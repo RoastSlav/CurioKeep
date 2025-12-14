@@ -1,9 +1,15 @@
 services:
-  postgres:
-    image: 'postgres:latest'
+  db:
+    image: postgres:16
+    container_name: curiokeep-db
     environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
+      POSTGRES_DB: curiokeep
+      POSTGRES_USER: curiokeep
+      POSTGRES_PASSWORD: curiokeep
     ports:
-      - '5432'
+      - "5432:5432"
+    volumes:
+      - curiokeep-db:/var/lib/postgresql/data
+
+volumes:
+  curiokeep-db:
