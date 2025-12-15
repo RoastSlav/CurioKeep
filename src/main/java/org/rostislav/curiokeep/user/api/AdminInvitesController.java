@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user.api;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.rostislav.curiokeep.user.InviteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@SecurityRequirement(name = "sessionAuth")
 @RestController
 @RequestMapping("/api/admin/invites")
 public class AdminInvitesController {

@@ -34,9 +34,15 @@ public class SetupModeFilter extends OncePerRequestFilter {
 
         boolean allowed =
                 path.startsWith("/api/setup/") ||
-                        path.equals("/") || path.equals("/index.html") ||
-                        path.startsWith("/assets/") || path.startsWith("/css/") || path.startsWith("/js/") ||
-                        path.startsWith("/images/") || path.equals("/favicon.ico");
+                        path.startsWith("/swagger-ui") ||
+                        path.startsWith("/v3/api-docs") ||
+                        path.equals("/") ||
+                        path.equals("/index.html") ||
+                        path.startsWith("/assets/") ||
+                        path.startsWith("/css/") ||
+                        path.startsWith("/js/") ||
+                        path.startsWith("/images/") ||
+                        path.equals("/favicon.ico");
 
         if (allowed) {
             chain.doFilter(req, res);
