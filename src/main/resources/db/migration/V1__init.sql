@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS module_state (
                                             state_key   TEXT NOT NULL,            -- e.g. OWNED
                                             label       TEXT NOT NULL,
                                             sort_order  INT  NOT NULL DEFAULT 0,
+                                            active      BOOLEAN NOT NULL DEFAULT TRUE,
+                                            deprecated   BOOLEAN NOT NULL DEFAULT FALSE,
                                             PRIMARY KEY (module_id, state_key)
 );
 
@@ -90,6 +92,8 @@ CREATE TABLE IF NOT EXISTS module_field (
                                             enum_values       JSONB,
                                             provider_mappings JSONB,
                                             sort_order        INT NOT NULL DEFAULT 0,
+                                            active            BOOLEAN NOT NULL DEFAULT TRUE,
+                                            deprecated        BOOLEAN NOT NULL DEFAULT FALSE,
                                             UNIQUE (module_id, field_key),
                                             CONSTRAINT chk_field_type CHECK (field_type IN (
                                                                                             'TEXT','NUMBER','DATE','BOOLEAN','ENUM','TAGS','LINK','JSON'
