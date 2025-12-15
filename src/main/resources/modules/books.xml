@@ -54,7 +54,7 @@
 
         <!-- Series -->
         <field key="series" label="Series" type="TEXT" searchable="true" filterable="true" order="10"/>
-        <field key="seriesNumber" label="Series number" type="NUMBER" filterable="true" sortable="true" order="11"/>
+        <field key="series_number" label="Series number" type="NUMBER" filterable="true" sortable="true" order="11"/>
 
         <!-- Identifiers -->
         <field key="isbn13" label="ISBN-13" type="TEXT" searchable="true" filterable="true" order="20">
@@ -79,7 +79,7 @@
 
         <!-- Publishing -->
         <field key="publisher" label="Publisher" type="TEXT" filterable="true" order="30"/>
-        <field key="publishedYear" label="Published year" type="NUMBER" filterable="true" sortable="true" order="31"/>
+        <field key="published_year" label="Published year" type="NUMBER" filterable="true" sortable="true" order="31"/>
         <field key="language" label="Language" type="TEXT" filterable="true" order="32"/>
         <field key="pages" label="Pages" type="NUMBER" sortable="true" order="33"/>
 
@@ -105,10 +105,10 @@
 
         <field key="edition" label="Edition" type="TEXT" order="42"/>
         <field key="printing" label="Printing" type="TEXT" order="43"/>
-        <field key="printCountry" label="Printed in" type="TEXT" filterable="true" order="44"/>
+        <field key="print_country" label="Printed in" type="TEXT" filterable="true" order="44"/>
 
         <field key="dimensions" label="Dimensions (e.g. 20 x 13 x 3 cm)" type="TEXT" order="45"/>
-        <field key="weightGrams" label="Weight (g)" type="NUMBER" order="46"/>
+        <field key="weight_grams" label="Weight (g)" type="NUMBER" order="46"/>
 
         <field key="condition" label="Condition" type="ENUM" filterable="true" order="50">
             <enumValues>
@@ -125,14 +125,14 @@
     </fields>
 
     <workflows>
-        <workflow key="quickAddByIsbn" label="Quick add by ISBN">
+        <workflow key="quick_add_by_isbn" label="Quick add by ISBN">
             <step type="PROMPT_ANY" fields="isbn13,isbn10" label="Scan or type ISBN"/>
             <step type="LOOKUP_METADATA" providers="openlibrary,googlebooks"/>
             <step type="APPLY_METADATA"/>
             <step type="SAVE_ITEM"/>
         </workflow>
 
-        <workflow key="manualAdd" label="Manual add">
+        <workflow key="manual_add" label="Manual add">
             <step type="PROMPT" field="title"/>
             <step type="SAVE_ITEM"/>
         </workflow>

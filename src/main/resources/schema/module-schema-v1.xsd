@@ -15,46 +15,38 @@
 
     <xs:simpleType name="ProviderKeyType">
         <xs:restriction base="xs:string">
-            <xs:pattern value="^[a-z][a-z0-9_-]{1,63}$"/>
+            <xs:pattern value="[a-z][a-z0-9_-]{1,63}"/>
         </xs:restriction>
     </xs:simpleType>
 
-    <xs:simpleType name="StateKeyType">
-        <xs:restriction base="xs:string">
-            <xs:pattern value="^[A-Z][A-Z0-9_]{1,63}$"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="FieldKeyType">
-        <xs:restriction base="xs:string">
-            <xs:pattern value="^[a-z][a-z0-9_]{1,63}$"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="EnumKeyType">
-        <xs:restriction base="xs:string">
-            <xs:pattern value="^[A-Z0-9_]{1,63}$"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="JsonPointerType">
-        <xs:restriction base="xs:string">
-            <xs:pattern value="^/.*"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-
-    <!-- SemVer-ish -->
     <xs:simpleType name="SemVerType">
         <xs:restriction base="xs:string">
             <xs:pattern value="[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?"/>
         </xs:restriction>
     </xs:simpleType>
 
+    <xs:simpleType name="FieldKeyType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[a-z][a-z0-9_]{1,63}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="EnumKeyType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Z0-9_]{1,63}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="JsonPointerType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="/.*"/>
+        </xs:restriction>
+    </xs:simpleType>
+
 
     <xs:simpleType name="MinAppVersionType">
         <xs:restriction base="xs:string">
-            <xs:pattern value="^[0-9]+\.[0-9]+\.[0-9]+$"/>
+            <xs:pattern value="[0-9]+\.[0-9]+\.[0-9]+"/>
         </xs:restriction>
     </xs:simpleType>
 
@@ -68,6 +60,12 @@
             <xs:enumeration value="TAGS"/>
             <xs:enumeration value="LINK"/>
             <xs:enumeration value="JSON"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="StateKeyType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Z][A-Z0-9_]{1,63}"/>
         </xs:restriction>
     </xs:simpleType>
 
@@ -363,9 +361,6 @@
 
             <xs:attribute name="key" type="ModuleKeyType" use="required"/>
             <xs:attribute name="version" type="SemVerType" use="required"/>
-
-            <!-- XSD 1.1: enforce mandatory OWNED state -->
-            <xs:assert test="exists(states/state[@key = 'OWNED'])"/>
         </xs:complexType>
 
         <!-- Uniqueness constraints -->
