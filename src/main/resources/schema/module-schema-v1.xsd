@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+    <!-- ----------------------------
+         Simple types / enums
+         ---------------------------- -->
+    <xs:simpleType name="FieldType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="TEXT"/>
+            <xs:enumeration value="NUMBER"/>
+            <xs:enumeration value="DATE"/>
+            <xs:enumeration value="BOOLEAN"/>
+            <xs:enumeration value="ENUM"/>
+            <xs:enumeration value="TAGS"/>
+            <xs:enumeration value="LINK"/>
+            <xs:enumeration value="JSON"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="IdentifierType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ISBN10"/>
+            <xs:enumeration value="ISBN13"/>
+            <xs:enumeration value="UPC"/>
+            <xs:enumeration value="EAN"/>
+            <xs:enumeration value="ASIN"/>
+            <xs:enumeration value="CUSTOM"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="WorkflowStepType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PROMPT"/>
+            <xs:enumeration value="PROMPT_ANY"/>
+            <xs:enumeration value="LOOKUP_METADATA"/>
+            <xs:enumeration value="APPLY_METADATA"/>
+            <xs:enumeration value="SAVE_ITEM"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- ----------------------------
+         Root
+         ---------------------------- -->
+    <xs:element name="module">
+        <xs:complexType>
+            <xs:sequence>
+
+                <xs:element name="name" type="xs:string"/>
+                <xs:element name="description" type="xs:string" minOccurs="0"/>
+
+                <!-- STATES -->
+                <xs:element name="states" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="state" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:attribute name="key" type="xs:string" use="required"/>
+                                    <xs:attribute name="label" type="xs:string" use="required"/>
+                                    <xs:attribute name="order" type="xs:int" use="optional"/>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <!-- PROVIDERS -->
+                <xs:element name="providers" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="provider" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="supports" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="identifier" maxOccurs="unbounded" minOccurs="0">
+                                                        <xs:complexType>
+                                                            <xs:attribute name="type" type="IdentifierType" use="required"/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element name="priority" type="xs:int" minOccurs="0"/>
+                                    </xs:sequence>
+                                    <xs:attribute name="key" type="xs:string" use="required"/>
+                                    <xs:attribute name="enabled" type="xs:boolean" use="optional"/>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <!-- FIELDS -->
+                <xs:element name="fields">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="field" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="identifiers" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="identifier" maxOccurs="unbounded">
+                                                        <xs:complexType>
+                                                            <xs:attribute name="type" type="IdentifierType" use="required"/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <xs:element name="enumValues" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="value" maxOccurs="unbounded">
+                                                        <xs:complexType>
+                                                            <xs:attribute name="key" type="xs:string" use="required"/>
+                                                            <xs:attribute name="label" type="xs:string" use="required"/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <xs:element name="providerMappings" minOccurs="0">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="map" maxOccurs="unbounded">
+                                                        <xs:complexType>
+                                                            <xs:attribute name="provider" type="xs:string" use="required"/>
+                                                            <xs:attribute name="from" type="xs:string" use="required"/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                    </xs:sequence>
+
+                                    <xs:attribute name="key" type="xs:string" use="required"/>
+                                    <xs:attribute name="label" type="xs:string" use="required"/>
+                                    <xs:attribute name="type" type="FieldType" use="required"/>
+                                    <xs:attribute name="required" type="xs:boolean" use="optional"/>
+                                    <xs:attribute name="searchable" type="xs:boolean" use="optional"/>
+                                    <xs:attribute name="filterable" type="xs:boolean" use="optional"/>
+                                    <xs:attribute name="sortable" type="xs:boolean" use="optional"/>
+                                    <xs:attribute name="order" type="xs:int" use="optional"/>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <!-- WORKFLOWS (optional) -->
+                <xs:element name="workflows" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="workflow" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="step" maxOccurs="unbounded">
+                                            <xs:complexType>
+                                                <xs:attribute name="type" type="WorkflowStepType" use="required"/>
+
+                                                <!-- PROMPT -->
+                                                <xs:attribute name="field" type="xs:string" use="optional"/>
+                                                <xs:attribute name="label" type="xs:string" use="optional"/>
+
+                                                <!-- PROMPT_ANY -->
+                                                <xs:attribute name="fields" type="xs:string" use="optional"/>
+
+                                                <!-- LOOKUP_METADATA -->
+                                                <xs:attribute name="providers" type="xs:string" use="optional"/>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+
+                                    <xs:attribute name="key" type="xs:string" use="required"/>
+                                    <xs:attribute name="label" type="xs:string" use="required"/>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+            </xs:sequence>
+
+            <xs:attribute name="key" type="xs:string" use="required"/>
+            <xs:attribute name="version" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

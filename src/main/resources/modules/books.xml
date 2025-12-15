@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="../schema/module-schema-v1.xsd"
+        key="books"
+        version="1.0.0">
+    <name>Books</name>
+    <description>Physical paper books.</description>
+
+    <states>
+        <state key="OWNED" label="Owned" order="1"/>
+        <state key="WISHLIST" label="Wishlist" order="2"/>
+        <state key="PREVIOUSLY_OWNED" label="Previously owned" order="3"/>
+        <state key="LENT_OUT" label="Lent out" order="4"/>
+        <state key="LOST" label="Lost" order="5"/>
+        <state key="FOR_SALE" label="For sale" order="6"/>
+    </states>
+
+    <providers>
+        <provider key="openlibrary" enabled="true">
+            <supports>
+                <identifier type="ISBN10"/>
+                <identifier type="ISBN13"/>
+            </supports>
+            <priority>1</priority>
+        </provider>
+
+        <provider key="googlebooks" enabled="true">
+            <supports>
+                <identifier type="ISBN10"/>
+                <identifier type="ISBN13"/>
+            </supports>
+            <priority>2</priority>
+        </provider>
+    </providers>
+
+    <fields>
+        <!-- Core -->
+        <field key="title" label="Title" type="TEXT" required="true" searchable="true" sortable="true" order="1"/>
+        <field key="authors" label="Authors" type="TEXT" searchable="true" filterable="true" order="2"/>
+        <field key="subtitle" label="Subtitle" type="TEXT" searchable="true" order="3"/>
+
+        <!-- Series -->
+        <field key="series" label="Series" type="TEXT" searchable="true" filterable="true" order="10"/>
+        <field key="seriesNumber" label="Series number" type="NUMBER" filterable="true" sortable="true" order="11"/>
+
+        <!-- Identifiers -->
+        <field key="isbn13" label="ISBN-13" type="TEXT" searchable="true" filterable="true" order="20">
+            <identifiers>
+                <identifier type="ISBN13"/>
+            </identifiers>
+            <providerMappings>
+                <map provider="openlibrary" from="isbn_13"/>
+                <map provider="googlebooks" from="industryIdentifiers.ISBN_13"/>
+            </providerMappings>
+        </field>
+
+        <field key="isbn10" label="ISBN-10" type="TEXT" searchable="true" filterable="true" order="21">
+            <identifiers>
+                <identifier type="ISBN10"/>
+            </identifiers>
+            <providerMappings>
+                <map provider="openlibrary" from="isbn_10"/>
+                <map provider="googlebooks" from="industryIdentifiers.ISBN_10"/>
+            </providerMappings>
+        </field>
+
+        <!-- Publishing -->
+        <field key="publisher" label="Publisher" type="TEXT" filterable="true" order="30"/>
+        <field key="publishedYear" label="Published year" type="NUMBER" filterable="true" sortable="true" order="31"/>
+        <field key="language" label="Language" type="TEXT" filterable="true" order="32"/>
+        <field key="pages" label="Pages" type="NUMBER" sortable="true" order="33"/>
+
+        <!-- Physical / collecting-specific -->
+        <field key="format" label="Format" type="ENUM" filterable="true" order="40">
+            <enumValues>
+                <value key="HARDCOVER" label="Hardcover"/>
+                <value key="PAPERBACK" label="Paperback"/>
+                <value key="MASS_MARKET_PAPERBACK" label="Mass market paperback"/>
+                <value key="TRADE_PAPERBACK" label="Trade paperback"/>
+            </enumValues>
+        </field>
+
+        <field key="binding" label="Binding" type="ENUM" filterable="true" order="41">
+            <enumValues>
+                <value key="SEWN" label="Sewn"/>
+                <value key="GLUED" label="Glued (perfect bound)"/>
+                <value key="SPIRAL" label="Spiral"/>
+                <value key="STAPLED" label="Stapled"/>
+                <value key="UNKNOWN" label="Unknown"/>
+            </enumValues>
+        </field>
+
+        <field key="edition" label="Edition" type="TEXT" order="42"/>
+        <field key="printing" label="Printing" type="TEXT" order="43"/>
+        <field key="printCountry" label="Printed in" type="TEXT" filterable="true" order="44"/>
+
+        <field key="dimensions" label="Dimensions (e.g. 20 x 13 x 3 cm)" type="TEXT" order="45"/>
+        <field key="weightGrams" label="Weight (g)" type="NUMBER" order="46"/>
+
+        <field key="condition" label="Condition" type="ENUM" filterable="true" order="50">
+            <enumValues>
+                <value key="NEW" label="New"/>
+                <value key="LIKE_NEW" label="Like new"/>
+                <value key="VERY_GOOD" label="Very good"/>
+                <value key="GOOD" label="Good"/>
+                <value key="FAIR" label="Fair"/>
+                <value key="POOR" label="Poor"/>
+            </enumValues>
+        </field>
+
+        <field key="notes" label="Notes" type="TEXT" order="90"/>
+    </fields>
+
+    <workflows>
+        <workflow key="quickAddByIsbn" label="Quick add by ISBN">
+            <step type="PROMPT_ANY" fields="isbn13,isbn10" label="Scan or type ISBN"/>
+            <step type="LOOKUP_METADATA" providers="openlibrary,googlebooks"/>
+            <step type="APPLY_METADATA"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+
+        <workflow key="manualAdd" label="Manual add">
+            <step type="PROMPT" field="title"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+    </workflows>
+</module>
