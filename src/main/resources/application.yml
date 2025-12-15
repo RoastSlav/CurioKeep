@@ -20,8 +20,16 @@ spring:
 
 logging:
   level:
-    org:
-      flywaydb: INFO
+    root: INFO
+    org.springframework: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    org.rostislav.curiokeep: DEBUG   # your app while developing
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [rid=%X{rid}] %logger{36} - %msg%n"
+
 
 curiokeep:
   modules:
