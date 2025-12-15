@@ -19,12 +19,28 @@ public class CollectionModuleEntity {
         if (enabledAt == null) enabledAt = OffsetDateTime.now();
     }
 
-    public java.util.UUID getCollectionId() { return id != null ? id.getCollectionId() : null; }
-    public java.util.UUID getModuleId() { return id != null ? id.getModuleId() : null; }
+    public java.util.UUID getCollectionId() {
+        return id != null ? id.getCollectionId() : null;
+    }
+
+    public java.util.UUID getModuleId() {
+        return id != null ? id.getModuleId() : null;
+    }
 
     // getters/setters
-    public CollectionModuleId getId() { return id; }
-    public void setId(CollectionModuleId id) { this.id = id; }
-    public OffsetDateTime getEnabledAt() { return enabledAt; }
-    public void setEnabledAt(OffsetDateTime enabledAt) { this.enabledAt = enabledAt; }
+    public CollectionModuleId getId() {
+        return id;
+    }
+
+    public void setId(CollectionModuleId id) {
+        this.id = id;
+    }
+
+    public OffsetDateTime getEnabledAt() {
+        return enabledAt;
+    }
+
+    public void setEnabledAt(OffsetDateTime enabledAt) {
+        this.enabledAt = enabledAt;
+    }
 }

@@ -12,6 +12,8 @@ import org.rostislav.curiokeep.user.api.dto.CreateAdminRequest;
 import org.rostislav.curiokeep.user.api.dto.OkResponse;
 import org.rostislav.curiokeep.user.api.dto.SetupStatusResponse;
 import org.rostislav.curiokeep.user.entities.AppUserEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,7 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/setup")
 public class SetupController {
-
+    private static final Logger log = LoggerFactory.getLogger(SetupController.class);
     private final AppUserRepository users;
     private final PasswordEncoder encoder;
 
@@ -60,6 +62,7 @@ public class SetupController {
     @PostMapping("/admin")
     public ResponseEntity<?> createAdmin(@RequestBody CreateAdminRequest req) {
         if (users.existsByIsAdminTrue()) {
+            log.warn("Setup blocked: admin already exists");
             throw new ResponseStatusException(HttpStatus.CONFLICT, "ADMIN_ALREADY_EXISTS");
         }
 

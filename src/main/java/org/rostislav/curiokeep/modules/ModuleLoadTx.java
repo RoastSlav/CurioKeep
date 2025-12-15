@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static org.rostislav.curiokeep.modules.ModuleUtil.*;
-import static org.rostislav.curiokeep.modules.ModuleUtil.jsonb;
 
 @Service
 public class ModuleLoadTx {

@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface ModuleDefinitionRepository extends JpaRepository<ModuleDefinitionEntity, UUID> {
     Optional<ModuleDefinitionEntity> findByModuleKey(String moduleKey);
+
     boolean existsByModuleKey(String moduleKey);
 }

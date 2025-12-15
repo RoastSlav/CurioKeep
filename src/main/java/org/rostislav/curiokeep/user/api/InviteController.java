@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.rostislav.curiokeep.api.dto.ApiError;
 import org.rostislav.curiokeep.user.InviteService;
+import org.rostislav.curiokeep.user.api.dto.AcceptInviteRequest;
 import org.rostislav.curiokeep.user.api.dto.InviteValidateResponse;
 import org.rostislav.curiokeep.user.api.dto.OkResponse;
 import org.springframework.http.ResponseEntity;
@@ -66,8 +67,5 @@ public class InviteController {
     public ResponseEntity<OkResponse> accept(@RequestBody AcceptInviteRequest req) {
         inviteService.acceptInvite(req.token(), req.password(), req.displayName());
         return ResponseEntity.ok(new OkResponse(true));
-    }
-
-    public record AcceptInviteRequest(String token, String password, String displayName) {
     }
 }

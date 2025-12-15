@@ -10,4 +10,5 @@ public record MeResponse(
         @Schema(example = "user@curiokeep.local") String email,
         @Schema(example = "RoastSlav") String displayName,
         @Schema(example = "false") boolean isAdmin
-) {}
+) {
+}
