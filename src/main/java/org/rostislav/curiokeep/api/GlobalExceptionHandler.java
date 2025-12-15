@@ -2,7 +2,8 @@ package org.rostislav.curiokeep.api;
 
 import org.rostislav.curiokeep.api.dto.ApiError;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {

@@ -10,6 +10,8 @@ import java.util.UUID;
 
 public interface CollectionModuleRepository extends JpaRepository<CollectionModuleEntity, CollectionModuleId> {
     boolean existsByCollectionIdAndModuleId(UUID collectionId, UUID moduleId);
+
     Optional<CollectionModuleEntity> findByCollectionIdAndModuleId(UUID collectionId, UUID moduleId);
+
     List<CollectionModuleEntity> findAllByCollectionId(UUID collectionId);
 }

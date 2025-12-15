@@ -11,4 +11,5 @@ public record StatesXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "state")
         List<StateXml> state
-) {}
+) {
+}

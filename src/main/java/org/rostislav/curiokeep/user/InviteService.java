@@ -27,6 +27,16 @@ public class InviteService {
         this.currentUser = currentUser;
     }
 
+    private static String sha256Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] out = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(out);
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
     @Transactional
     public String createInvite(String emailRaw) {
         String email = emailRaw.trim().toLowerCase();
@@ -93,15 +103,5 @@ public class InviteService {
         inv.setStatus("ACCEPTED");
         inv.setAcceptedAt(OffsetDateTime.now());
         invites.save(inv);
-    }
-
-    private static String sha256Hex(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] out = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(out);
-        } catch (Exception e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
     }
 }

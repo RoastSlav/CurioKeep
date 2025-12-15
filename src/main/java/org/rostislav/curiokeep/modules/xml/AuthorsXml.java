@@ -11,4 +11,5 @@ public record AuthorsXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "author")
         List<AuthorXml> author
-) {}
+) {
+}

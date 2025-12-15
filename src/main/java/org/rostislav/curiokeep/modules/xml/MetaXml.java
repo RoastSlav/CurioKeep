@@ -23,6 +23,7 @@ public record MetaXml(
         public List<AuthorXml> authorsList() {
                 return authors == null || authors.author() == null ? List.of() : authors.author();
         }
+
         public List<String> tagsList() {
                 return tags == null || tags.tag() == null ? List.of() : tags.tag();
         }

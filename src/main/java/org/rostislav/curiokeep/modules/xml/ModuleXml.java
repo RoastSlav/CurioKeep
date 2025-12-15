@@ -1,8 +1,6 @@
 package org.rostislav.curiokeep.modules.xml;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import java.util.List;
@@ -31,12 +29,15 @@ public record ModuleXml(
         public List<StateXml> statesList() {
                 return states == null || states.state() == null ? List.of() : states.state();
         }
+
         public List<ProviderXml> providersList() {
                 return providers == null || providers.provider() == null ? List.of() : providers.provider();
         }
+
         public List<FieldXml> fieldsList() {
                 return fields == null || fields.field() == null ? List.of() : fields.field();
         }
+
         public List<WorkflowXml> workflowsList() {
                 return workflows == null || workflows.workflow() == null ? List.of() : workflows.workflow();
         }
