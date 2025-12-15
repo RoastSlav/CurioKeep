@@ -14,6 +14,8 @@ import org.rostislav.curiokeep.user.api.dto.LoginRequest;
 import org.rostislav.curiokeep.user.api.dto.MeResponse;
 import org.rostislav.curiokeep.user.api.dto.OkResponse;
 import org.rostislav.curiokeep.user.entities.AppUserEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -33,7 +35,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private final AuthenticationManager authManager;
     private final AppUserRepository users;
     private final SecurityContextRepository securityContextRepository;
@@ -95,7 +97,11 @@ public class AuthController {
     })
     @GetMapping("/me")
     public MeResponse me(Authentication authentication) {
-        if (authentication == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if (authentication == null) {
+            log.info("Unauthorized /me access attempt");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         String email = authentication.getName();
         AppUserEntity u = users.findByEmailIgnoreCase(email).orElseThrow();
         return new MeResponse(u.getId(), u.getEmail(), u.getDisplayName(), u.isAdmin());

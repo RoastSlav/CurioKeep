@@ -35,7 +35,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, SetupModeFilter setupModeFilter) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SetupModeFilter setupModeFilter) {
         return http
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(

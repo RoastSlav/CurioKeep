@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.config;
 
+import org.rostislav.curiokeep.config.logging.RequestIdFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

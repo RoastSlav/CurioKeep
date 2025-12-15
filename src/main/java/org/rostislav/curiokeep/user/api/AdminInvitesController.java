@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.rostislav.curiokeep.api.dto.ApiError;
 import org.rostislav.curiokeep.user.InviteService;
+import org.rostislav.curiokeep.user.api.dto.CreateInviteRequest;
 import org.rostislav.curiokeep.user.api.dto.CreateInviteResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -65,8 +66,5 @@ public class AdminInvitesController {
     public ResponseEntity<CreateInviteResponse> createInvite(@RequestBody CreateInviteRequest req) {
         String token = inviteService.createInvite(req.email());
         return ResponseEntity.ok(new CreateInviteResponse(token));
-    }
-
-    public record CreateInviteRequest(String email) {
     }
 }
