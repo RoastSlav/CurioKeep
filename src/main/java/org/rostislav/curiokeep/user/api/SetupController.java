@@ -1,13 +1,27 @@
 package org.rostislav.curiokeep.user.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.rostislav.curiokeep.api.dto.ApiError;
 import org.rostislav.curiokeep.user.AppUserRepository;
+import org.rostislav.curiokeep.user.api.dto.CreateAdminRequest;
+import org.rostislav.curiokeep.user.api.dto.OkResponse;
+import org.rostislav.curiokeep.user.api.dto.SetupStatusResponse;
 import org.rostislav.curiokeep.user.entities.AppUserEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
+
+@Tag(name = "Setup", description = "First-run admin setup")
 @RestController
 @RequestMapping("/api/setup")
 public class SetupController {
@@ -20,17 +34,35 @@ public class SetupController {
         this.encoder = encoder;
     }
 
+    @Operation(summary = "Check if setup is required", description = "Returns true if no admin user exists yet.",
+            security = {})
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Setup status returned",
+                    content = @Content(schema = @Schema(implementation = SetupStatusResponse.class)))
+    })
     @GetMapping("/status")
-    public Map<String, Object> status() {
+    public SetupStatusResponse status() {
         boolean setupRequired = !users.existsByIsAdminTrue();
-        return Map.of("setupRequired", setupRequired);
+        return new SetupStatusResponse(setupRequired);
     }
 
+    @Operation(summary = "Create initial admin user",
+            description = "Creates the first admin. Only allowed when no admin exists yet.",
+            security = {})
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Admin created",
+                    content = @Content(schema = @Schema(implementation = OkResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Admin already exists",
+                    content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request",
+                    content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
     @PostMapping("/admin")
     public ResponseEntity<?> createAdmin(@RequestBody CreateAdminRequest req) {
         if (users.existsByIsAdminTrue()) {
-            return ResponseEntity.status(409).body(Map.of("error", "ADMIN_ALREADY_EXISTS"));
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ADMIN_ALREADY_EXISTS");
         }
+
 
         AppUserEntity u = new AppUserEntity();
         u.setEmail(req.email().trim().toLowerCase());
@@ -44,6 +76,4 @@ public class SetupController {
 
         return ResponseEntity.ok(Map.of("created", true));
     }
-
-    public record CreateAdminRequest(String email, String password, String displayName) {}
 }
