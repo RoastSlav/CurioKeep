@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:curiokeep:module-contract:v1",
+  "title": "CurioKeep Module Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key",
+    "version",
+    "name",
+    "states",
+    "fields"
+  ],
+  "properties": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "meta": {
+      "$ref": "#/$defs/moduleMeta"
+    },
+    "states": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/state"
+      }
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/provider"
+      },
+      "default": []
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/field"
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workflow"
+      },
+      "default": []
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Forward-compatible bag for custom data (must not affect core behavior unless app explicitly supports it).",
+      "additionalProperties": true,
+      "default": {}
+    }
+  },
+  "$defs": {
+    "moduleMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/author"
+          },
+          "default": []
+        },
+        "license": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri"
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri"
+        },
+        "icon": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 48
+          },
+          "default": []
+        },
+        "minAppVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "active": {
+          "type": "boolean",
+          "default": true
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 100
+        },
+        "supportsIdentifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifierType"
+          },
+          "default": []
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    },
+    "identifierType": {
+      "type": "string",
+      "enum": [
+        "ISBN10",
+        "ISBN13",
+        "UPC",
+        "EAN",
+        "ASIN",
+        "CUSTOM"
+      ]
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "type": {
+          "$ref": "#/$defs/fieldType"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "searchable": {
+          "type": "boolean",
+          "default": false
+        },
+        "filterable": {
+          "type": "boolean",
+          "default": false
+        },
+        "sortable": {
+          "type": "boolean",
+          "default": false
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "active": {
+          "type": "boolean",
+          "default": true
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false
+        },
+        "defaultValue": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "object",
+            "array",
+            "null"
+          ]
+        },
+        "identifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifierType"
+          },
+          "default": []
+        },
+        "enumValues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/enumValue"
+          },
+          "default": []
+        },
+        "constraints": {
+          "$ref": "#/$defs/constraints"
+        },
+        "ui": {
+          "$ref": "#/$defs/uiHints"
+        },
+        "providerMappings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/providerMapping"
+          },
+          "default": []
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    },
+    "fieldType": {
+      "type": "string",
+      "enum": [
+        "TEXT",
+        "NUMBER",
+        "DATE",
+        "BOOLEAN",
+        "ENUM",
+        "TAGS",
+        "LINK",
+        "JSON"
+      ]
+    },
+    "enumValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]{1,63}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Generic constraints; semantic validator enforces which ones apply to which field types.",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "multi": {
+          "type": "boolean",
+          "default": false
+        },
+        "uniqueWithinCollection": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "default": {}
+    },
+    "uiHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "widget": {
+          "type": "string",
+          "maxLength": 48
+        },
+        "placeholder": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "helpText": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "group": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "hidden": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "default": {}
+    },
+    "providerMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "path"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+        },
+        "path": {
+          "type": "string",
+          "description": "JSON Pointer into the provider's NORMALIZED response (CurioKeep normalized schema), e.g. /isbn13 or /title",
+          "pattern": "^/.*"
+        },
+        "transform": {
+          "type": "string",
+          "description": "Optional small transform key handled by backend (rare if using normalized responses)."
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label",
+        "steps"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/workflowStep"
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    },
+    "workflowStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/workflowStepType"
+        },
+        "field": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    },
+    "workflowStepType": {
+      "type": "string",
+      "enum": [
+        "PROMPT",
+        "PROMPT_ANY",
+        "LOOKUP_METADATA",
+        "APPLY_METADATA",
+        "SAVE_ITEM"
+      ]
+    }
+  }
+}

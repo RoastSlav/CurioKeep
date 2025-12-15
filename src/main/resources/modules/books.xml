@@ -6,6 +6,19 @@
     <name>Books</name>
     <description>Physical paper books.</description>
 
+    <meta>
+        <authors>
+            <author name="Rostislav Raykov" url="https://github.com/RoastSlav"/>
+        </authors>
+        <license>MIT</license>
+        <repository>https://github.com/RoastSlav/CurioKeep</repository>
+        <tags>
+            <tag>books</tag>
+            <tag>physical</tag>
+        </tags>
+        <minAppVersion>0.0.1</minAppVersion>
+    </meta>
+
     <states>
         <state key="OWNED" label="Owned" order="1"/>
         <state key="WISHLIST" label="Wishlist" order="2"/>
@@ -49,8 +62,8 @@
                 <identifier type="ISBN13"/>
             </identifiers>
             <providerMappings>
-                <map provider="openlibrary" from="isbn_13"/>
-                <map provider="googlebooks" from="industryIdentifiers.ISBN_13"/>
+                <map provider="openlibrary" path="/isbn13"/>
+                <map provider="googlebooks" path="/isbn13"/>
             </providerMappings>
         </field>
 
@@ -59,8 +72,8 @@
                 <identifier type="ISBN10"/>
             </identifiers>
             <providerMappings>
-                <map provider="openlibrary" from="isbn_10"/>
-                <map provider="googlebooks" from="industryIdentifiers.ISBN_10"/>
+                <map provider="openlibrary" path="/isbn10"/>
+                <map provider="googlebooks" path="/isbn10"/>
             </providerMappings>
         </field>
 
