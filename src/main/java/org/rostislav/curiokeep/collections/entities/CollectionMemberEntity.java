@@ -1,6 +1,7 @@
 package org.rostislav.curiokeep.collections.entities;
 
 import jakarta.persistence.*;
+import org.rostislav.curiokeep.collections.api.dto.Role;
 
 import java.time.OffsetDateTime;
 
@@ -21,7 +22,6 @@ public class CollectionMemberEntity {
         if (createdAt == null) createdAt = OffsetDateTime.now();
     }
 
-    // convenience getters
     public java.util.UUID getCollectionId() {
         return id != null ? id.getCollectionId() : null;
     }
@@ -54,6 +54,4 @@ public class CollectionMemberEntity {
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-    public enum Role {OWNER, ADMIN, EDITOR, VIEWER}
 }

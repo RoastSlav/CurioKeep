@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.rostislav.curiokeep.modules.contract.ModuleSource;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public class ModuleDefinitionEntity {
     private String version;
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false)
-    private Source source;
+    private ModuleSource source;
     @Column(name = "checksum", nullable = false)
     private String checksum;
     @Column(name = "xml_raw", nullable = false, columnDefinition = "text")
@@ -82,11 +83,11 @@ public class ModuleDefinitionEntity {
         this.version = version;
     }
 
-    public Source getSource() {
+    public ModuleSource getSource() {
         return source;
     }
 
-    public void setSource(Source source) {
+    public void setSource(ModuleSource source) {
         this.source = source;
     }
 
@@ -129,6 +130,4 @@ public class ModuleDefinitionEntity {
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
-
-    public enum Source {BUILTIN, USER}
 }
