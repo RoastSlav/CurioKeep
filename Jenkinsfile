@@ -7,13 +7,12 @@ pipeline {
     PATH = "${JDK_HOME}/bin:${MAVEN_HOME}/bin:${env.PATH}"
 
     IMAGE = "roastslav/curiokeep"
-    DOCKER_CREDS = credentials('dockerhub-creds')
   }
 
   stages {
 
     stage('PR: Build & Test') {
-      when { changeRequest() } // ONLY PR builds
+      when { changeRequest() }
       steps {
         sh 'java -version'
         sh 'mvn -v'
@@ -22,7 +21,7 @@ pipeline {
     }
 
     stage('Main: Build Jar (no tests)') {
-      when { not { changeRequest() } } // NOT PR builds (main, tags, manual)
+      when { allOf { not { changeRequest() }; branch 'master' } } // or 'main' if you rename
       steps {
         sh 'java -version'
         sh 'mvn -v'
@@ -31,31 +30,27 @@ pipeline {
     }
 
     stage('Main: Docker Build') {
-      when { not { changeRequest() } }
+      when { allOf { not { changeRequest() }; branch 'master' } }
       steps {
         script {
-          def tag = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-          env.IMAGE_TAG = tag
+          env.IMAGE_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
         }
         sh 'docker build -t $IMAGE:$IMAGE_TAG -t $IMAGE:latest .'
       }
     }
 
     stage('Main: Docker Push') {
-      when { not { changeRequest() } }
+      when { allOf { not { changeRequest() }; branch 'master' } }
       steps {
-        sh '''
-          echo "$DOCKER_CREDS_PSW" | docker login -u "$DOCKER_CREDS_USR" --password-stdin
-          docker push $IMAGE:$IMAGE_TAG
-          docker push $IMAGE:latest
-        '''
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+          sh '''
+            echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
+            docker push $IMAGE:$IMAGE_TAG
+            docker push $IMAGE:latest
+            docker logout || true
+          '''
+        }
       }
-    }
-  }
-
-  post {
-    always {
-      sh 'docker logout || true'
     }
   }
 }
