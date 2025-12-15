@@ -11,4 +11,5 @@ public record FieldsXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "field")
         List<FieldXml> field
-) {}
+) {
+}

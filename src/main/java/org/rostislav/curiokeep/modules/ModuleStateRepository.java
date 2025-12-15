@@ -10,5 +10,6 @@ import java.util.UUID;
 
 public interface ModuleStateRepository extends JpaRepository<ModuleStateEntity, ModuleStateId> {
     List<ModuleStateEntity> findAllByModuleId(UUID moduleId);
+
     Optional<ModuleStateEntity> findByModuleIdAndStateKey(UUID moduleId, String stateKey);
 }

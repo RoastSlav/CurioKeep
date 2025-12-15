@@ -23,4 +23,5 @@ public record FieldXml(
         @JacksonXmlProperty(localName = "providerMappings") ProviderMappingsXml providerMappings,
 
         String defaultValue
-) {}
+) {
+}

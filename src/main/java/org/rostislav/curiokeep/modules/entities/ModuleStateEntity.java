@@ -1,6 +1,9 @@
 package org.rostislav.curiokeep.modules.entities;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "module_state")
@@ -22,18 +25,52 @@ public class ModuleStateEntity {
     private boolean deprecated = false;
 
     // convenience
-    public java.util.UUID getModuleId() { return id != null ? id.getModuleId() : null; }
-    public String getStateKey() { return id != null ? id.getStateKey() : null; }
+    public java.util.UUID getModuleId() {
+        return id != null ? id.getModuleId() : null;
+    }
+
+    public String getStateKey() {
+        return id != null ? id.getStateKey() : null;
+    }
 
     // getters/setters
-    public ModuleStateId getId() { return id; }
-    public void setId(ModuleStateId id) { this.id = id; }
-    public String getLabel() { return label; }
-    public void setLabel(String label) { this.label = label; }
-    public int getSortOrder() { return sortOrder; }
-    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
-    public boolean isDeprecated() { return deprecated; }
-    public void setDeprecated(boolean deprecated) { this.deprecated = deprecated; }
+    public ModuleStateId getId() {
+        return id;
+    }
+
+    public void setId(ModuleStateId id) {
+        this.id = id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public int getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public boolean isDeprecated() {
+        return deprecated;
+    }
+
+    public void setDeprecated(boolean deprecated) {
+        this.deprecated = deprecated;
+    }
 }

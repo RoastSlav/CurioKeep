@@ -11,4 +11,5 @@ public record TagsXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "tag")
         List<String> tag
-) {}
+) {
+}

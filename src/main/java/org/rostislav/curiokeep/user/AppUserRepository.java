@@ -8,6 +8,8 @@ import java.util.UUID;
 
 public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
     boolean existsByEmail(String email);
+
     Optional<AppUserEntity> findByEmailIgnoreCase(String email);
+
     boolean existsByIsAdminTrue();
 }

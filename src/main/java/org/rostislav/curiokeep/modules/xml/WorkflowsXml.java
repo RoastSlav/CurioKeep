@@ -11,4 +11,5 @@ public record WorkflowsXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "workflow")
         List<WorkflowXml> workflow
-) {}
+) {
+}

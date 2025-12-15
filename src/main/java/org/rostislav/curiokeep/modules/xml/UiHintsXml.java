@@ -10,4 +10,5 @@ public record UiHintsXml(
         @JacksonXmlProperty(isAttribute = true) String helpText,
         @JacksonXmlProperty(isAttribute = true) String group,
         @JacksonXmlProperty(isAttribute = true) Boolean hidden
-) {}
+) {
+}

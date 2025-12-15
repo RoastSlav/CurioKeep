@@ -26,7 +26,7 @@ logging:
     org.springframework.security: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
-    org.rostislav.curiokeep: DEBUG   # your app while developing
+    org.rostislav.curiokeep: DEBUG   #while developing
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [rid=%X{rid}] %logger{36} - %msg%n"
 

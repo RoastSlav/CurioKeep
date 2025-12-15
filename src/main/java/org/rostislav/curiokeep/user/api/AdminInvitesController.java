@@ -9,12 +9,14 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.rostislav.curiokeep.api.dto.ApiError;
 import org.rostislav.curiokeep.user.InviteService;
+import org.rostislav.curiokeep.user.api.dto.CreateInviteRequest;
 import org.rostislav.curiokeep.user.api.dto.CreateInviteResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Admin - Invites", description = "Admin-only endpoints for inviting new users")
 @SecurityRequirement(name = "sessionAuth")
@@ -65,6 +67,4 @@ public class AdminInvitesController {
         String token = inviteService.createInvite(req.email());
         return ResponseEntity.ok(new CreateInviteResponse(token));
     }
-
-    public record CreateInviteRequest(String email) {}
 }

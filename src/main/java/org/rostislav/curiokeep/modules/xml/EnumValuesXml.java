@@ -11,4 +11,5 @@ public record EnumValuesXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "value")
         List<EnumValueXml> value
-) {}
+) {
+}

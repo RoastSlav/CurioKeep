@@ -11,4 +11,5 @@ public record ProviderMappingsXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "map")
         List<ProviderMapXml> map
-) {}
+) {
+}

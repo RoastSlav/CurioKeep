@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface UserInviteRepository extends JpaRepository<UserInviteEntity, UUID> {
     boolean existsByEmailIgnoreCaseAndStatus(String email, String status);
+
     Optional<UserInviteEntity> findByTokenHashAndStatus(String tokenHash, String status);
 }

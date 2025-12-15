@@ -14,4 +14,5 @@ public record ConstraintsXml(
         @JacksonXmlProperty(isAttribute = true) String pattern,
         @JacksonXmlProperty(isAttribute = true) Boolean multi,
         @JacksonXmlProperty(isAttribute = true) Boolean uniqueWithinCollection
-) {}
+) {
+}

@@ -1,6 +1,7 @@
 package org.rostislav.curiokeep.user.entities;
 
 import jakarta.persistence.*;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -51,22 +52,55 @@ public class UserInviteEntity {
     }
 
     // getters/setters...
-    public UUID getId() { return id; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public UUID getId() {
+        return id;
+    }
 
-    public String getTokenHash() { return tokenHash; }
-    public void setTokenHash(String tokenHash) { this.tokenHash = tokenHash; }
+    public String getEmail() {
+        return email;
+    }
 
-    public AppUserEntity getInvitedBy() { return invitedBy; }
-    public void setInvitedBy(AppUserEntity invitedBy) { this.invitedBy = invitedBy; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getTokenHash() {
+        return tokenHash;
+    }
 
-    public OffsetDateTime getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(OffsetDateTime expiresAt) { this.expiresAt = expiresAt; }
+    public void setTokenHash(String tokenHash) {
+        this.tokenHash = tokenHash;
+    }
 
-    public OffsetDateTime getAcceptedAt() { return acceptedAt; }
-    public void setAcceptedAt(OffsetDateTime acceptedAt) { this.acceptedAt = acceptedAt; }
+    public AppUserEntity getInvitedBy() {
+        return invitedBy;
+    }
+
+    public void setInvitedBy(AppUserEntity invitedBy) {
+        this.invitedBy = invitedBy;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public OffsetDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(OffsetDateTime expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
+    public OffsetDateTime getAcceptedAt() {
+        return acceptedAt;
+    }
+
+    public void setAcceptedAt(OffsetDateTime acceptedAt) {
+        this.acceptedAt = acceptedAt;
+    }
 }

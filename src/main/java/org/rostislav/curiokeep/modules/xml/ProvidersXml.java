@@ -11,4 +11,5 @@ public record ProvidersXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "provider")
         List<ProviderXml> provider
-) {}
+) {
+}

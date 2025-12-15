@@ -11,4 +11,5 @@ public record IdentifiersXml(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "identifier")
         List<IdentifierRefXml> identifier
-) {}
+) {
+}
