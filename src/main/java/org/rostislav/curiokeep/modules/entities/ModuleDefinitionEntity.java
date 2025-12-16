@@ -7,6 +7,8 @@ import org.hibernate.type.SqlTypes;
 import org.rostislav.curiokeep.modules.contract.ModuleSource;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +35,10 @@ public class ModuleDefinitionEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "definition_json", nullable = false, columnDefinition = "jsonb")
     private JsonNode definitionJson;
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "module_id", referencedColumnName = "id")
+    @OrderBy("sortOrder ASC")
+    private List<ModuleFieldEntity> fields = new ArrayList<>();
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -49,6 +55,7 @@ public class ModuleDefinitionEntity {
     void preUpdate() {
         updatedAt = OffsetDateTime.now();
     }
+
 
     // getters/setters
     public UUID getId() {
@@ -113,6 +120,14 @@ public class ModuleDefinitionEntity {
 
     public void setDefinitionJson(JsonNode definitionJson) {
         this.definitionJson = definitionJson;
+    }
+
+    public Iterable<ModuleFieldEntity> getFields() {
+        return fields == null ? List.of() : fields;
+    }
+
+    public void setFields(List<ModuleFieldEntity> fields) {
+        this.fields = fields;
     }
 
     public OffsetDateTime getCreatedAt() {

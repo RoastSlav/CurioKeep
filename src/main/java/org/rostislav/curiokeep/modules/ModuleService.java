@@ -1,21 +1,22 @@
 package org.rostislav.curiokeep.modules;
 
+import jakarta.validation.constraints.NotNull;
+import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class ModuleService {
 
     private final ModuleLoadTx moduleLoadTx;
+    private final ModuleDefinitionRepository moduleDefinitionRepository;
 
-    public ModuleService(ModuleLoadTx moduleLoadTx) {
+    public ModuleService(ModuleLoadTx moduleLoadTx, ModuleDefinitionRepository moduleDefinitionRepository) {
         this.moduleLoadTx = moduleLoadTx;
+        this.moduleDefinitionRepository = moduleDefinitionRepository;
     }
 
     /**
@@ -53,4 +54,8 @@ public class ModuleService {
         }
     }
 
+    public ModuleDefinitionEntity getById(@NotNull UUID uuid) {
+        return moduleDefinitionRepository.findById(uuid)
+                .orElseThrow(() -> new NoSuchElementException("Module " + uuid + " not found"));
+    }
 }
