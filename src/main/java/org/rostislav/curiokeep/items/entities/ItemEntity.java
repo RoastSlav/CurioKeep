@@ -1,6 +1,5 @@
 package org.rostislav.curiokeep.items.entities;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -31,7 +30,7 @@ public class ItemEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attributes", nullable = false, columnDefinition = "jsonb")
-    private JsonNode attributes;
+    private String attributes;
 
     @Column(name = "created_by", columnDefinition = "uuid")
     private UUID createdBy;
@@ -95,11 +94,11 @@ public class ItemEntity {
         this.title = title;
     }
 
-    public JsonNode getAttributes() {
+    public String getAttributes() {
         return attributes;
     }
 
-    public void setAttributes(JsonNode attributes) {
+    public void setAttributes(String attributes) {
         this.attributes = attributes;
     }
 

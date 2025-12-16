@@ -1,9 +1,7 @@
 package org.rostislav.curiokeep.items;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.rostislav.curiokeep.collections.CollectionAccessService;
 import org.rostislav.curiokeep.collections.api.dto.Role;
 import org.rostislav.curiokeep.items.api.dto.*;
@@ -29,8 +27,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-
 @Service
 public class ItemService {
 
@@ -48,18 +44,15 @@ public class ItemService {
             ItemIdentifierRepository identifiers,
             CurrentUserService currentUser,
             CollectionAccessService access,
-            ModuleQueryService modules
+            ModuleQueryService modules,
+            ObjectMapper objectMapper
     ) {
         this.items = items;
         this.identifiers = identifiers;
         this.currentUser = currentUser;
         this.access = access;
         this.modules = modules;
-
-        objectMapper = JsonMapper.builder()
-                .defaultPropertyInclusion(JsonInclude.Value.construct(NON_NULL, NON_NULL))
-                .findAndAddModules()
-                .build();
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -88,7 +81,7 @@ public class ItemService {
         e.setModuleId(req.moduleId());
         e.setStateKey(normalizeState(req.stateKey(), contract));
         e.setTitle(req.title());
-        e.setAttributes(attrs);
+        e.setAttributes(writeJson(attrs));
         e.setCreatedBy(u.getId());
 
         items.save(e);
@@ -134,7 +127,7 @@ public class ItemService {
         if (req.title() != null) e.setTitle(req.title());
         if (req.attributes() != null) {
             validateAttributes(contract, attrs);
-            e.setAttributes(attrs);
+            e.setAttributes(writeJson(attrs));
         }
 
         items.save(e);
@@ -239,5 +232,14 @@ public class ItemService {
 
     private JsonNode toJsonNode(Map<String, Object> attributes) {
         return objectMapper.valueToTree(attributes);
+    }
+
+    private String writeJson(JsonNode value) {
+        if (value == null || value.isNull()) return "{}";
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ATTRIBUTES_SERIALIZATION_FAILED", e);
+        }
     }
 }

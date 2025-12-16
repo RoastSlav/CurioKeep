@@ -1,6 +1,6 @@
 package org.rostislav.curiokeep.modules;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import tools.jackson.dataformat.xml.XmlMapper;
 import org.rostislav.curiokeep.modules.xml.ModuleXml;
 import org.springframework.stereotype.Component;
 

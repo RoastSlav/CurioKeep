@@ -1,8 +1,9 @@
 package org.rostislav.curiokeep.items.api.dto;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -45,13 +46,21 @@ public record ItemResponse(
         OffsetDateTime updatedAt
 ) {
     public static ItemResponse from(ItemEntity e, ObjectMapper mapper) {
+                Map<String, Object> attrs;
+                try {
+                        String json = e.getAttributes() == null ? "{}" : e.getAttributes();
+                        attrs = mapper.readValue(json, new TypeReference<>() {
+                        });
+                } catch (Exception ex) {
+                        throw new IllegalStateException("Failed to parse item attributes", ex);
+                }
         return new ItemResponse(
                 e.getId(),
                 e.getCollectionId(),
                 e.getModuleId(),
                 e.getStateKey(),
                 e.getTitle(),
-                mapper.convertValue(e.getAttributes(), Map.class),
+                                attrs,
                 e.getCreatedBy(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()

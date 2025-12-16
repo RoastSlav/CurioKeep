@@ -1,12 +1,16 @@
 package org.rostislav.curiokeep.providers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.net.URI;
 import java.util.*;
@@ -14,10 +18,14 @@ import java.util.*;
 @Component
 public class GoogleBooksProvider implements MetadataProvider {
 
-    private final RestClient http;
+    private static final Logger log = LoggerFactory.getLogger(GoogleBooksProvider.class);
 
-    public GoogleBooksProvider(RestClient http) {
+    private final RestClient http;
+    private final ObjectMapper objectMapper;
+
+    public GoogleBooksProvider(RestClient http, ObjectMapper objectMapper) {
         this.http = http;
+        this.objectMapper = objectMapper;
     }
 
     private static String normalizeIsbn(String in) {
@@ -58,18 +66,31 @@ public class GoogleBooksProvider implements MetadataProvider {
         String isbn = normalizeIsbn(idValue);
         if (isbn == null) return Optional.empty();
 
-        String root = http.get()
+        ResponseEntity<String> response = http.get()
                 .uri("https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}", isbn)
                 .retrieve()
-                .body(String.class);
-        JsonNode rootNode;
-        try {
-            rootNode = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(root);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+                .toEntity(String.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            log.warn("googlebooks lookup failed: status={} isbn={}", response.getStatusCode(), isbn);
+            return Optional.empty();
         }
 
-        if (root == null || !rootNode.has("items") || !rootNode.get("items").isArray() || rootNode.get("items").isEmpty()) {
+        String body = response.getBody();
+        if (body == null || body.isBlank()) {
+            log.warn("googlebooks lookup empty body isbn={}", isbn);
+            return Optional.empty();
+        }
+
+        JsonNode rootNode;
+        try {
+            rootNode = objectMapper.readTree(body);
+        } catch (JacksonException e) {
+            log.warn("googlebooks lookup invalid JSON isbn={} error={}", isbn, e.getMessage());
+            return Optional.empty();
+        }
+
+        if (!rootNode.has("items") || !rootNode.get("items").isArray() || rootNode.get("items").isEmpty()) {
             return Optional.empty();
         }
 

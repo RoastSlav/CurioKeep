@@ -1,7 +1,7 @@
 package org.rostislav.curiokeep.modules;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.postgresql.util.PGobject;
 import org.springframework.core.io.Resource;
 
@@ -55,7 +55,7 @@ public class ModuleUtil {
         if (value == null) return null;
         try {
             return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize JSON", e);
         }
     }

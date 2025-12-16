@@ -1,13 +1,16 @@
 package org.rostislav.curiokeep.providers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.net.URI;
 import java.util.*;
@@ -15,10 +18,14 @@ import java.util.*;
 @Component
 public class OpenLibraryProvider implements MetadataProvider {
 
-    private final RestClient http;
+    private static final Logger log = LoggerFactory.getLogger(OpenLibraryProvider.class);
 
-    public OpenLibraryProvider(RestClient http) {
+    private final RestClient http;
+    private final ObjectMapper objectMapper;
+
+    public OpenLibraryProvider(RestClient http, ObjectMapper objectMapper) {
         this.http = http;
+        this.objectMapper = objectMapper;
     }
 
     private static String normalizeIsbn(String in) {
@@ -61,13 +68,25 @@ public class OpenLibraryProvider implements MetadataProvider {
         if (isbn == null) return Optional.empty();
 
         try {
-            String raw = http.get()
+            ResponseEntity<String> response = http.get()
                     .uri("https://openlibrary.org/isbn/{isbn}.json", isbn)
                     .retrieve()
-                    .body(String.class);
-            JsonNode rawNode = com.fasterxml.jackson.databind.json.JsonMapper.builder().build().readTree(raw);
+                    .toEntity(String.class);
 
-            if (raw == null || rawNode.isMissingNode() || rawNode.isNull()) return Optional.empty();
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.warn("openlibrary lookup failed: status={} isbn={}", response.getStatusCode(), isbn);
+                return Optional.empty();
+            }
+
+            String raw = response.getBody();
+            if (raw == null || raw.isBlank()) {
+                log.warn("openlibrary lookup empty body isbn={}", isbn);
+                return Optional.empty();
+            }
+
+            JsonNode rawNode = objectMapper.readTree(raw);
+
+            if (rawNode.isMissingNode() || rawNode.isNull()) return Optional.empty();
 
             ObjectNode normalized = JsonNodeFactory.instance.objectNode();
 
@@ -119,12 +138,12 @@ public class OpenLibraryProvider implements MetadataProvider {
                     conf
             ));
 
-        } catch (RestClientResponseException ex) {
-            // 404 = no match; anything else you may want to log later
-            if (ex.getStatusCode().value() == 404) return Optional.empty();
+        } catch (JacksonException e) {
+            log.warn("openlibrary lookup invalid JSON isbn={} error={}", isbn, e.getMessage());
             return Optional.empty();
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            log.warn("openlibrary lookup failed isbn={} error={}", isbn, e.getMessage());
+            return Optional.empty();
         }
     }
 
@@ -136,11 +155,21 @@ public class OpenLibraryProvider implements MetadataProvider {
             if (keyNode == null || !keyNode.isTextual()) continue;
             String key = keyNode.asText(); // "/authors/OL..."
             try {
-                JsonNode authorJson = http.get()
+                ResponseEntity<String> response = http.get()
                         .uri("https://openlibrary.org{key}.json", key)
                         .retrieve()
-                        .body(JsonNode.class);
-                if (authorJson != null && authorJson.hasNonNull("name")) {
+                        .toEntity(String.class);
+
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    continue;
+                }
+
+                String body = response.getBody();
+                if (body == null || body.isBlank()) continue;
+
+                JsonNode authorJson = objectMapper.readTree(body);
+
+                if (authorJson.hasNonNull("name")) {
                     result.add(authorJson.get("name").asText());
                 }
             } catch (Exception ignored) {
