@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 
@@ -67,6 +69,13 @@ public class ModuleQueryService {
         );
     }
 
+    public Optional<ModuleDefinitionEntity> getEntityById(UUID id) {
+        return modules.findById(id);
+    }
+
+    public ModuleContract getContract(ModuleDefinitionEntity e) {
+        return objectMapper.convertValue(e.getDefinitionJson(), ModuleContract.class);
+    }
 
     @Transactional(readOnly = true)
     public ModuleRawXmlResponse getRawXml(String moduleKeyRaw) {
