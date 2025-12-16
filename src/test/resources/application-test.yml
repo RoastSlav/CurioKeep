@@ -1,0 +1,10 @@
+spring:
+  docker:
+    compose:
+      enabled: false
+  flyway:
+    enabled: false
+logging:
+  level:
+    root: WARN
+    org.rostislav.curiokeep: WARN
