@@ -55,7 +55,8 @@ public class ModuleService {
     }
 
     public ModuleDefinitionEntity getById(@NotNull UUID uuid) {
-        return moduleDefinitionRepository.findById(uuid)
-                .orElseThrow(() -> new NoSuchElementException("Module " + uuid + " not found"));
+        return moduleDefinitionRepository.findWithFieldsById(uuid)
+            .or(() -> moduleDefinitionRepository.findById(uuid))
+            .orElseThrow(() -> new NoSuchElementException("Module " + uuid + " not found"));
     }
 }
