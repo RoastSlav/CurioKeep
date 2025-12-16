@@ -1,14 +1,21 @@
 package org.rostislav.curiokeep.providers;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.rostislav.curiokeep.modules.entities.ModuleFieldEntity;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class ProviderFieldMapper {
+
+    private final ObjectMapper objectMapper;
+
+    public ProviderFieldMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     private static String text(JsonNode n) {
         return (n == null || n.isNull() || n.isMissingNode()) ? null : n.asText(null);
@@ -32,7 +39,7 @@ public class ProviderFieldMapper {
         Map<String, Object> result = new HashMap<>();
 
         for (ModuleFieldEntity field : moduleFields) {
-            JsonNode mappings = field.getProviderMappings(); // you implement this
+            JsonNode mappings = parse(field.getProviderMappings());
             if (mappings == null || !mappings.isArray()) continue;
 
             for (JsonNode m : mappings) {
@@ -50,5 +57,14 @@ public class ProviderFieldMapper {
         }
 
         return result;
+    }
+
+    private JsonNode parse(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readTree(json);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

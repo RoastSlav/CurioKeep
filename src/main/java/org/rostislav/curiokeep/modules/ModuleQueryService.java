@@ -1,8 +1,6 @@
 package org.rostislav.curiokeep.modules;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.rostislav.curiokeep.modules.api.dto.ModuleDetailsResponse;
 import org.rostislav.curiokeep.modules.api.dto.ModuleRawXmlResponse;
 import org.rostislav.curiokeep.modules.api.dto.ModuleSummaryResponse;
@@ -21,8 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-
 @Service
 public class ModuleQueryService {
 
@@ -30,13 +26,9 @@ public class ModuleQueryService {
     private final ObjectMapper objectMapper;
     private final ModuleDefinitionRepository modules;
 
-    public ModuleQueryService(ModuleDefinitionRepository modules) {
+    public ModuleQueryService(ModuleDefinitionRepository modules, ObjectMapper objectMapper) {
         this.modules = modules;
-
-        objectMapper = JsonMapper.builder()
-                .defaultPropertyInclusion(JsonInclude.Value.construct(NON_NULL, NON_NULL))
-                .findAndAddModules()
-                .build();
+        this.objectMapper = objectMapper;
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +44,7 @@ public class ModuleQueryService {
         ModuleDefinitionEntity e = modules.findByModuleKey(moduleKey)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "MODULE_NOT_FOUND"));
 
-        ModuleContract contract = objectMapper.convertValue(e.getDefinitionJson(), ModuleContract.class);
+        ModuleContract contract = readContract(e.getDefinitionJson());
 
         ModuleSource source = ModuleSource.valueOf(e.getSource().name());
 
@@ -74,7 +66,7 @@ public class ModuleQueryService {
     }
 
     public ModuleContract getContract(ModuleDefinitionEntity e) {
-        return objectMapper.convertValue(e.getDefinitionJson(), ModuleContract.class);
+        return readContract(e.getDefinitionJson());
     }
 
     @Transactional(readOnly = true)
@@ -92,5 +84,16 @@ public class ModuleQueryService {
         String k = raw.trim().toLowerCase();
         if (k.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "moduleKey is required");
         return k;
+    }
+
+    private ModuleContract readContract(String json) {
+        if (json == null || json.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "MODULE_DEFINITION_EMPTY");
+        }
+        try {
+            return objectMapper.readValue(json, ModuleContract.class);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "MODULE_CONTRACT_PARSE_ERROR", e);
+        }
     }
 }

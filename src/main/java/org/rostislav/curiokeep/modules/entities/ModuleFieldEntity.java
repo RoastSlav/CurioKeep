@@ -1,6 +1,5 @@
 package org.rostislav.curiokeep.modules.entities;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -37,13 +36,13 @@ public class ModuleFieldEntity {
     private boolean sortable = false;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "default_value", columnDefinition = "jsonb")
-    private JsonNode defaultValue;
+    private String defaultValue;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "enum_values", columnDefinition = "jsonb")
-    private JsonNode enumValues;
+    private String enumValues;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "provider_mappings", columnDefinition = "jsonb")
-    private JsonNode providerMappings;
+    private String providerMappings;
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
     @Column(name = "active", nullable = false)
@@ -124,27 +123,27 @@ public class ModuleFieldEntity {
         this.sortable = sortable;
     }
 
-    public JsonNode getDefaultValue() {
+    public String getDefaultValue() {
         return defaultValue;
     }
 
-    public void setDefaultValue(JsonNode defaultValue) {
+    public void setDefaultValue(String defaultValue) {
         this.defaultValue = defaultValue;
     }
 
-    public JsonNode getEnumValues() {
+    public String getEnumValues() {
         return enumValues;
     }
 
-    public void setEnumValues(JsonNode enumValues) {
+    public void setEnumValues(String enumValues) {
         this.enumValues = enumValues;
     }
 
-    public JsonNode getProviderMappings() {
+    public String getProviderMappings() {
         return providerMappings;
     }
 
-    public void setProviderMappings(JsonNode providerMappings) {
+    public void setProviderMappings(String providerMappings) {
         this.providerMappings = providerMappings;
     }
 

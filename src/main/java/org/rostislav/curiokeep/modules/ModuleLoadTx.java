@@ -1,10 +1,8 @@
 package org.rostislav.curiokeep.modules;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.rostislav.curiokeep.modules.contract.*;
 import org.rostislav.curiokeep.modules.xml.ModuleXml;
 import org.springframework.core.io.Resource;
@@ -21,7 +19,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static org.rostislav.curiokeep.modules.ModuleUtil.*;
 
 @Service
@@ -37,17 +34,14 @@ public class ModuleLoadTx {
                         ModuleXmlParser xmlParser,
                         ModuleCompiler moduleCompiler,
                         ModuleContractValidator contractValidator,
-                        NamedParameterJdbcTemplate jdbc) {
+                        NamedParameterJdbcTemplate jdbc,
+                        ObjectMapper objectMapper) {
         this.xsdValidator = xsdValidator;
         this.xmlParser = xmlParser;
         this.moduleCompiler = moduleCompiler;
         this.contractValidator = contractValidator;
         this.jdbc = jdbc;
-
-        objectMapper = JsonMapper.builder()
-                .defaultPropertyInclusion(JsonInclude.Value.construct(NON_NULL, NON_NULL))
-                .findAndAddModules()
-                .build();
+                this.objectMapper = objectMapper;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -148,7 +142,7 @@ public class ModuleLoadTx {
         UUID moduleId;
         try {
             moduleId = upsertModuleDefinition(module, xmlRaw, checksum, contractJson);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize module contract JSON for module " + module.key(), e);
         }
 
@@ -157,7 +151,7 @@ public class ModuleLoadTx {
     }
 
 
-    private UUID upsertModuleDefinition(ModuleContract module, String xmlRaw, String checksum, JsonNode contractJson) throws JsonProcessingException {
+    private UUID upsertModuleDefinition(ModuleContract module, String xmlRaw, String checksum, JsonNode contractJson) throws JacksonException {
         String sql = """
                 INSERT INTO module_definition (
                     module_key, name, version, source, checksum, xml_raw, definition_json, created_at, updated_at
@@ -249,7 +243,7 @@ public class ModuleLoadTx {
                                 .addValue("enum_values", jsonb(objectMapper.writeValueAsString(f.enumValues())))
                                 .addValue("provider_mappings", jsonb(objectMapper.writeValueAsString(f.providerMappings())))
                                 .addValue("sort_order", f.order());
-                    } catch (JsonProcessingException e) {
+                    } catch (JacksonException e) {
                         throw new IllegalStateException("Failed to serialize field JSON for module " + module.key() +
                                 ", field " + f.key(), e);
                     }
