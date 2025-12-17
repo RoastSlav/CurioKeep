@@ -149,6 +149,9 @@ public class ProviderStatusService {
         if (key.equals("coverartarchive")) {
             return "https://coverartarchive.org/";
         }
+        if (key.equals("openproduct")) {
+            return "https://world.openfoodfacts.org/api/v2/product/7376280645020";
+        }
 
         if (profile == null) return null;
         if (profile.apiUrl() != null) return profile.apiUrl();
