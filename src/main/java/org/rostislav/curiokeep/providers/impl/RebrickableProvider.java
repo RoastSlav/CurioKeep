@@ -5,10 +5,12 @@ import org.rostislav.curiokeep.providers.AssetType;
 import org.rostislav.curiokeep.providers.MetadataProvider;
 import org.rostislav.curiokeep.providers.ProviderAsset;
 import org.rostislav.curiokeep.providers.ProviderConfidence;
+import org.rostislav.curiokeep.providers.ProviderCredential;
+import org.rostislav.curiokeep.providers.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.ProviderCredentialLookup;
 import org.rostislav.curiokeep.providers.ProviderResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -29,14 +31,18 @@ public class RebrickableProvider implements MetadataProvider {
     private static final Logger log = LoggerFactory.getLogger(RebrickableProvider.class);
     private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
+    private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
+            ProviderCredentialField.secret("apiKey", "Rebrickable API key", "Rebrickable API key")
+    );
+
     private final RestClient http;
     private final ObjectMapper objectMapper;
-    private final String apiKey;
+    private final ProviderCredentialLookup credentialLookup;
 
-    public RebrickableProvider(RestClient http, ObjectMapper objectMapper, @Value("${curiokeep.providers.rebrickable.apiKey:}") String apiKey) {
+    public RebrickableProvider(RestClient http, ObjectMapper objectMapper, ProviderCredentialLookup credentialLookup) {
         this.http = http;
         this.objectMapper = objectMapper;
-        this.apiKey = apiKey == null ? "" : apiKey.trim();
+        this.credentialLookup = credentialLookup;
     }
 
     @Override
@@ -50,8 +56,19 @@ public class RebrickableProvider implements MetadataProvider {
     }
 
     @Override
+    public List<ProviderCredentialField> credentialFields() {
+        return CREDENTIAL_FIELDS;
+    }
+
+    @Override
     public Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
-        if (apiKey.isEmpty()) {
+        Optional<ProviderCredential> stored = credentialLookup.getCredentials(key());
+        if (stored.isEmpty()) {
+            log.debug("rebrickable apiKey not configured; skipping lookup");
+            return Optional.empty();
+        }
+        String apiKey = stored.get().values().get("apiKey");
+        if (apiKey == null || apiKey.isBlank()) {
             log.debug("rebrickable apiKey not configured; skipping lookup");
             return Optional.empty();
         }

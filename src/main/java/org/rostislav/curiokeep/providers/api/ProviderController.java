@@ -9,6 +9,8 @@ import org.rostislav.curiokeep.providers.MetadataProvider;
 import org.rostislav.curiokeep.providers.ProviderDescriptor;
 import org.rostislav.curiokeep.providers.ProviderKnowledgeBase;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
+import org.rostislav.curiokeep.providers.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.ProviderCredentialService;
 import org.rostislav.curiokeep.providers.ProviderProfile;
 import org.rostislav.curiokeep.providers.ProviderRegistry;
 import org.rostislav.curiokeep.providers.ProviderStatusService;
@@ -35,17 +37,20 @@ public class ProviderController {
     private final ProviderLookupService lookup;
     private final ProviderKnowledgeBase knowledgeBase;
     private final ProviderStatusService statusService;
+    private final ProviderCredentialService credentialService;
 
     public ProviderController(ModuleService modules,
                               ProviderRegistry registry,
                               ProviderLookupService lookup,
                               ProviderKnowledgeBase knowledgeBase,
-                              ProviderStatusService statusService) {
+                              ProviderStatusService statusService,
+                              ProviderCredentialService credentialService) {
         this.modules = modules;
         this.registry = registry;
         this.lookup = lookup;
         this.knowledgeBase = knowledgeBase;
         this.statusService = statusService;
+        this.credentialService = credentialService;
     }
 
     @GetMapping
@@ -87,6 +92,8 @@ public class ProviderController {
     private ProviderInfoResponse toInfo(MetadataProvider provider) {
         ProviderDescriptor descriptor = provider.descriptor();
         ProviderProfile profile = knowledgeBase.profileFor(descriptor.key());
+        List<ProviderCredentialField> credentialFields = descriptor.credentialFields();
+        boolean configured = credentialService.hasCredentials(descriptor.key(), credentialFields);
         return new ProviderInfoResponse(
             descriptor.key(),
             profile != null && profile.displayName() != null ? profile.displayName() : descriptor.displayName(),
@@ -96,7 +103,9 @@ public class ProviderController {
             profile == null ? null : profile.websiteUrl(),
             profile == null ? null : profile.apiUrl(),
             profile == null ? null : profile.dataReturned(),
-            profile == null ? List.of() : profile.highlights()
+            profile == null ? List.of() : profile.highlights(),
+            credentialFields,
+            configured
         );
     }
 }

@@ -5,10 +5,12 @@ import org.rostislav.curiokeep.providers.AssetType;
 import org.rostislav.curiokeep.providers.MetadataProvider;
 import org.rostislav.curiokeep.providers.ProviderAsset;
 import org.rostislav.curiokeep.providers.ProviderConfidence;
+import org.rostislav.curiokeep.providers.ProviderCredential;
+import org.rostislav.curiokeep.providers.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.ProviderCredentialLookup;
 import org.rostislav.curiokeep.providers.ProviderResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -29,19 +31,21 @@ public class IgdbProvider implements MetadataProvider {
     private static final Logger log = LoggerFactory.getLogger(IgdbProvider.class);
     private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
+    private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
+            ProviderCredentialField.text("clientId", "Client ID", "Twitch IGDB Client ID"),
+            ProviderCredentialField.secret("token", "Bearer token", "IGDB bearer token")
+    );
+
     private final RestClient http;
     private final ObjectMapper objectMapper;
-    private final String clientId;
-    private final String bearerToken;
+    private final ProviderCredentialLookup credentialLookup;
 
     public IgdbProvider(RestClient http,
                         ObjectMapper objectMapper,
-                        @Value("${curiokeep.providers.igdb.clientId:}") String clientId,
-                        @Value("${curiokeep.providers.igdb.token:}") String bearerToken) {
+                        ProviderCredentialLookup credentialLookup) {
         this.http = http;
         this.objectMapper = objectMapper;
-        this.clientId = clientId == null ? "" : clientId.trim();
-        this.bearerToken = bearerToken == null ? "" : bearerToken.trim();
+        this.credentialLookup = credentialLookup;
     }
 
     @Override
@@ -55,8 +59,21 @@ public class IgdbProvider implements MetadataProvider {
     }
 
     @Override
+    public List<ProviderCredentialField> credentialFields() {
+        return CREDENTIAL_FIELDS;
+    }
+
+    @Override
     public Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
-        if (clientId.isEmpty() || bearerToken.isEmpty()) {
+        Optional<ProviderCredential> stored = credentialLookup.getCredentials(key());
+        if (stored.isEmpty()) {
+            log.debug("igdb clientId/token not configured; skipping lookup");
+            return Optional.empty();
+        }
+        Map<String, String> storedValues = stored.get().values();
+        String clientId = storedValues.get("clientId");
+        String bearerToken = storedValues.get("token");
+        if (clientId == null || clientId.isBlank() || bearerToken == null || bearerToken.isBlank()) {
             log.debug("igdb clientId/token not configured; skipping lookup");
             return Optional.empty();
         }

@@ -2,6 +2,7 @@ package org.rostislav.curiokeep.providers;
 
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.providers.MetadataProvider;
+import org.rostislav.curiokeep.providers.ProviderCredentialField;
 
 import java.util.Arrays;
 import java.util.List;
@@ -11,12 +12,14 @@ public record ProviderDescriptor(
         String displayName,
         String description,
         List<ItemIdentifierEntity.IdType> supportedIdTypes,
-        Integer priority
+    Integer priority,
+    List<ProviderCredentialField> credentialFields
 ) {
     public ProviderDescriptor {
         displayName = displayName == null || displayName.isBlank() ? humanize(key) : displayName;
         description = description;
         supportedIdTypes = supportedIdTypes == null ? List.of() : List.copyOf(supportedIdTypes);
+    credentialFields = credentialFields == null ? List.of() : List.copyOf(credentialFields);
         priority = priority;
     }
 
@@ -24,7 +27,7 @@ public record ProviderDescriptor(
         List<ItemIdentifierEntity.IdType> supported = Arrays.stream(ItemIdentifierEntity.IdType.values())
                 .filter(provider::supports)
                 .toList();
-        return new ProviderDescriptor(provider.key(), null, null, supported, null);
+    return new ProviderDescriptor(provider.key(), null, null, supported, null, provider.credentialFields());
     }
 
     private static String humanize(String key) {
