@@ -36,19 +36,18 @@ public class OpenLibraryProvider implements MetadataProvider {
     }
 
     private static void putText(ObjectNode out, String key, JsonNode n) {
-        if (n != null && n.isTextual() && !n.asText().isBlank()) out.put(key, n.asText().trim());
+        if (n != null && n.isString() && !n.asString().isBlank()) out.put(key, n.asString().trim());
     }
 
     private static void putPublishedYear(ObjectNode out, JsonNode publishDate) {
-        if (publishDate == null || !publishDate.isTextual()) return;
-        String s = publishDate.asText();
-        // extract first 4-digit year
+        if (publishDate == null || !publishDate.isString()) return;
+        String s = publishDate.asString();
+
         var m = java.util.regex.Pattern.compile("(\\d{4})").matcher(s);
         if (m.find()) out.put("published_year", Integer.parseInt(m.group(1)));
     }
 
     private static Map<String, Object> jsonToMap(JsonNode node) {
-        // simplest safe thing: store raw JSON string; you can improve later
         return Map.of("json", node == null ? null : node.toString());
     }
 
@@ -95,7 +94,7 @@ public class OpenLibraryProvider implements MetadataProvider {
             putText(normalized, "subtitle", rawNode.get("subtitle"));
 
             // publish
-            putText(normalized, "publisher", rawNode.get("publishers") != null && rawNode.get("publishers").isArray() && rawNode.get("publishers").size() > 0
+            putText(normalized, "publisher", rawNode.get("publishers") != null && rawNode.get("publishers").isArray() && !rawNode.get("publishers").isEmpty()
                     ? rawNode.get("publishers").get(0)
                     : rawNode.get("publishers"));
             putPublishedYear(normalized, rawNode.get("publish_date"));
@@ -104,11 +103,10 @@ public class OpenLibraryProvider implements MetadataProvider {
             if (rawNode.hasNonNull("number_of_pages")) normalized.put("pages", rawNode.get("number_of_pages").asInt());
 
             // language (OpenLibrary returns language keys sometimes)
-            // keep it simple: if "languages" is array, take first key (like "/languages/eng")
-            if (rawNode.has("languages") && rawNode.get("languages").isArray() && rawNode.get("languages").size() > 0) {
+            if (rawNode.has("languages") && rawNode.get("languages").isArray() && !rawNode.get("languages").isEmpty()) {
                 JsonNode langKey = rawNode.get("languages").get(0).get("key");
-                if (langKey != null && langKey.isTextual()) {
-                    String v = langKey.asText();
+                if (langKey != null && langKey.isString()) {
+                    String v = langKey.asString();
                     normalized.put("language", v.substring(v.lastIndexOf('/') + 1));
                 }
             }
@@ -118,8 +116,6 @@ public class OpenLibraryProvider implements MetadataProvider {
             if (idType == ItemIdentifierEntity.IdType.ISBN13) normalized.put("isbn13", isbn);
 
             // authors: OpenLibrary often requires a second call to /authors/{id}.json
-            // Keep v1 simple: return empty if not resolved (you can add the extra call later)
-            // You *can* still attempt it if you want:
             List<String> authors = tryResolveAuthors(rawNode);
             if (!authors.isEmpty()) normalized.put("authors", String.join(", ", authors));
 
@@ -152,8 +148,8 @@ public class OpenLibraryProvider implements MetadataProvider {
         List<String> result = new ArrayList<>();
         for (JsonNode a : raw.get("authors")) {
             JsonNode keyNode = a.get("key");
-            if (keyNode == null || !keyNode.isTextual()) continue;
-            String key = keyNode.asText(); // "/authors/OL..."
+            if (keyNode == null || !keyNode.isString()) continue;
+            String key = keyNode.asString();
             try {
                 ResponseEntity<String> response = http.get()
                         .uri("https://openlibrary.org{key}.json", key)
@@ -170,7 +166,7 @@ public class OpenLibraryProvider implements MetadataProvider {
                 JsonNode authorJson = objectMapper.readTree(body);
 
                 if (authorJson.hasNonNull("name")) {
-                    result.add(authorJson.get("name").asText());
+                    result.add(authorJson.get("name").asString());
                 }
             } catch (Exception ignored) {
             }
