@@ -1,5 +1,5 @@
 import { AppBar, Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, ListItemIcon, Toolbar, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ViewListIcon from "@mui/icons-material/ViewList";
@@ -36,12 +36,22 @@ export default function Layout({ user, onLogout }: LayoutProps) {
         { label: "Providers", to: "/providers", icon: <HubIcon fontSize="small" /> },
     ];
 
+    const activeNav = useMemo(
+        () => navItems.find((item) => location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to))),
+        [location.pathname]
+    );
+
     return (
         <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: (t) => t.palette.background.default }}>
             <AppBar
                 position="fixed"
                 elevation={0}
-                sx={{ ml: !isMobile && open ? `${drawerWidth}px` : 0, width: !isMobile && open ? `calc(100% - ${drawerWidth}px)` : "100%", backgroundColor: accent }}
+                sx={{
+                    ml: !isMobile && open ? `${drawerWidth}px` : 0,
+                    width: !isMobile && open ? `calc(100% - ${drawerWidth}px)` : "100%",
+                    backgroundColor: accent,
+                    zIndex: (t) => t.zIndex.drawer + 1,
+                }}
             >
                 <Toolbar>
                     <IconButton color="inherit" edge="start" onClick={() => setOpen((v) => !v)} sx={{ mr: 2 }}>
@@ -58,7 +68,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
             </AppBar>
 
             <Drawer
-                variant={isMobile ? "temporary" : "permanent"}
+                variant={isMobile ? "temporary" : "persistent"}
                 open={open}
                 onClose={() => setOpen(false)}
                 ModalProps={{ keepMounted: true }}
@@ -75,7 +85,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
             >
                 <Toolbar>
                     <Typography variant="h6" color="primary">
-                        Collections
+                        {activeNav?.label || "CurioKeep"}
                     </Typography>
                 </Toolbar>
                 <Divider />
@@ -105,7 +115,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                 </List>
             </Drawer>
 
-            <Box component="main" sx={{ flexGrow: 1, p: 3, ml: open ? `${drawerWidth}px` : 0 }}>
+            <Box component="main" sx={{ flexGrow: 1, p: 3, ml: !isMobile && open ? `${drawerWidth}px` : 0 }}>
                 <Toolbar />
                 <Outlet />
             </Box>

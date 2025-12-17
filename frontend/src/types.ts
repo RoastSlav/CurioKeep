@@ -21,6 +21,15 @@ export type ModuleField = {
     label: string;
     fieldType: string;
     required?: boolean;
+    order?: number;
+    searchable?: boolean;
+    filterable?: boolean;
+    sortable?: boolean;
+    active?: boolean;
+    deprecated?: boolean;
+    identifiers?: unknown[];
+    enumValues?: unknown[];
+    providerMappings?: unknown[];
 };
 
 export type ModuleDetails = {
