@@ -10,6 +10,7 @@ import org.rostislav.curiokeep.modules.contract.ModuleSource;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.providers.ProviderConfidence;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
+import org.rostislav.curiokeep.providers.ProviderRegistry;
 import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
 import org.rostislav.curiokeep.providers.ProviderResult;
 import org.rostislav.curiokeep.security.SetupModeFilter;
@@ -35,8 +36,11 @@ class ProviderControllerTest {
     @Mock
     ModuleService moduleService;
 
-    @Mock
-    ProviderLookupService providerLookupService;
+        @Mock
+        ProviderLookupService providerLookupService;
+
+        @Mock
+        ProviderRegistry providerRegistry;
 
     @Mock
     AppUserRepository appUserRepository;
@@ -46,7 +50,7 @@ class ProviderControllerTest {
     @BeforeEach
     void setUp() {
         when(appUserRepository.existsByIsAdminTrue()).thenReturn(true);
-        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(moduleService, providerLookupService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(moduleService, providerRegistry, providerLookupService))
                 .addFilters(new SetupModeFilter(appUserRepository))
                 .build();
     }

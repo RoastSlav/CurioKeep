@@ -14,10 +14,10 @@ public record ProviderDescriptor(
         Integer priority
 ) {
     public ProviderDescriptor {
-        this.displayName = displayName == null || displayName.isBlank() ? humanize(key) : displayName;
-        this.description = description;
-        this.supportedIdTypes = supportedIdTypes == null ? List.of() : List.copyOf(supportedIdTypes);
-        this.priority = priority;
+        displayName = displayName == null || displayName.isBlank() ? humanize(key) : displayName;
+        description = description;
+        supportedIdTypes = supportedIdTypes == null ? List.of() : List.copyOf(supportedIdTypes);
+        priority = priority;
     }
 
     public static ProviderDescriptor basic(MetadataProvider provider) {
