@@ -1,4 +1,4 @@
-import { Alert, Snackbar } from "@mui/material";
+import { Alert, Snackbar, alpha } from "@mui/material";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 export type Toast = { id: number; message: string; severity?: "success" | "info" | "warning" | "error" };
@@ -31,7 +31,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             {children}
             {queue.map((toast) => (
                 <Snackbar key={toast.id} open autoHideDuration={4000} onClose={handleClose(toast.id)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-                    <Alert onClose={handleClose(toast.id)} severity={toast.severity} variant="filled" sx={{ width: "100%" }}>
+                    <Alert
+                        onClose={handleClose(toast.id)}
+                        severity={toast.severity}
+                        variant="filled"
+                        sx={{
+                            width: "100%",
+                            border: (t) => `1px solid ${alpha(t.palette.common.black, 0.08)}`,
+                            ...(toast.severity === "success" && {
+                                backgroundColor: (t) => t.palette.primary.main,
+                                color: (t) => t.palette.common.white,
+                            }),
+                            ...(toast.severity === "info" && {
+                                backgroundColor: (t) => t.palette.secondary.main,
+                                color: (t) => t.palette.common.white,
+                            }),
+                        }}
+                    >
                         {toast.message}
                     </Alert>
                 </Snackbar>

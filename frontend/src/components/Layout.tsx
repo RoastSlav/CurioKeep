@@ -1,4 +1,4 @@
-import { AppBar, Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, ListItemIcon, Toolbar, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { AppBar, Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, ListItemIcon, Toolbar, Typography, alpha, useMediaQuery, useTheme } from "@mui/material";
 import { useEffect, useMemo } from "react";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -10,7 +10,6 @@ import type { PropsWithChildren } from "react";
 import { useState } from "react";
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { logout } from "../api";
-import { accent } from "../theme";
 import type { User } from "../types";
 
 const drawerWidth = 240;
@@ -49,7 +48,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                 sx={{
                     ml: !isMobile && open ? `${drawerWidth}px` : 0,
                     width: !isMobile && open ? `calc(100% - ${drawerWidth}px)` : "100%",
-                    backgroundColor: accent,
+                    backgroundColor: (t) => t.palette.common.black,
                     zIndex: (t) => t.zIndex.drawer + 1,
                     borderRadius: 0,
                     borderTopLeftRadius: 0,
@@ -63,7 +62,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                     <Typography variant="h6" sx={{ flexGrow: 1 }}>
                         CurioKeep
                     </Typography>
-                    <Avatar sx={{ width: 32, height: 32, bgcolor: "white", color: accent, mr: 1 }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: (t) => t.palette.background.paper, color: (t) => t.palette.primary.main, mr: 1 }}>
                         {user.displayName?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
                     </Avatar>
                     <Typography variant="body2">{user.displayName || user.email}</Typography>
@@ -81,8 +80,8 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                     [`& .MuiDrawer-paper`]: {
                         width: drawerWidth,
                         boxSizing: "border-box",
-                        backgroundColor: "white",
-                        borderRight: "1px solid #e8e8ef",
+                        backgroundColor: (t) => t.palette.background.paper,
+                        borderRight: (t) => `1px solid ${alpha(t.palette.secondary.main, 0.3)}`,
                     },
                 }}
             >

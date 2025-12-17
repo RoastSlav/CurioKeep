@@ -8,13 +8,16 @@ const theme = createTheme({
     palette: {
         primary: { main: primary },
         secondary: { main: secondary },
+        common: {
+            black: accent,
+        },
         background: {
             default: "#f7f7fb",
             paper: "#ffffff",
         },
         text: {
             primary: accent,
-            secondary: "#2f3640",
+            secondary: secondary,
         },
     },
     shape: { borderRadius: 12 },
