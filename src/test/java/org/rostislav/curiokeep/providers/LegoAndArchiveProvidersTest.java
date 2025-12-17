@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +39,9 @@ class LegoAndArchiveProvidersTest {
         server.expect(requestTo(containsString("brickset.com/api/v3.asmx/getSet")))
                 .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
 
-        BricksetProvider provider = new BricksetProvider(client, objectMapper, "brick-key");
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+                .with("brickset", Map.of("apiKey", "brick-key"));
+        BricksetProvider provider = new BricksetProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.CUSTOM, "9999");
 
@@ -69,7 +72,9 @@ class LegoAndArchiveProvidersTest {
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "key rebrick-key"))
                 .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
 
-        RebrickableProvider provider = new RebrickableProvider(client, objectMapper, "rebrick-key");
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+                .with("rebrickable", Map.of("apiKey", "rebrick-key"));
+        RebrickableProvider provider = new RebrickableProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.CUSTOM, "497-1");
 

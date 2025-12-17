@@ -56,6 +56,13 @@ export type ModuleDetails = {
     key?: string;
 };
 
+export type ProviderCredentialField = {
+    name: string;
+    label: string;
+    description?: string;
+    secret: boolean;
+};
+
 export type ProviderInfo = {
     key: string;
     displayName: string;
@@ -66,6 +73,8 @@ export type ProviderInfo = {
     apiUrl?: string;
     dataReturned?: string;
     highlights?: string[];
+    credentialFields?: ProviderCredentialField[];
+    credentialsConfigured: boolean;
 };
 
 export type ProviderStatus = {
@@ -75,6 +84,8 @@ export type ProviderStatus = {
     supportedIdTypes: string[];
     rateLimited?: boolean;
     retryAfterSeconds?: number;
+    credentialsRequired: boolean;
+    credentialsConfigured: boolean;
 };
 
 export type Collection = {

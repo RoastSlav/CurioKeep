@@ -12,6 +12,7 @@ import org.rostislav.curiokeep.providers.impl.MusicBrainzProvider;
 import org.rostislav.curiokeep.providers.impl.DiscogsProvider;
 import org.rostislav.curiokeep.providers.impl.CoverArtArchiveProvider;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,7 +72,9 @@ class MusicProvidersTest {
         server.expect(requestTo(containsString("api.discogs.com/database/search")))
                 .andRespond(withSuccess(discogsJson, MediaType.APPLICATION_JSON));
 
-        DiscogsProvider provider = new DiscogsProvider(client, objectMapper, "token123");
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+                .with("discogs", Map.of("token", "token123"));
+        DiscogsProvider provider = new DiscogsProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.UPC, "012345678905");
 

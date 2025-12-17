@@ -50,6 +50,9 @@ class ProviderControllerTest {
         @Mock
         ProviderStatusService providerStatusService;
 
+        @Mock
+        org.rostislav.curiokeep.providers.ProviderCredentialService providerCredentialService;
+
     @Mock
     AppUserRepository appUserRepository;
 
@@ -58,7 +61,7 @@ class ProviderControllerTest {
     @BeforeEach
     void setUp() {
         when(appUserRepository.existsByIsAdminTrue()).thenReturn(true);
-        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(moduleService, providerRegistry, providerLookupService, providerKnowledgeBase, providerStatusService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(moduleService, providerRegistry, providerLookupService, providerKnowledgeBase, providerStatusService, providerCredentialService))
                 .addFilters(new SetupModeFilter(appUserRepository))
                 .build();
     }
