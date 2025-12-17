@@ -36,7 +36,12 @@ export default function ProvidersPage() {
                 setLoading(true);
                 setError(undefined);
                 const data = await listProviders();
-                setProviders(data);
+                if (Array.isArray(data)) {
+                    setProviders(data);
+                } else {
+                    setProviders([]);
+                    setError("Unexpected response from provider service");
+                }
             } catch (e) {
                 setError((e as Error).message);
             } finally {
