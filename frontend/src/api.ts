@@ -1,4 +1,4 @@
-import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule } from "./types";
+import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation } from "./types";
 
 async function jsonFetch<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
     let res: Response;
@@ -134,3 +134,46 @@ export async function lookupProviders(payload: ProviderLookupResult["request"]):
 }
 
 export type { User };
+
+// Admin invites
+export async function createInvite(email: string): Promise<string> {
+    const res = await jsonFetch<{ token: string }>("/api/admin/invites", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+    });
+    return res.token;
+}
+
+export async function validateInvite(token: string): Promise<InviteValidation> {
+    return jsonFetch<InviteValidation>(`/api/invites/${encodeURIComponent(token)}/validate`, { method: "GET" });
+}
+
+export async function acceptInvite(token: string, password: string, displayName: string): Promise<void> {
+    await jsonFetch("/api/invites/accept", {
+        method: "POST",
+        body: JSON.stringify({ token, password, displayName }),
+    });
+}
+
+// Admin users (API not yet available server-side; wired to expected endpoints)
+export async function listUsers(): Promise<AdminUser[]> {
+    return jsonFetch<AdminUser[]>("/api/admin/users", { method: "GET" });
+}
+
+export async function setUserStatus(userId: string, status: "ACTIVE" | "DISABLED"): Promise<void> {
+    await jsonFetch(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status }),
+    });
+}
+
+export async function setUserAdmin(userId: string, admin: boolean): Promise<void> {
+    await jsonFetch(`/api/admin/users/${encodeURIComponent(userId)}/admin`, {
+        method: "POST",
+        body: JSON.stringify({ admin }),
+    });
+}
+
+export async function resetUserPassword(userId: string): Promise<void> {
+    await jsonFetch(`/api/admin/users/${encodeURIComponent(userId)}/reset-password`, { method: "POST" });
+}

@@ -7,6 +7,19 @@ export type User = {
     admin: boolean;
 };
 
+export type AdminUser = {
+    id: string;
+    email: string;
+    displayName: string;
+    admin: boolean;
+    status?: string;
+    authProvider?: string;
+    providerSubject?: string;
+    lastLoginAt?: string;
+};
+
+export type InviteValidation = { valid: boolean };
+
 export type ModuleSummary = {
     moduleKey: string;
     name: string;

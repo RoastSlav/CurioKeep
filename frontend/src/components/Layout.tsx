@@ -6,6 +6,9 @@ import ViewListIcon from "@mui/icons-material/ViewList";
 import ExtensionIcon from "@mui/icons-material/Extension";
 import HubIcon from "@mui/icons-material/Hub";
 import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/Person";
+import GroupIcon from "@mui/icons-material/Group";
+import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import type { PropsWithChildren } from "react";
 import { useState } from "react";
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -28,16 +31,26 @@ export default function Layout({ user, onLogout }: LayoutProps) {
     // Sync when viewport changes
     useEffect(() => setOpen(!isMobile), [isMobile]);
 
-    const navItems = [
-        { label: "Dashboard", to: "/", icon: <DashboardIcon fontSize="small" /> },
-        { label: "Modules", to: "/modules", icon: <ExtensionIcon fontSize="small" /> },
-        { label: "Collections", to: "/collections", icon: <ViewListIcon fontSize="small" /> },
-        { label: "Providers", to: "/providers", icon: <HubIcon fontSize="small" /> },
-    ];
+    const navItems = useMemo(() => {
+        const items = [
+            { label: "Dashboard", to: "/", icon: <DashboardIcon fontSize="small" /> },
+            { label: "Modules", to: "/modules", icon: <ExtensionIcon fontSize="small" /> },
+            { label: "Collections", to: "/collections", icon: <ViewListIcon fontSize="small" /> },
+            { label: "Providers", to: "/providers", icon: <HubIcon fontSize="small" /> },
+            { label: "Profile", to: "/profile", icon: <PersonIcon fontSize="small" /> },
+        ];
+
+        if (user.admin) {
+            items.push({ label: "Users", to: "/admin/users", icon: <GroupIcon fontSize="small" /> });
+            items.push({ label: "Invites", to: "/admin/invites", icon: <PersonAddAltIcon fontSize="small" /> });
+        }
+
+        return items;
+    }, [user.admin]);
 
     const activeNav = useMemo(
         () => navItems.find((item) => location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to))),
-        [location.pathname]
+        [location.pathname, navItems]
     );
 
     return (
@@ -119,7 +132,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
 
             <Box component="main" sx={{ flexGrow: 1, p: 3, ml: !isMobile && open ? `${drawerWidth}px` : 0 }}>
                 <Toolbar />
-                <Outlet />
+                <Outlet context={{ user }} />
             </Box>
 
             <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)}>
