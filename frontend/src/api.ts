@@ -76,11 +76,29 @@ export async function getHealth(): Promise<{ status: string }> {
 }
 
 export async function listModules(): Promise<ModuleSummary[]> {
-    return jsonFetch<ModuleSummary[]>("/api/modules", { method: "GET" });
+    const mods = await jsonFetch<any[]>("/api/modules", { method: "GET" });
+    return mods.map((m) => ({
+        moduleKey: m.moduleKey ?? m.key,
+        key: m.moduleKey ?? m.key,
+        name: m.name,
+        version: m.version,
+        description: m.description,
+    } satisfies ModuleSummary));
 }
 
 export async function getModule(key: string): Promise<ModuleDetails> {
-    return jsonFetch<ModuleDetails>(`/api/modules/${encodeURIComponent(key)}`, { method: "GET" });
+    const data = await jsonFetch<any>(`/api/modules/${encodeURIComponent(key)}`, { method: "GET" });
+    const contract = data.contract || {};
+    return {
+        moduleKey: data.moduleKey ?? data.key,
+        key: data.moduleKey ?? data.key,
+        name: data.name,
+        version: data.version,
+        description: contract.description ?? data.description,
+        states: contract.states,
+        providers: contract.providers,
+        fields: contract.fields,
+    } satisfies ModuleDetails;
 }
 
 export async function listCollections(): Promise<Collection[]> {
@@ -95,7 +113,12 @@ export async function createCollection(name: string, description: string): Promi
 }
 
 export async function listCollectionModules(collectionId: string): Promise<CollectionModule[]> {
-    return jsonFetch<CollectionModule[]>(`/api/collections/${collectionId}/modules`, { method: "GET" });
+    const data = await jsonFetch<any[]>(`/api/collections/${collectionId}/modules`, { method: "GET" });
+    return data.map((m) => ({
+        moduleKey: m.moduleKey,
+        moduleName: m.name ?? m.moduleName,
+        version: m.version,
+    } satisfies CollectionModule));
 }
 
 export async function enableCollectionModule(collectionId: string, moduleKey: string): Promise<void> {
