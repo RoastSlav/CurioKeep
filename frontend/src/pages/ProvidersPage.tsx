@@ -131,6 +131,15 @@ export default function ProvidersPage() {
                     const status = statusByKey[p.key];
                     const isChecking = checkingKey === p.key;
                     const statusIcon = status?.available ? <CheckCircleIcon color="success" fontSize="small" /> : <ErrorOutlineIcon color="warning" fontSize="small" />;
+                    const statusText = (() => {
+                        if (!status) return undefined;
+                        if (status.rateLimited) return "Status checks are cooling down. Try again soon.";
+                        if (status.available) return status.message || "Available";
+                        // Show only high-level failure states to avoid leaking HTML bodies.
+                        if (status.message?.toLowerCase().includes("internal")) return "Status check failed inside the app.";
+                        if (status.message?.toLowerCase().includes("unreachable")) return "Provider API is unreachable.";
+                        return "Provider API is unreachable.";
+                    })();
                     return (
                         <Card key={p.key} variant="outlined">
                             <CardHeader
@@ -192,11 +201,11 @@ export default function ProvidersPage() {
                                     </Stack>
                                 ) : null}
 
-                                {status && (
+                                {status && statusText && (
                                     <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1 }}>
                                         {statusIcon}
                                         <Typography variant="body2" color={status.available ? "success.main" : "warning.main"}>
-                                            {status.message || (status.available ? "Available" : "Unavailable")}
+                                            {statusText}
                                         </Typography>
                                     </Box>
                                 )}

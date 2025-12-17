@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import org.rostislav.curiokeep.providers.ProviderDescriptor;
 import org.rostislav.curiokeep.providers.ProviderProfile;
@@ -72,21 +74,35 @@ public class ProviderStatusService {
         List<ItemIdentifierEntity.IdType> ids = descriptor.supportedIdTypes();
         ProviderProfile profile = knowledgeBase.profileFor(key);
         String target = profile != null ? (profile.apiUrl() != null ? profile.apiUrl() : profile.websiteUrl()) : null;
+
         boolean available = descriptor != null;
         String message;
-        if (target == null) {
-            message = "No health endpoint configured";
+
+        if (target == null || target.contains("{")) {
+            // Avoid calling templated URLs or missing endpoints; treat as not configured.
+            message = "Health check not configured for this provider";
+            available = false;
         } else {
+            String safeTarget = normalizeTarget(key, target);
             try {
-                restClient.get().uri(target).retrieve().toBodilessEntity();
-                message = "Successfully contacted " + target;
+                restClient.get().uri(safeTarget).retrieve().toBodilessEntity();
+                message = "Successfully contacted provider";
                 available = true;
+            } catch (RestClientResponseException ex) {
+                log.debug("Provider health check failed for {}: status={} bodyLength={}", key, ex.getStatusCode(), ex.getResponseBodyAsString().length());
+                message = "Health check failed: HTTP " + ex.getStatusCode().value();
+                available = false;
+            } catch (RestClientException ex) {
+                log.debug("Provider health check failed for {}: {}", key, ex.getMessage());
+                message = "Health check failed: API unreachable";
+                available = false;
             } catch (Exception ex) {
                 log.debug("Provider health check failed for {}: {}", key, ex.getMessage());
-                message = "Health call failed: " + ex.getMessage();
+                message = "Health check failed: internal error";
                 available = false;
             }
         }
+
         ProviderStatusResponse response = new ProviderStatusResponse(
                 key,
                 available,
@@ -96,6 +112,14 @@ public class ProviderStatusService {
                 null
         );
         return new ProviderStatusEntry(response, Instant.now());
+    }
+
+    private String normalizeTarget(String key, String target) {
+        // Certain providers require query parameters; supply safe defaults to avoid 400s.
+        if (key.equals("googlebooks") && !target.contains("?")) {
+            return target + "?q=ping";
+        }
+        return target;
     }
 
     private ProviderDescriptor descriptorFor(String key) {
