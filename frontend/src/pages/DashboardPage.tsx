@@ -25,7 +25,7 @@ export default function DashboardPage() {
                         <Typography variant="subtitle2" color="text.secondary">
                             Backend health
                         </Typography>
-                        <Typography variant="h6" sx={{ mt: 1 }} color={health === "UP" ? "success.main" : "error.main"}>
+                        <Typography variant="h6" sx={{ mt: 1 }} color={health === "UP" || health === "OK" ? "success.main" : "error.main"}>
                             {health === "loading" ? "Checking…" : health}
                         </Typography>
                     </CardContent>
