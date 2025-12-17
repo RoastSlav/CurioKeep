@@ -20,7 +20,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import { getProviderStatus, listProviders } from "../api";
+import { checkProviderStatus, listProviders } from "../api";
 import type { ProviderInfo, ProviderStatus } from "../types";
 
 export default function ProvidersPage() {
@@ -68,21 +68,31 @@ export default function ProvidersPage() {
         }
     };
 
+    const applyStatus = (key: string, status: ProviderStatus) => {
+        setStatusByKey((prev) => ({ ...prev, [key]: status }));
+        if (status.rateLimited && status.retryAfterSeconds) {
+            window.setTimeout(() => {
+                setStatusByKey((prev) => {
+                    const existing = prev[key];
+                    if (!existing || !existing.rateLimited) return prev;
+                    return { ...prev, [key]: { ...existing, rateLimited: false } };
+                });
+            }, status.retryAfterSeconds * 1000);
+        }
+    };
+
     const checkStatus = async (key: string) => {
         try {
             setCheckingKey(key);
-            const status = await getProviderStatus(key);
-            setStatusByKey((prev) => ({ ...prev, [key]: status }));
+            const status = await checkProviderStatus(key);
+            applyStatus(key, status);
         } catch (e) {
-            setStatusByKey((prev) => ({
-                ...prev,
-                [key]: {
-                    key,
-                    available: false,
-                    supportedIdTypes: [],
-                    message: (e as Error).message,
-                },
-            }));
+            applyStatus(key, {
+                key,
+                available: false,
+                supportedIdTypes: [],
+                message: (e as Error).message,
+            });
         } finally {
             setCheckingKey(null);
         }
@@ -137,7 +147,7 @@ export default function ProvidersPage() {
                                             onClick={() => checkStatus(p.key)}
                                             size="small"
                                             startIcon={<RefreshIcon fontSize="small" />}
-                                            disabled={isChecking}
+                                            disabled={isChecking || status?.rateLimited}
                                         >
                                             {isChecking ? "Checking…" : "Check status"}
                                         </Button>

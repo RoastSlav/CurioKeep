@@ -73,6 +73,8 @@ export type ProviderStatus = {
     available: boolean;
     message?: string;
     supportedIdTypes: string[];
+    rateLimited?: boolean;
+    retryAfterSeconds?: number;
 };
 
 export type Collection = {

@@ -147,6 +147,10 @@ export async function getProviderStatus(key: string): Promise<ProviderStatus> {
     return jsonFetch<ProviderStatus>(`/api/providers/${encodeURIComponent(key)}/status`, { method: "GET" });
 }
 
+export async function checkProviderStatus(key: string): Promise<ProviderStatus> {
+    return jsonFetch<ProviderStatus>(`/api/providers/${encodeURIComponent(key)}/status/check`, { method: "POST" });
+}
+
 export type { User };
 
 // Admin invites
