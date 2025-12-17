@@ -53,7 +53,10 @@ function App() {
         }
         if (!state.user) {
             if (location.pathname !== "/login") navigate("/login", { replace: true });
+            return;
         }
+        // If already authenticated but on the login screen, send to home.
+        if (location.pathname === "/login") navigate("/", { replace: true });
     }, [state.loading, state.setupRequired, state.user, location.pathname, navigate]);
 
     const shell = useMemo(() => {
