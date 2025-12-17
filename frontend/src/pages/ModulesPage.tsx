@@ -35,7 +35,7 @@ export default function ModulesPage() {
                     </AccordionSummary>
                     <AccordionDetails>
                         <Typography color="text.secondary" sx={{ mb: 1 }}>
-                            {m.description || "No description"}
+                            {details[m.moduleKey]?.description ?? m.description ?? "No description"}
                         </Typography>
                         <ModuleDetailView details={details[m.moduleKey]} />
                     </AccordionDetails>
@@ -76,11 +76,33 @@ function ModuleDetailView({ details }: { details?: ModuleDetails }) {
                     <Divider />
                     <Stack spacing={1}>
                         {details.fields.map((f) => (
-                            <Stack key={f.fieldKey} direction="row" justifyContent="space-between">
-                                <Typography>{f.label}</Typography>
-                                <Typography color="text.secondary" variant="body2">
-                                    {f.fieldType} {f.required ? "• required" : ""}
-                                </Typography>
+                            <Stack key={f.fieldKey} spacing={1}>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                    <div>
+                                        <Typography>{f.label || f.fieldKey}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{f.fieldKey}</Typography>
+                                    </div>
+                                    <Typography color="text.secondary" variant="body2">
+                                        {f.fieldType} {f.required ? "• required" : ""}
+                                    </Typography>
+                                </Stack>
+                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                    <Chip label={`order: ${f.order ?? "-"}`} size="small" />
+                                    {f.searchable && <Chip label="searchable" size="small" />}
+                                    {f.filterable && <Chip label="filterable" size="small" />}
+                                    {f.sortable && <Chip label="sortable" size="small" />}
+                                    {f.active === false && <Chip label="inactive" color="warning" size="small" />}
+                                    {f.deprecated && <Chip label="deprecated" color="error" size="small" />}
+                                    {Array.isArray(f.identifiers) && f.identifiers.length > 0 && (
+                                        <Chip label={`${f.identifiers.length} id(s)`} size="small" />
+                                    )}
+                                    {Array.isArray(f.enumValues) && f.enumValues.length > 0 && (
+                                        <Chip label={`${f.enumValues.length} enum`} size="small" />
+                                    )}
+                                    {Array.isArray(f.providerMappings) && f.providerMappings.length > 0 && (
+                                        <Chip label={`${f.providerMappings.length} provider map(s)`} size="small" />
+                                    )}
+                                </Stack>
                             </Stack>
                         ))}
                     </Stack>
