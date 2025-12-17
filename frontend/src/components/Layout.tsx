@@ -1,0 +1,125 @@
+import { AppBar, Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, Toolbar, Typography } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import ExtensionIcon from "@mui/icons-material/Extension";
+import HubIcon from "@mui/icons-material/Hub";
+import LogoutIcon from "@mui/icons-material/Logout";
+import type { PropsWithChildren } from "react";
+import { useState } from "react";
+import { Link as RouterLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { logout } from "../api";
+import { accent } from "../theme";
+import type { User } from "../types";
+
+const drawerWidth = 240;
+
+type LayoutProps = PropsWithChildren<{ user: User; onLogout?: () => void }>;
+
+export default function Layout({ user, onLogout }: LayoutProps) {
+    const [open, setOpen] = useState(true);
+    const [logoutOpen, setLogoutOpen] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const navItems = [
+        { label: "Dashboard", to: "/", icon: <DashboardIcon fontSize="small" /> },
+        { label: "Modules", to: "/modules", icon: <ExtensionIcon fontSize="small" /> },
+        { label: "Collections", to: "/collections", icon: <ViewListIcon fontSize="small" /> },
+        { label: "Providers", to: "/providers", icon: <HubIcon fontSize="small" /> },
+    ];
+
+    return (
+        <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: (t) => t.palette.background.default }}>
+            <AppBar
+                position="fixed"
+                elevation={0}
+                sx={{ ml: open ? `${drawerWidth}px` : 0, width: open ? `calc(100% - ${drawerWidth}px)` : "100%", backgroundColor: accent }}
+            >
+                <Toolbar>
+                    <IconButton color="inherit" edge="start" onClick={() => setOpen((v) => !v)} sx={{ mr: 2 }}>
+                        <MenuIcon />
+                    </IconButton>
+                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                        CurioKeep
+                    </Typography>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: "white", color: accent, mr: 1 }}>
+                        {user.displayName?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                    </Avatar>
+                    <Typography variant="body2">{user.displayName || user.email}</Typography>
+                </Toolbar>
+            </AppBar>
+
+            <Drawer
+                variant="permanent"
+                open={open}
+                sx={{
+                    width: drawerWidth,
+                    flexShrink: 0,
+                    [`& .MuiDrawer-paper`]: {
+                        width: drawerWidth,
+                        boxSizing: "border-box",
+                        backgroundColor: "white",
+                        borderRight: "1px solid #e8e8ef",
+                    },
+                }}
+            >
+                <Toolbar>
+                    <Typography variant="h6" color="primary">
+                        Collections
+                    </Typography>
+                </Toolbar>
+                <Divider />
+                <List>
+                    {navItems.map((item) => {
+                        const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+                        return (
+                            <ListItemButton
+                                key={item.to}
+                                component={RouterLink}
+                                to={item.to}
+                                selected={active}
+                            >
+                            {item.icon}
+                            <ListItemText primary={item.label} sx={{ ml: 1 }} />
+                            </ListItemButton>
+                        );
+                    })}
+                </List>
+                <Box sx={{ flexGrow: 1 }} />
+                <Divider />
+                <List>
+                    <ListItemButton onClick={() => setLogoutOpen(true)}>
+                        <LogoutIcon fontSize="small" />
+                        <ListItemText primary="Logout" sx={{ ml: 1 }} />
+                    </ListItemButton>
+                </List>
+            </Drawer>
+
+            <Box component="main" sx={{ flexGrow: 1, p: 3, ml: open ? `${drawerWidth}px` : 0 }}>
+                <Toolbar />
+                <Outlet />
+            </Box>
+
+            <Dialog open={logoutOpen} onClose={() => setLogoutOpen(false)}>
+                <DialogTitle>Sign out?</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2">This will end your session.</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setLogoutOpen(false)}>Cancel</Button>
+                    <Button
+                        color="primary"
+                        onClick={() => logout().finally(() => {
+                            setLogoutOpen(false);
+                            onLogout?.();
+                            navigate("/login", { replace: true });
+                        })}
+                    >
+                        Logout
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
+}
