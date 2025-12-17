@@ -1,0 +1,142 @@
+package org.rostislav.curiokeep.providers.impl;
+
+import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
+import org.rostislav.curiokeep.providers.AssetType;
+import org.rostislav.curiokeep.providers.MetadataProvider;
+import org.rostislav.curiokeep.providers.ProviderAsset;
+import org.rostislav.curiokeep.providers.ProviderConfidence;
+import org.rostislav.curiokeep.providers.ProviderResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Component
+public class TvMazeProvider implements MetadataProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(TvMazeProvider.class);
+    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
+
+    private final RestClient http;
+    private final ObjectMapper objectMapper;
+
+    public TvMazeProvider(RestClient http, ObjectMapper objectMapper) {
+        this.http = http;
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public String key() {
+        return "tvmaze";
+    }
+
+    @Override
+    public boolean supports(ItemIdentifierEntity.IdType idType) {
+        return idType == ItemIdentifierEntity.IdType.CUSTOM;
+    }
+
+    @Override
+    public Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
+        String id = normalizeId(idValue);
+        if (id == null) return Optional.empty();
+
+        try {
+            ResponseEntity<String> response = http.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .scheme("https")
+                            .host("api.tvmaze.com")
+                            .path("/shows/" + id)
+                            .queryParam("embed", "episodes,cast")
+                            .build())
+                    .header("User-Agent", USER_AGENT)
+                    .retrieve()
+                    .toEntity(String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.warn("tvmaze lookup failed status={} id={}", response.getStatusCode(), id);
+                return Optional.empty();
+            }
+
+            String body = response.getBody();
+            if (body == null || body.isBlank()) return Optional.empty();
+
+            JsonNode root = objectMapper.readTree(body);
+            ObjectNode normalized = objectMapper.createObjectNode();
+
+            putText(normalized, "title", root.get("name"));
+            String summary = stripHtml(root.get("summary"));
+            if (summary != null) normalized.put("description", summary);
+            Integer year = yearFromDate(root.get("premiered"));
+            if (year != null) normalized.put("published_year", year);
+            putText(normalized, "language", root.get("language"));
+            normalized.put("tvmaze_id", id);
+            normalized.put("canonical_url", "https://www.tvmaze.com/shows/" + id);
+
+            List<ProviderAsset> assets = new ArrayList<>();
+            JsonNode image = root.get("image");
+            if (image != null && image.isObject()) {
+                String original = text(image.get("original"));
+                String medium = text(image.get("medium"));
+                if (original != null) assets.add(new ProviderAsset(AssetType.COVER, URI.create(original), null, null));
+                if (medium != null) assets.add(new ProviderAsset(AssetType.THUMBNAIL, URI.create(medium), null, null));
+            }
+
+            ProviderConfidence confidence = new ProviderConfidence(75, "TVMaze show lookup");
+
+            return Optional.of(new ProviderResult(
+                    key(),
+                    Map.of("json", body),
+                    Map.of("json", normalized.toString()),
+                    assets,
+                    confidence
+            ));
+        } catch (Exception e) {
+            log.warn("tvmaze lookup failed id={} error={}", idValue, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private Integer yearFromDate(JsonNode dateNode) {
+        String v = text(dateNode);
+        if (v == null) return null;
+        var m = java.util.regex.Pattern.compile("^(\\d{4})").matcher(v);
+        if (m.find()) return Integer.parseInt(m.group(1));
+        return null;
+    }
+
+    private String stripHtml(JsonNode node) {
+        String v = text(node);
+        if (v == null) return null;
+        return v.replaceAll("<[^>]+>", "").trim();
+    }
+
+    private String text(JsonNode n) {
+        if (n == null || n.isNull() || n.isMissingNode()) return null;
+        String v = n.asText(null);
+        if (v == null) return null;
+        v = v.trim();
+        return v.isEmpty() ? null : v;
+    }
+
+    private void putText(ObjectNode target, String key, JsonNode value) {
+        String v = text(value);
+        if (v != null) target.put(key, v);
+    }
+
+    private String normalizeId(String raw) {
+        if (raw == null) return null;
+        String v = raw.trim();
+        if (!v.matches("\\d+")) return null;
+        return v;
+    }
+}
