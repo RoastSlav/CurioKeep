@@ -36,17 +36,17 @@ public class GoogleBooksProvider implements MetadataProvider {
     }
 
     private static void putText(ObjectNode out, String key, JsonNode n) {
-        if (n != null && n.isTextual() && !n.asText().isBlank()) out.put(key, n.asText().trim());
+        if (n != null && n.isString() && !n.asString().isBlank()) out.put(key, n.asString().trim());
     }
 
     private static String text(JsonNode n) {
         if (n == null || n.isNull() || n.isMissingNode()) return null;
-        return n.asText(null);
+        return n.asString(null);
     }
 
     private static void putPublishedYear(ObjectNode out, JsonNode publishedDate) {
-        if (publishedDate == null || !publishedDate.isTextual()) return;
-        String s = publishedDate.asText();
+        if (publishedDate == null || !publishedDate.isString()) return;
+        String s = publishedDate.asString();
         var m = java.util.regex.Pattern.compile("(\\d{4})").matcher(s);
         if (m.find()) out.put("published_year", Integer.parseInt(m.group(1)));
     }
