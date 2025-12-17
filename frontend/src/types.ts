@@ -42,10 +42,33 @@ export type ModuleField = {
     deprecated?: boolean;
     identifiers?: unknown[];
     enumValues?: unknown[];
-    providerMappings?: unknown[];
+    providerMappings?: ProviderMapping[];
+};
+
+export type ProviderMapping = {
+    providerKey: string;
+    path: string;
+    transform?: string;
+};
+
+export type WorkflowStep = {
+    type: "PROMPT" | "PROMPT_ANY" | "LOOKUP_METADATA" | "APPLY_METADATA" | "SAVE_ITEM";
+    field?: string;
+    fields?: string[];
+    providers?: string[];
+    label?: string;
+    extensions?: Record<string, unknown>;
+};
+
+export type Workflow = {
+    key: string;
+    label?: string;
+    steps: WorkflowStep[];
+    extensions?: Record<string, unknown>;
 };
 
 export type ModuleDetails = {
+    id?: string;
     moduleKey: string;
     name: string;
     version?: string;
@@ -53,6 +76,7 @@ export type ModuleDetails = {
     states?: { key: string; label?: string }[];
     providers?: { key: string; label?: string; description?: string }[];
     fields?: ModuleField[];
+    workflows?: Workflow[];
     key?: string;
 };
 
@@ -103,11 +127,52 @@ export type CollectionModule = {
 };
 
 export type ProviderLookupResult = {
-    request: {
-        moduleId: string;
-        identifiers: { idType: string; idValue: string }[];
-    };
-    best?: unknown;
-    results?: unknown[];
-    assets?: { url: string }[];
+    request: ProviderLookupRequest;
+    best?: ProviderResult;
+    results?: ProviderResult[];
+    mergedAttributes?: Record<string, unknown>;
+    assets?: ProviderAsset[];
+};
+
+export type ProviderLookupRequest = {
+    moduleId: string;
+    identifiers: ItemIdentifier[];
+};
+
+export type ProviderAsset = {
+    url: string;
+    type?: string;
+    width?: number;
+    height?: number;
+};
+
+export type ProviderResult = {
+    providerKey: string;
+    confidence?: { score?: number; reason?: string } | null;
+    raw?: Record<string, unknown>;
+    normalized?: Record<string, unknown>;
+    mappedAttributes?: Record<string, unknown>;
+};
+
+export type ItemIdentifier = {
+    idType: string;
+    idValue: string;
+};
+
+export type CreateItemRequest = {
+    moduleId: string;
+    stateKey?: string;
+    title?: string;
+    attributes: Record<string, unknown>;
+    identifiers?: ItemIdentifier[];
+};
+
+export type Item = {
+    id: string;
+    moduleId: string;
+    collectionId?: string;
+    stateKey: string;
+    title?: string;
+    attributes: Record<string, unknown>;
+    identifiers?: ItemIdentifier[];
 };

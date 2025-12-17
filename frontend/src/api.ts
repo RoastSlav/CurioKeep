@@ -1,4 +1,4 @@
-import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus } from "./types";
+import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus, ProviderLookupRequest, CreateItemRequest } from "./types";
 
 async function jsonFetch<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
     let res: Response;
@@ -96,6 +96,7 @@ export async function getModule(key: string): Promise<ModuleDetails> {
     const data = await jsonFetch<any>(`/api/modules/${encodeURIComponent(key)}`, { method: "GET" });
     const contract = data.contract || {};
     return {
+        id: data.id,
         moduleKey: data.moduleKey ?? data.key,
         key: data.moduleKey ?? data.key,
         name: data.name,
@@ -104,6 +105,7 @@ export async function getModule(key: string): Promise<ModuleDetails> {
         states: contract.states,
         providers: contract.providers,
         fields: contract.fields,
+        workflows: contract.workflows,
     } satisfies ModuleDetails;
 }
 
@@ -135,7 +137,7 @@ export async function disableCollectionModule(collectionId: string, moduleKey: s
     await jsonFetch(`/api/collections/${collectionId}/modules/${encodeURIComponent(moduleKey)}`, { method: "DELETE" });
 }
 
-export async function lookupProviders(payload: ProviderLookupResult["request"]): Promise<ProviderLookupResult> {
+export async function lookupProviders(payload: ProviderLookupRequest): Promise<ProviderLookupResult> {
     return jsonFetch<ProviderLookupResult>("/api/providers/lookup", { method: "POST", body: JSON.stringify(payload) });
 }
 
@@ -162,6 +164,13 @@ export async function saveProviderCredentials(key: string, values: ProviderCrede
 
 export async function deleteProviderCredentials(key: string): Promise<void> {
     await jsonFetch(`/api/providers/${encodeURIComponent(key)}/credentials`, { method: "DELETE" });
+}
+
+export async function createItem(collectionId: string, payload: CreateItemRequest) : Promise<void> {
+    await jsonFetch(`/api/collections/${encodeURIComponent(collectionId)}/items`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
 }
 
 export type { User };

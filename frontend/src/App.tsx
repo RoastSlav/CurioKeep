@@ -5,6 +5,7 @@ import { getMe, getSetupStatus } from "./api";
 import Layout from "./components/Layout";
 import CollectionsPage from "./pages/CollectionsPage";
 import DashboardPage from "./pages/DashboardPage";
+import AddItemPage from "./pages/AddItemPage";
 import LoginPage from "./pages/LoginPage";
 import ModulesPage from "./pages/ModulesPage";
 import ProvidersPage from "./pages/ProvidersPage";
@@ -110,6 +111,7 @@ function App() {
                 <Route index element={<DashboardPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/collections" element={<CollectionsPage />} />
+                <Route path="/collections/:collectionId/modules/:moduleKey/add" element={<AddItemPage />} />
                 <Route path="/providers" element={<ProvidersPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin/invites" element={<AdminInvitesPage />} />
