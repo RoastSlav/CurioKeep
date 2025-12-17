@@ -51,6 +51,9 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                     width: !isMobile && open ? `calc(100% - ${drawerWidth}px)` : "100%",
                     backgroundColor: accent,
                     zIndex: (t) => t.zIndex.drawer + 1,
+                    borderRadius: 0,
+                    borderTopLeftRadius: 0,
+                    borderTopRightRadius: 0,
                 }}
             >
                 <Toolbar>
