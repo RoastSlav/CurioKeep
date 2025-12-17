@@ -9,6 +9,10 @@ import LoginPage from "./pages/LoginPage";
 import ModulesPage from "./pages/ModulesPage";
 import ProvidersPage from "./pages/ProvidersPage";
 import SetupPage from "./pages/SetupPage";
+import ProfilePage from "./pages/ProfilePage";
+import AdminInvitesPage from "./pages/AdminInvitesPage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
+import UsersPage from "./pages/UsersPage";
 import type { User } from "./types";
 
 type BootstrapState = {
@@ -47,16 +51,18 @@ function App() {
 
     useEffect(() => {
         if (state.loading) return;
+        const isInviteAcceptance = location.pathname.startsWith("/accept-invite");
+
         if (state.setupRequired) {
             if (location.pathname !== "/setup") navigate("/setup", { replace: true });
             return;
         }
         if (!state.user) {
-            if (location.pathname !== "/login") navigate("/login", { replace: true });
+            if (!isInviteAcceptance && location.pathname !== "/login") navigate("/login", { replace: true });
             return;
         }
         // If already authenticated but on the login screen, send to home.
-        if (location.pathname === "/login") navigate("/", { replace: true });
+        if (location.pathname === "/login" || isInviteAcceptance) navigate("/", { replace: true });
     }, [state.loading, state.setupRequired, state.user, location.pathname, navigate]);
 
     const shell = useMemo(() => {
@@ -96,11 +102,18 @@ function App() {
                 path="/login"
                 element={<LoginPage onLoginSuccess={reload} />}
             />
+            <Route
+                path="/accept-invite"
+                element={<AcceptInvitePage />}
+            />
             <Route element={shell}>
                 <Route index element={<DashboardPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/collections" element={<CollectionsPage />} />
                 <Route path="/providers" element={<ProvidersPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/admin/invites" element={<AdminInvitesPage />} />
+                <Route path="/admin/users" element={<UsersPage />} />
             </Route>
             <Route path="*" element={<Navigate to={state.setupRequired ? "/setup" : state.user ? "/" : "/login"} replace />} />
         </Routes>
