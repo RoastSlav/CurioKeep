@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem, Select, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem, Select, Stack, TextField, Typography, alpha } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { createCollection, disableCollectionModule, enableCollectionModule, listCollectionModules, listCollections, listModules } from "../api";
 import type { Collection, CollectionModule, ModuleSummary } from "../types";
@@ -113,7 +113,7 @@ export default function CollectionsPage() {
                             <CardContent onClick={() => handleSelectCollection(c.id)} style={{ cursor: "pointer" }}>
                                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                                     <Typography variant="h6">{c.name}</Typography>
-                                    <Chip label={c.role} size="small" />
+                                    <Chip label={c.role} size="small" color="secondary" variant="outlined" />
                                 </Stack>
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                                     {c.description || "No description"}
@@ -163,7 +163,18 @@ export default function CollectionsPage() {
                         )}
                         <Stack spacing={1}>
                             {enabledModules.map((m) => (
-                                <Box key={m.moduleKey} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #eee", borderRadius: 1, p: 1 }}>
+                                <Box
+                                    key={m.moduleKey}
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        border: 1,
+                                        borderColor: (t) => alpha(t.palette.secondary.main, 0.3),
+                                        borderRadius: 1,
+                                        p: 1,
+                                    }}
+                                >
                                     <div>
                                         <Typography>{m.moduleName || m.moduleKey}</Typography>
                                         <Typography variant="caption" color="text.secondary">{m.moduleKey}</Typography>

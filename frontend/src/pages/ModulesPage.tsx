@@ -55,7 +55,7 @@ function ModuleDetailView({ details }: { details?: ModuleDetails }) {
                     <Typography variant="subtitle2">Providers</Typography>
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                         {details.providers.map((p) => (
-                            <Chip key={p.key} label={p.label || p.key} />
+                            <Chip key={p.key} label={p.label || p.key} color="secondary" variant="outlined" />
                         ))}
                     </Stack>
                 </Stack>
