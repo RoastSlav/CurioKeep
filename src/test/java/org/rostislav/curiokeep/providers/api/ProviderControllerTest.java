@@ -10,6 +10,7 @@ import org.rostislav.curiokeep.modules.contract.ModuleSource;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.providers.ProviderConfidence;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
+import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
 import org.rostislav.curiokeep.providers.ProviderResult;
 import org.rostislav.curiokeep.security.SetupModeFilter;
 import org.rostislav.curiokeep.user.AppUserRepository;
@@ -71,7 +72,7 @@ class ProviderControllerTest {
                 List.of(),
                 new ProviderConfidence(80, "good")
         );
-        ProviderLookupService.LookupResponse response = new ProviderLookupService.LookupResponse(
+        LookupResponse response = new LookupResponse(
                 List.of(result),
                 result,
                 Map.of("title", "Dune"),
