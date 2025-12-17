@@ -42,5 +42,5 @@ curiokeep:
   providers:
     credentials:
       encryption:
-        password: ${CURIOKEEP_PROVIDERS_CREDENTIALS_PASSWORD:changeme}
-        salt: ${CURIOKEEP_PROVIDERS_CREDENTIALS_SALT:changeme-salt}
+        password: changeme
+        salt: 5f4dcc3b5aa765d6
