@@ -5,7 +5,7 @@ import { getMe } from "../api";
 import type { User } from "../types";
 
 export default function ProfilePage() {
-    const outlet = useOutletContext<{ user?: User }>();
+    const outlet = useOutletContext<{ user?: User } | undefined>();
     const [user, setUser] = useState<User | null>(outlet?.user ?? null);
 
     useEffect(() => {

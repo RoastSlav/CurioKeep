@@ -23,7 +23,8 @@ import { useOutletContext } from "react-router-dom";
 import type { AdminUser, User } from "../types";
 
 export default function UsersPage() {
-    const { user } = useOutletContext<{ user: User }>();
+    const outlet = useOutletContext<{ user?: User }>();
+    const user = outlet?.user;
     const toasts = useToasts();
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(false);
