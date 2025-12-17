@@ -6,6 +6,7 @@ import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleService;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
+import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
 import org.rostislav.curiokeep.providers.api.dto.ProviderLookupRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,7 +29,7 @@ public class ProviderController {
 
     @PostMapping("/lookup")
     @Operation(summary = "Lookup metadata from external providers (no saving)")
-    public ProviderLookupService.LookupResponse lookup(@RequestBody @Valid ProviderLookupRequest req) {
+    public LookupResponse lookup(@RequestBody @Valid ProviderLookupRequest req) {
         ModuleDefinitionEntity module = modules.getById(req.moduleId());
         List<ItemIdentifierEntity> ids = req.identifiers().stream().map(d -> {
             ItemIdentifierEntity e = new ItemIdentifierEntity();
