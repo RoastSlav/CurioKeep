@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -55,12 +57,21 @@ public class AuthController {
     })
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
-        Authentication auth = authManager.authenticate(
+        Authentication auth;
+        try {
+            auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        req.email().trim().toLowerCase(),
-                        req.password()
+                    req.email().trim().toLowerCase(),
+                    req.password()
                 )
-        );
+            );
+        } catch (BadCredentialsException e) {
+            log.warn("Login failed: bad credentials for email={}", req.email());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError("UNAUTHORIZED", "Invalid email or password"));
+        } catch (Exception e) {
+            log.error("Login failed: unexpected error for email={}", req.email(), e);
+            throw new AuthenticationServiceException("Login failed", e);
+        }
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(auth);
