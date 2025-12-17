@@ -62,6 +62,10 @@ export type ProviderInfo = {
     description?: string;
     supportedIdTypes: string[];
     priority?: number | null;
+    websiteUrl?: string;
+    apiUrl?: string;
+    dataReturned?: string;
+    highlights?: string[];
 };
 
 export type ProviderStatus = {

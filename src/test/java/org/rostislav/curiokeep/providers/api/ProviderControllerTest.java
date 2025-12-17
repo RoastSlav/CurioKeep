@@ -11,6 +11,7 @@ import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.providers.ProviderConfidence;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
 import org.rostislav.curiokeep.providers.ProviderRegistry;
+import org.rostislav.curiokeep.providers.ProviderKnowledgeBase;
 import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
 import org.rostislav.curiokeep.providers.ProviderResult;
 import org.rostislav.curiokeep.security.SetupModeFilter;
@@ -33,14 +34,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class ProviderControllerTest {
 
-    @Mock
+        @Mock
     ModuleService moduleService;
 
-        @Mock
-        ProviderLookupService providerLookupService;
+    @Mock
+    ProviderLookupService providerLookupService;
 
-        @Mock
-        ProviderRegistry providerRegistry;
+    @Mock
+    ProviderRegistry providerRegistry;
+
+    @Mock
+    ProviderKnowledgeBase providerKnowledgeBase;
 
     @Mock
     AppUserRepository appUserRepository;
@@ -50,7 +54,7 @@ class ProviderControllerTest {
     @BeforeEach
     void setUp() {
         when(appUserRepository.existsByIsAdminTrue()).thenReturn(true);
-        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(moduleService, providerRegistry, providerLookupService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(moduleService, providerRegistry, providerLookupService, providerKnowledgeBase))
                 .addFilters(new SetupModeFilter(appUserRepository))
                 .build();
     }

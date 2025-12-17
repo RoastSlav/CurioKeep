@@ -10,6 +10,7 @@ import {
     CircularProgress,
     IconButton,
     InputAdornment,
+    Link,
     Stack,
     TextField,
     Tooltip,
@@ -151,6 +152,35 @@ export default function ProvidersPage() {
                                     ))}
                                     {typeof p.priority === "number" && <Chip label={`Priority: ${p.priority}`} size="small" />}
                                 </Stack>
+
+                                {p.dataReturned && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                        {p.dataReturned}
+                                    </Typography>
+                                )}
+
+                                {(p.websiteUrl || p.apiUrl) && (
+                                    <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mt: 1 }}>
+                                        {p.websiteUrl && (
+                                            <Link href={p.websiteUrl} target="_blank" rel="noreferrer" underline="hover">
+                                                Visit website
+                                            </Link>
+                                        )}
+                                        {p.apiUrl && (
+                                            <Link href={p.apiUrl} target="_blank" rel="noreferrer" underline="hover">
+                                                API documentation
+                                            </Link>
+                                        )}
+                                    </Stack>
+                                )}
+
+                                {p.highlights?.length ? (
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                                        {p.highlights.map((h) => (
+                                            <Chip key={h} label={h} variant="outlined" size="small" />
+                                        ))}
+                                    </Stack>
+                                ) : null}
 
                                 {status && (
                                     <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1 }}>

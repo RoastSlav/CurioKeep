@@ -7,6 +7,8 @@ import org.rostislav.curiokeep.modules.ModuleService;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.providers.MetadataProvider;
 import org.rostislav.curiokeep.providers.ProviderDescriptor;
+import org.rostislav.curiokeep.providers.ProviderKnowledgeBase;
+import org.rostislav.curiokeep.providers.ProviderProfile;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
 import org.rostislav.curiokeep.providers.ProviderRegistry;
 import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
@@ -32,20 +34,22 @@ public class ProviderController {
     private final ModuleService modules;
     private final ProviderRegistry registry;
     private final ProviderLookupService lookup;
+    private final ProviderKnowledgeBase knowledgeBase;
 
-    public ProviderController(ModuleService modules, ProviderRegistry registry, ProviderLookupService lookup) {
+    public ProviderController(ModuleService modules, ProviderRegistry registry, ProviderLookupService lookup, ProviderKnowledgeBase knowledgeBase) {
         this.modules = modules;
         this.registry = registry;
         this.lookup = lookup;
+        this.knowledgeBase = knowledgeBase;
     }
 
     @GetMapping
     @Operation(summary = "List available metadata providers")
     public List<ProviderInfoResponse> listProviders() {
         return registry.all().stream()
-                .map(this::toInfo)
-                .sorted(Comparator.comparing(ProviderInfoResponse::displayName))
-                .toList();
+            .map(this::toInfo)
+            .sorted(Comparator.comparing(ProviderInfoResponse::displayName))
+            .toList();
     }
 
     @GetMapping("/{key}/status")
@@ -74,12 +78,17 @@ public class ProviderController {
 
     private ProviderInfoResponse toInfo(MetadataProvider provider) {
         ProviderDescriptor descriptor = provider.descriptor();
+        ProviderProfile profile = knowledgeBase.profileFor(descriptor.key());
         return new ProviderInfoResponse(
-                descriptor.key(),
-                descriptor.displayName(),
-                descriptor.description(),
-                descriptor.supportedIdTypes(),
-                descriptor.priority()
+            descriptor.key(),
+            profile != null && profile.displayName() != null ? profile.displayName() : descriptor.displayName(),
+            profile != null && profile.summary() != null ? profile.summary() : descriptor.description(),
+            descriptor.supportedIdTypes(),
+            descriptor.priority(),
+            profile == null ? null : profile.websiteUrl(),
+            profile == null ? null : profile.apiUrl(),
+            profile == null ? null : profile.dataReturned(),
+            profile == null ? List.of() : profile.highlights()
         );
     }
 }
