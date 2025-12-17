@@ -1,6 +1,11 @@
-package org.rostislav.curiokeep.providers;
+package org.rostislav.curiokeep.providers.impl;
 
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
+import org.rostislav.curiokeep.providers.AssetType;
+import org.rostislav.curiokeep.providers.MetadataProvider;
+import org.rostislav.curiokeep.providers.ProviderAsset;
+import org.rostislav.curiokeep.providers.ProviderConfidence;
+import org.rostislav.curiokeep.providers.ProviderResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
