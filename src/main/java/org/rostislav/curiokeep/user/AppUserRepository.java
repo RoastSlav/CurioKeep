@@ -12,4 +12,6 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, UUID> {
     Optional<AppUserEntity> findByEmailIgnoreCase(String email);
 
     boolean existsByIsAdminTrue();
+
+    long countByIsAdminTrue();
 }
