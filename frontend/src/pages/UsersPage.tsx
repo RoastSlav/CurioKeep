@@ -36,7 +36,12 @@ export default function UsersPage() {
         setError(null);
         try {
             const list = await listUsers();
-            setUsers(list);
+            if (Array.isArray(list)) {
+                setUsers(list);
+            } else {
+                setUsers([]);
+                setError("Unexpected response from /api/admin/users");
+            }
         } catch (err) {
             setError((err as Error).message + " (API may not exist yet)");
             setUsers([]);
@@ -125,7 +130,7 @@ export default function UsersPage() {
                                 </TableCell>
                             </TableRow>
                         )}
-                        {users.map((u) => (
+                        {Array.isArray(users) && users.map((u) => (
                             <TableRow key={u.id} hover>
                                 <TableCell>
                                     <Stack direction="row" spacing={1} alignItems="center">
