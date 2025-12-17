@@ -7,7 +7,8 @@ import { useOutletContext } from "react-router-dom";
 import type { User } from "../types";
 
 export default function AdminInvitesPage() {
-    const { user } = useOutletContext<{ user: User }>();
+    const outlet = useOutletContext<{ user?: User }>();
+    const user = outlet?.user;
     const toasts = useToasts();
     const [email, setEmail] = useState("");
     const [token, setToken] = useState<string | null>(null);
