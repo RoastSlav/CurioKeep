@@ -1,4 +1,4 @@
-import { AppBar, Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, Toolbar, Typography } from "@mui/material";
+import { AppBar, Avatar, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, ListItemIcon, Toolbar, Typography, useMediaQuery, useTheme } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import ViewListIcon from "@mui/icons-material/ViewList";
@@ -21,6 +21,12 @@ export default function Layout({ user, onLogout }: LayoutProps) {
     const [logoutOpen, setLogoutOpen] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+    // Keep drawer closed by default on mobile, open on desktop
+    // Sync when viewport changes
+    useEffect(() => setOpen(!isMobile), [isMobile]);
 
     const navItems = [
         { label: "Dashboard", to: "/", icon: <DashboardIcon fontSize="small" /> },
@@ -34,7 +40,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
             <AppBar
                 position="fixed"
                 elevation={0}
-                sx={{ ml: open ? `${drawerWidth}px` : 0, width: open ? `calc(100% - ${drawerWidth}px)` : "100%", backgroundColor: accent }}
+                sx={{ ml: !isMobile && open ? `${drawerWidth}px` : 0, width: !isMobile && open ? `calc(100% - ${drawerWidth}px)` : "100%", backgroundColor: accent }}
             >
                 <Toolbar>
                     <IconButton color="inherit" edge="start" onClick={() => setOpen((v) => !v)} sx={{ mr: 2 }}>
@@ -51,8 +57,10 @@ export default function Layout({ user, onLogout }: LayoutProps) {
             </AppBar>
 
             <Drawer
-                variant="permanent"
+                variant={isMobile ? "temporary" : "permanent"}
                 open={open}
+                onClose={() => setOpen(false)}
+                ModalProps={{ keepMounted: true }}
                 sx={{
                     width: drawerWidth,
                     flexShrink: 0,
@@ -80,7 +88,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                                 to={item.to}
                                 selected={active}
                             >
-                            {item.icon}
+                            <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
                             <ListItemText primary={item.label} sx={{ ml: 1 }} />
                             </ListItemButton>
                         );

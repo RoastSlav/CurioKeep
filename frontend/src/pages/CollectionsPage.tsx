@@ -166,7 +166,18 @@ export default function CollectionsPage() {
                                         <Typography>{m.moduleName || m.moduleKey}</Typography>
                                         <Typography variant="caption" color="text.secondary">{m.moduleKey}</Typography>
                                     </div>
-                                    <Button color="secondary" disabled={!canManage} onClick={() => handleDisable(m.moduleKey)}>
+                                    <Button
+                                        color="secondary"
+                                        disabled={!canManage}
+                                        onClick={() => handleDisable(m.moduleKey)}
+                                        sx={{
+                                            // Keep secondary color visible when disabled
+                                            '&.Mui-disabled': {
+                                                color: (t) => `${t.palette.secondary.main} !important`,
+                                                opacity: 0.8,
+                                            },
+                                        }}
+                                    >
                                         Disable
                                     </Button>
                                 </Box>
