@@ -1,39 +1,49 @@
 package org.rostislav.curiokeep.modules;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
+import org.everit.json.schema.Schema;
+import org.everit.json.schema.loader.SchemaLoader;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 public class ModuleContractValidator {
+    private final Schema schema;
+    private final ObjectMapper objectMapper;
 
-    private final JsonSchema schema;
+    public ModuleContractValidator(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
 
-    public ModuleContractValidator() {
         try (InputStream in = new ClassPathResource("docs/spec/module-contract-v1.schema.json").getInputStream()) {
-            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-            this.schema = factory.getSchema(in);
+            JSONObject raw = new JSONObject(new JSONTokener(in));
+            this.schema = SchemaLoader.builder()
+                    .schemaJson(raw)
+                    .draftV7Support() // schema file is V202012 compatible
+                    .build()
+                    .load()
+                    .build();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to load module contract JSON schema", e);
         }
     }
 
     public void validate(JsonNode moduleContractJson) {
-        Set<ValidationMessage> errors = schema.validate(moduleContractJson);
-        if (!errors.isEmpty()) {
-            String msg = errors.stream()
-                    .map(ValidationMessage::getMessage)
+        try {
+            JSONObject data = new JSONObject(objectMapper.writeValueAsString(moduleContractJson));
+            schema.validate(data);
+        } catch (org.everit.json.schema.ValidationException ve) {
+            String msg = ve.getAllMessages().stream()
                     .sorted()
                     .collect(Collectors.joining("\n - ", "Module contract invalid:\n - ", ""));
-            throw new IllegalStateException(msg);
+            throw new IllegalStateException(msg, ve);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to validate module contract JSON", e);
         }
     }
 }

@@ -4,11 +4,14 @@ import org.rostislav.curiokeep.collections.entities.CollectionMemberEntity;
 import org.rostislav.curiokeep.collections.entities.CollectionMemberId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface CollectionMemberRepository extends JpaRepository<CollectionMemberEntity, CollectionMemberId> {
-    Optional<CollectionMemberEntity> findByCollectionIdAndUserId(UUID collectionId, UUID userId);
+    List<CollectionMemberEntity> findAllByIdUserId(UUID userId);
 
-    boolean existsByCollectionIdAndUserId(UUID collectionId, UUID userId);
+    Optional<CollectionMemberEntity> findByIdCollectionIdAndIdUserId(UUID collectionId, UUID userId);
+
+    void deleteAllByIdCollectionId(UUID collectionId);
 }
