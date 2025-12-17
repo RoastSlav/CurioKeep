@@ -45,6 +45,7 @@ export default function AddItemPage() {
     const [saving, setSaving] = useState(false);
     const [lookupLoading, setLookupLoading] = useState(false);
     const [lookupResult, setLookupResult] = useState<ProviderLookupResult | null>(null);
+    const [appliedKeys, setAppliedKeys] = useState<string[]>([]);
 
     useEffect(() => {
         let mounted = true;
@@ -84,7 +85,8 @@ export default function AddItemPage() {
     };
 
     const applyMergedAttributes = (merged?: Record<string, unknown>) => {
-        if (!merged) return;
+        if (!merged) return [] as string[];
+        const applied: string[] = [];
         setAttributes((prev) => {
             const next = { ...prev };
             Object.entries(merged).forEach(([key, value]) => {
@@ -92,10 +94,12 @@ export default function AddItemPage() {
                 const empty = isEmptyValue(prev[key]);
                 if (!alreadyTouched && empty) {
                     next[key] = value as any;
+                    applied.push(key);
                 }
             });
             return next;
         });
+        return applied;
     };
 
     const handleLookup = async () => {
@@ -110,10 +114,18 @@ export default function AddItemPage() {
         }
         setLookupLoading(true);
         setError(undefined);
+        setAppliedKeys([]);
         try {
             const result = await lookupProviders({ moduleId: module.id, identifiers: ids });
             setLookupResult(result);
-            applyMergedAttributes(result.mergedAttributes as Record<string, unknown> | undefined);
+            const mergedApplied = applyMergedAttributes(result.mergedAttributes as Record<string, unknown> | undefined);
+            if (mergedApplied.length > 0) {
+                setAppliedKeys(mergedApplied);
+            } else {
+                const fallback = (result.best?.mappedAttributes as Record<string, unknown> | undefined) || (result.best?.normalized as Record<string, unknown> | undefined);
+                const fallbackApplied = applyMergedAttributes(fallback);
+                setAppliedKeys(fallbackApplied);
+            }
         } catch (e) {
             setError((e as Error).message);
         } finally {
@@ -180,7 +192,10 @@ export default function AddItemPage() {
             <Stack spacing={2}>
                 <Typography variant="h5">Add Item – {module.name}</Typography>
                 {lookupResult?.best && (
-                    <Alert severity="info">Fetched metadata from {lookupResult.best.providerKey}</Alert>
+                    <Alert severity="info">
+                        Fetched metadata from {lookupResult.best.providerKey}
+                        {appliedKeys.length > 0 ? ` · Applied ${appliedKeys.length} field${appliedKeys.length === 1 ? "" : "s"}` : ""}
+                    </Alert>
                 )}
                 <Card>
                     <CardContent>

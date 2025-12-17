@@ -33,9 +33,9 @@ export default function Layout({ user, onLogout }: LayoutProps) {
 
     const navItems = useMemo(() => {
         const items = [
-            { label: "Dashboard", to: "/", icon: <DashboardIcon fontSize="small" /> },
+            { label: "Collections", to: "/", icon: <ViewListIcon fontSize="small" /> },
+            { label: "Dashboard", to: "/dashboard", icon: <DashboardIcon fontSize="small" /> },
             { label: "Modules", to: "/modules", icon: <ExtensionIcon fontSize="small" /> },
-            { label: "Collections", to: "/collections", icon: <ViewListIcon fontSize="small" /> },
             { label: "Providers", to: "/providers", icon: <HubIcon fontSize="small" /> },
             { label: "Profile", to: "/profile", icon: <PersonIcon fontSize="small" /> },
         ];

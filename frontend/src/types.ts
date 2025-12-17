@@ -29,6 +29,14 @@ export type ModuleSummary = {
     key?: string;
 };
 
+export type Page<T> = {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+};
+
 export type ModuleField = {
     fieldKey: string;
     label: string;
@@ -175,4 +183,7 @@ export type Item = {
     title?: string;
     attributes: Record<string, unknown>;
     identifiers?: ItemIdentifier[];
+    createdBy?: string;
+    createdAt?: string;
+    updatedAt?: string;
 };

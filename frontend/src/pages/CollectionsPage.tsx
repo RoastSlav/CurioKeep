@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem, Select, Stack, TextField, Typography, alpha } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { createCollection, disableCollectionModule, enableCollectionModule, listCollectionModules, listCollections, listModules } from "../api";
-import type { Collection, CollectionModule, ModuleSummary } from "../types";
+import { Link as RouterLink } from "react-router-dom";
+import { createCollection, disableCollectionModule, enableCollectionModule, getModule, listCollectionModules, listCollections, listItems, listModules } from "../api";
+import type { Collection, CollectionModule, Item, ModuleDetails, ModuleSummary, Page } from "../types";
 import { useToasts } from "../components/Toasts";
 
 export default function CollectionsPage() {
@@ -10,6 +11,11 @@ export default function CollectionsPage() {
     const [modules, setModules] = useState<ModuleSummary[]>([]);
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
     const [enabledModules, setEnabledModules] = useState<CollectionModule[]>([]);
+    const [selectedModuleKey, setSelectedModuleKey] = useState<string | null>(null);
+    const [moduleCache, setModuleCache] = useState<Record<string, ModuleDetails>>({});
+    const [itemsPage, setItemsPage] = useState<Page<Item> | null>(null);
+    const [itemsLoading, setItemsLoading] = useState(false);
+    const [itemsError, setItemsError] = useState<string | null>(null);
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -30,6 +36,10 @@ export default function CollectionsPage() {
                 } else if (cols.length > 0) {
                     setSelectedCollection(cols[0].id);
                     void loadCollectionModules(cols[0].id);
+                } else {
+                    setSelectedModuleKey(null);
+                    setEnabledModules([]);
+                    setItemsPage(null);
                 }
             })
             .catch((err) => setError((err as Error).message))
@@ -41,6 +51,12 @@ export default function CollectionsPage() {
         try {
             const enabled = await listCollectionModules(collectionId);
             setEnabledModules(enabled);
+            if (enabled.length === 0) {
+                setSelectedModuleKey(null);
+                setItemsPage(null);
+            } else {
+                setSelectedModuleKey((prev) => (prev && enabled.some((m) => m.moduleKey === prev) ? prev : enabled[0].moduleKey));
+            }
         } catch (err) {
             setError((err as Error).message);
         } finally {
@@ -94,8 +110,50 @@ export default function CollectionsPage() {
         }
     };
 
+    const ensureModuleDetails = async (moduleKey: string) => {
+        if (moduleCache[moduleKey]) return moduleCache[moduleKey];
+        const mod = await getModule(moduleKey);
+        setModuleCache((prev) => ({ ...prev, [moduleKey]: mod }));
+        return mod;
+    };
+
+    const loadItems = async (moduleKey?: string, page = 0) => {
+        if (!selectedCollection || !moduleKey) {
+            setItemsPage(null);
+            return;
+        }
+        setItemsLoading(true);
+        setItemsError(null);
+        try {
+            const mod = await ensureModuleDetails(moduleKey);
+            if (!mod.id) throw new Error("Module id missing; cannot fetch items.");
+            const pageData = await listItems(selectedCollection, mod.id, page, 25);
+            setItemsPage(pageData);
+        } catch (err) {
+            setItemsError((err as Error).message);
+            setItemsPage(null);
+        } finally {
+            setItemsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!selectedCollection || !selectedModuleKey) {
+            setItemsPage(null);
+            return;
+        }
+        void loadItems(selectedModuleKey, 0);
+    }, [selectedCollection, selectedModuleKey]);
+
     const selected = selectedCollection ? collections.find((c) => c.id === selectedCollection) : undefined;
     const canManage = selected ? ["OWNER", "ADMIN"].includes(selected.role) : false;
+
+    const displayModuleName = (moduleKey?: string | null) => {
+        if (!moduleKey) return "";
+        const enabled = enabledModules.find((m) => m.moduleKey === moduleKey);
+        const known = modules.find((m) => m.moduleKey === moduleKey || m.key === moduleKey);
+        return enabled?.moduleName || known?.name || moduleKey;
+    };
 
     return (
         <Stack spacing={2}>
@@ -124,82 +182,178 @@ export default function CollectionsPage() {
                     {collections.length === 0 && <Alert severity="info">No collections yet. Create one to get started.</Alert>}
                 </Stack>
 
-                <Card sx={{ flex: 1 }}>
-                    <CardContent>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                            <Typography variant="h6">Modules in collection</Typography>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Select
-                                    value={pendingModule}
-                                    onChange={(e) => setPendingModule(e.target.value as string)}
-                                    displayEmpty
-                                    size="small"
-                                    sx={{ minWidth: 200 }}
-                                    disabled={!selectedCollection || !canManage}
-                                >
-                                    <MenuItem value="">
-                                        <em>Select module to enable</em>
-                                    </MenuItem>
-                                    {modules
-                                        .filter((m) => !enabledModules.some((em) => em.moduleKey === m.moduleKey))
-                                        .map((m) => (
-                                            <MenuItem key={m.moduleKey} value={m.moduleKey}>
-                                                {m.name || m.moduleKey}
-                                            </MenuItem>
-                                        ))}
-                                </Select>
-                                <Button variant="contained" onClick={handleEnable} disabled={!pendingModule || !selectedCollection || !canManage}>
-                                    Enable
-                                </Button>
-                                <IconButton onClick={() => selectedCollection && loadCollectionModules(selectedCollection)} disabled={!selectedCollection}>
-                                    <RefreshIcon />
-                                </IconButton>
+                <Stack spacing={2} sx={{ flex: 1 }}>
+                    <Card>
+                        <CardContent>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                                <Typography variant="h6">Modules in collection</Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Select
+                                        value={pendingModule}
+                                        onChange={(e) => setPendingModule(e.target.value as string)}
+                                        displayEmpty
+                                        size="small"
+                                        sx={{ minWidth: 200 }}
+                                        disabled={!selectedCollection || !canManage}
+                                    >
+                                        <MenuItem value="">
+                                            <em>Select module to enable</em>
+                                        </MenuItem>
+                                        {modules
+                                            .filter((m) => !enabledModules.some((em) => em.moduleKey === m.moduleKey))
+                                            .map((m) => (
+                                                <MenuItem key={m.moduleKey} value={m.moduleKey}>
+                                                    {m.name || m.moduleKey}
+                                                </MenuItem>
+                                            ))}
+                                    </Select>
+                                    <Button variant="contained" onClick={handleEnable} disabled={!pendingModule || !selectedCollection || !canManage}>
+                                        Enable
+                                    </Button>
+                                    <IconButton onClick={() => selectedCollection && loadCollectionModules(selectedCollection)} disabled={!selectedCollection}>
+                                        <RefreshIcon />
+                                    </IconButton>
+                                </Stack>
                             </Stack>
-                        </Stack>
 
-                        {moduleLoading && <LinearProgress />}
-                        {!moduleLoading && enabledModules.length === 0 && (
-                            <Alert severity="info">No modules enabled for this collection.</Alert>
-                        )}
-                        <Stack spacing={1}>
-                            {enabledModules.map((m) => (
-                                <Box
-                                    key={m.moduleKey}
-                                    sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        border: 1,
-                                        borderColor: (t) => alpha(t.palette.secondary.main, 0.3),
-                                        borderRadius: 1,
-                                        p: 1,
-                                    }}
-                                >
-                                    <div>
-                                        <Typography>{m.moduleName || m.moduleKey}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{m.moduleKey}</Typography>
-                                    </div>
-                                    <Button
-                                        variant="outlined"
-                                        color="secondary"
-                                        disabled={!canManage}
-                                        onClick={() => handleDisable(m.moduleKey)}
+                            {moduleLoading && <LinearProgress />}
+                            {!moduleLoading && enabledModules.length === 0 && (
+                                <Alert severity="info">No modules enabled for this collection.</Alert>
+                            )}
+                            <Stack spacing={1}>
+                                {enabledModules.map((m) => (
+                                    <Box
+                                        key={m.moduleKey}
                                         sx={{
-                                            // Keep secondary color visible when disabled
-                                            '&.Mui-disabled': {
-                                                color: (t) => `${t.palette.secondary.main} !important`,
-                                                borderColor: (t) => `${t.palette.secondary.main} !important`,
-                                                opacity: 0.9,
-                                            },
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            border: 1,
+                                            borderColor: (t) => alpha(t.palette.secondary.main, 0.3),
+                                            borderRadius: 1,
+                                            p: 1,
+                                            backgroundColor: selectedModuleKey === m.moduleKey ? (t) => alpha(t.palette.secondary.main, 0.05) : undefined,
                                         }}
                                     >
-                                        Disable
+                                        <Box sx={{ cursor: "pointer" }} onClick={() => setSelectedModuleKey(m.moduleKey)}>
+                                            <Typography>{m.moduleName || m.moduleKey}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{m.moduleKey}</Typography>
+                                        </Box>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <Button
+                                                size="small"
+                                                variant={selectedModuleKey === m.moduleKey ? "contained" : "outlined"}
+                                                onClick={() => setSelectedModuleKey(m.moduleKey)}
+                                            >
+                                                View items
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="secondary"
+                                                disabled={!canManage}
+                                                onClick={() => handleDisable(m.moduleKey)}
+                                                sx={{
+                                                    '&.Mui-disabled': {
+                                                        color: (t) => `${t.palette.secondary.main} !important`,
+                                                        borderColor: (t) => `${t.palette.secondary.main} !important`,
+                                                        opacity: 0.9,
+                                                    },
+                                                }}
+                                            >
+                                                Disable
+                                            </Button>
+                                        </Stack>
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardContent>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                                <Typography variant="h6">Items</Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Select
+                                        value={selectedModuleKey || ""}
+                                        onChange={(e) => setSelectedModuleKey((e.target.value as string) || null)}
+                                        displayEmpty
+                                        size="small"
+                                        sx={{ minWidth: 200 }}
+                                        disabled={enabledModules.length === 0}
+                                    >
+                                        <MenuItem value="">
+                                            <em>Select module</em>
+                                        </MenuItem>
+                                        {enabledModules.map((m) => (
+                                            <MenuItem key={m.moduleKey} value={m.moduleKey}>
+                                                {m.moduleName || m.moduleKey}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    <Button variant="outlined" onClick={() => void loadItems(selectedModuleKey || undefined)} disabled={!selectedModuleKey || itemsLoading}>
+                                        Refresh
                                     </Button>
-                                </Box>
-                            ))}
-                        </Stack>
-                    </CardContent>
-                </Card>
+                                    <Button
+                                        variant="contained"
+                                        component={RouterLink}
+                                        to={selectedCollection && selectedModuleKey ? `/collections/${selectedCollection}/modules/${selectedModuleKey}/add` : "#"}
+                                        disabled={!selectedCollection || !selectedModuleKey}
+                                    >
+                                        Add item
+                                    </Button>
+                                </Stack>
+                            </Stack>
+                            {itemsLoading && <LinearProgress />}
+                            {itemsError && <Alert severity="error" sx={{ mb: 2 }}>{itemsError}</Alert>}
+                            {!itemsLoading && !itemsError && (!itemsPage || itemsPage.content.length === 0) && (
+                                <Alert severity="info">No items for this module yet.</Alert>
+                            )}
+                            <Stack spacing={1}>
+                                {itemsPage?.content.map((item) => {
+                                    const attrs = item.attributes as Record<string, unknown>;
+                                    const attrTitle = typeof attrs?.title === "string" ? attrs.title : undefined;
+                                    const attrName = typeof attrs?.name === "string" ? attrs.name : undefined;
+                                    const displayTitle = item.title || attrTitle || attrName || "Untitled item";
+                                    return (
+                                        <Box
+                                            key={item.id}
+                                            sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                border: 1,
+                                                borderColor: (t) => alpha(t.palette.divider, 0.8),
+                                                borderRadius: 1,
+                                                p: 1,
+                                            }}
+                                        >
+                                            <Box>
+                                                <Typography fontWeight={600}>{displayTitle}</Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {displayModuleName(selectedModuleKey)}
+                                                    {item.updatedAt ? ` · Updated ${new Date(item.updatedAt).toLocaleString()}` : ""}
+                                                </Typography>
+                                            </Box>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <Chip size="small" label={item.stateKey} />
+                                                {selectedCollection && selectedModuleKey && (
+                                                    <Button
+                                                        size="small"
+                                                        component={RouterLink}
+                                                        to={`/collections/${selectedCollection}/modules/${selectedModuleKey}/items/${item.id}`}
+                                                    >
+                                                        Open
+                                                    </Button>
+                                                )}
+                                            </Stack>
+                                        </Box>
+                                    );
+                                })}
+                            </Stack>
+                        </CardContent>
+                    </Card>
+                </Stack>
             </Stack>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
