@@ -1,19 +1,15 @@
 package org.rostislav.curiokeep.providers;
 
-import org.springframework.stereotype.Service;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.providers.api.dto.ProviderStatusResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-import org.rostislav.curiokeep.providers.ProviderCredentialField;
-import org.rostislav.curiokeep.providers.ProviderCredentialService;
-import org.rostislav.curiokeep.providers.ProviderDescriptor;
-import org.rostislav.curiokeep.providers.ProviderProfile;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -107,7 +103,9 @@ public class ProviderStatusService {
                 message = "Successfully contacted provider";
                 available = true;
             } catch (RestClientResponseException ex) {
-                log.debug("Provider health check failed for {}: status={} bodyLength={}", key, ex.getStatusCode(), ex.getResponseBodyAsString().length());
+                String resp = ex.getResponseBodyAsString();
+                int bodyLen = resp == null ? 0 : resp.length();
+                log.debug("Provider health check failed for {}: status={} bodyLength={}", key, ex.getStatusCode(), bodyLen);
                 message = "Health check failed: HTTP " + ex.getStatusCode().value();
                 available = false;
             } catch (RestClientException ex) {
@@ -150,7 +148,7 @@ public class ProviderStatusService {
             return "https://coverartarchive.org/";
         }
         if (key.equals("openproduct")) {
-            return "https://world.openfoodfacts.org/api/v2/product/7376280645020";
+            return "https://world.openfoodfacts.org/robots.txt";
         }
 
         if (profile == null) return null;
