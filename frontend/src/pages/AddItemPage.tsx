@@ -29,6 +29,14 @@ function isEmptyValue(v: unknown) {
     return false;
 }
 
+function pickDefaultIdentifierType(mod?: ModuleDetails | null): string {
+    if (!mod?.providers) return "CUSTOM";
+    const supported = mod.providers.flatMap((p) => p.supportsIdentifiers || []);
+    if (supported.length === 0) return "CUSTOM";
+    const preferred = supported.find((t) => t !== "CUSTOM");
+    return preferred || supported[0] || "CUSTOM";
+}
+
 export default function AddItemPage() {
     const { collectionId, moduleKey } = useParams();
     const navigate = useNavigate();
@@ -64,6 +72,10 @@ export default function AddItemPage() {
                     nextAttrs[f.fieldKey] = "";
                 });
                 setAttributes(nextAttrs);
+
+                // Prefill identifier type from module providers if they declare supported identifiers.
+                const defaultIdType = pickDefaultIdentifierType(mod);
+                setIdentifiers([{ idType: defaultIdType, idValue: "" }]);
             } catch (e) {
                 if (!mounted) return;
                 setError((e as Error).message);
@@ -79,16 +91,11 @@ export default function AddItemPage() {
 
     const sortedFields = useMemo(() => (module?.fields ?? []).slice().sort(byOrder), [module?.fields]);
 
-    const setAttr = (key: string, value: any) => {
-        setAttributes((prev) => ({ ...prev, [key]: value }));
-        setTouched((prev) => ({ ...prev, [key]: true }));
-    };
-
     const applyMergedAttributes = (merged?: Record<string, unknown>) => {
         if (!merged) return [] as string[];
         const applied: string[] = [];
         setAttributes((prev) => {
-            const next = { ...prev };
+            const next: Record<string, any> = { ...prev };
             Object.entries(merged).forEach(([key, value]) => {
                 const alreadyTouched = touched[key];
                 const empty = isEmptyValue(prev[key]);
@@ -161,8 +168,13 @@ export default function AddItemPage() {
         setIdentifiers((prev) => prev.map((id, i) => (i === idx ? { ...id, [key]: value } : id)));
     };
 
-    const addIdentifier = () => setIdentifiers((prev) => [...prev, { idType: "CUSTOM", idValue: "" }]);
+    const addIdentifier = () => setIdentifiers((prev) => [...prev, { idType: pickDefaultIdentifierType(module), idValue: "" }]);
     const removeIdentifier = (idx: number) => setIdentifiers((prev) => prev.filter((_, i) => i !== idx));
+
+    const handleFieldChange = (key: string, value: string) => {
+        setAttributes((prev) => ({ ...prev, [key]: value }));
+        setTouched((prev) => ({ ...prev, [key]: true }));
+    };
 
     if (loading) {
         return (
@@ -250,9 +262,10 @@ export default function AddItemPage() {
                                 {sortedFields.map((field) => (
                                     <TextField
                                         key={field.fieldKey}
+                                        name={field.fieldKey}
                                         label={field.label || field.fieldKey}
                                         value={attributes[field.fieldKey] ?? ""}
-                                        onChange={(e) => setAttr(field.fieldKey, e.target.value)}
+                                        onChange={(e) => handleFieldChange(field.fieldKey, e.target.value)}
                                         required={field.required}
                                         fullWidth
                                     />

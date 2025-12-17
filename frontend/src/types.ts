@@ -82,7 +82,7 @@ export type ModuleDetails = {
     version?: string;
     description?: string;
     states?: { key: string; label?: string }[];
-    providers?: { key: string; label?: string; description?: string }[];
+    providers?: { key: string; label?: string; description?: string; supportsIdentifiers?: string[] }[];
     fields?: ModuleField[];
     workflows?: Workflow[];
     key?: string;
