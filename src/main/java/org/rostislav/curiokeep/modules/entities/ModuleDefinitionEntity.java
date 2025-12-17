@@ -1,11 +1,13 @@
 package org.rostislav.curiokeep.modules.entities;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.rostislav.curiokeep.modules.contract.ModuleSource;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -24,14 +26,18 @@ public class ModuleDefinitionEntity {
     private String version;
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false)
-    private Source source;
+    private ModuleSource source;
     @Column(name = "checksum", nullable = false)
     private String checksum;
     @Column(name = "xml_raw", nullable = false, columnDefinition = "text")
     private String xmlRaw;
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "definition_json", nullable = false, columnDefinition = "jsonb")
-    private JsonNode definitionJson;
+    private String definitionJson;
+    @OneToMany(fetch = FetchType.LAZY)
+    @JoinColumn(name = "module_id", referencedColumnName = "id")
+    @OrderBy("sortOrder ASC")
+    private List<ModuleFieldEntity> fields = new ArrayList<>();
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
     @Column(name = "updated_at", nullable = false)
@@ -48,6 +54,7 @@ public class ModuleDefinitionEntity {
     void preUpdate() {
         updatedAt = OffsetDateTime.now();
     }
+
 
     // getters/setters
     public UUID getId() {
@@ -82,11 +89,11 @@ public class ModuleDefinitionEntity {
         this.version = version;
     }
 
-    public Source getSource() {
+    public ModuleSource getSource() {
         return source;
     }
 
-    public void setSource(Source source) {
+    public void setSource(ModuleSource source) {
         this.source = source;
     }
 
@@ -106,12 +113,20 @@ public class ModuleDefinitionEntity {
         this.xmlRaw = xmlRaw;
     }
 
-    public JsonNode getDefinitionJson() {
+    public String getDefinitionJson() {
         return definitionJson;
     }
 
-    public void setDefinitionJson(JsonNode definitionJson) {
+    public void setDefinitionJson(String definitionJson) {
         this.definitionJson = definitionJson;
+    }
+
+    public Iterable<ModuleFieldEntity> getFields() {
+        return fields == null ? List.of() : fields;
+    }
+
+    public void setFields(List<ModuleFieldEntity> fields) {
+        this.fields = fields;
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -129,6 +144,4 @@ public class ModuleDefinitionEntity {
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
-
-    public enum Source {BUILTIN, USER}
 }

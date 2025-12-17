@@ -56,3 +56,7 @@ frontend/*.suo
 frontend/*.njsproj
 frontend/*.sln
 frontend/*.sw?
+
+# Ignore runtime logs and log files in repository root and environment
+/logs/
+*.log

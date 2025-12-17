@@ -10,5 +10,5 @@ import java.util.UUID;
 public interface ItemIdentifierRepository extends JpaRepository<ItemIdentifierEntity, UUID> {
     List<ItemIdentifierEntity> findAllByItemId(UUID itemId);
 
-    Optional<ItemIdentifierEntity> findByIdTypeAndIdValue(String idType, String idValue);
+    Optional<ItemIdentifierEntity> findByIdTypeAndIdValue(ItemIdentifierEntity.IdType idType, String idValue);
 }
