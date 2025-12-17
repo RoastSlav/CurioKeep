@@ -141,8 +141,8 @@ export default function CollectionsPage() {
                                         <em>Select module to enable</em>
                                     </MenuItem>
                                     {modules.map((m) => (
-                                        <MenuItem key={m.key} value={m.key}>
-                                            {m.name || m.key}
+                                        <MenuItem key={m.moduleKey} value={m.moduleKey}>
+                                            {m.name || m.moduleKey}
                                         </MenuItem>
                                     ))}
                                 </Select>

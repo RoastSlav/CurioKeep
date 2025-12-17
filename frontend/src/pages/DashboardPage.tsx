@@ -10,8 +10,8 @@ export default function DashboardPage() {
 
     useEffect(() => {
         void getHealth()
-            .then((h) => setHealth(h.status))
-            .catch(() => setHealth("error"));
+            .then((h) => setHealth((h.status || "").toUpperCase()))
+            .catch(() => setHealth("ERROR"));
         void listCollections().then(setCollections).catch(() => setCollections([]));
         void listModules().then(setModules).catch(() => setModules([]));
     }, []);

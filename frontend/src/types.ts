@@ -8,10 +8,12 @@ export type User = {
 };
 
 export type ModuleSummary = {
-    key: string;
+    moduleKey: string;
     name: string;
     version?: string;
     description?: string;
+    // Legacy alias for convenience when mapping backend responses that used `key`.
+    key?: string;
 };
 
 export type ModuleField = {
@@ -22,13 +24,14 @@ export type ModuleField = {
 };
 
 export type ModuleDetails = {
-    key: string;
+    moduleKey: string;
     name: string;
     version?: string;
     description?: string;
     states?: { key: string; label?: string }[];
     providers?: { key: string; label?: string; description?: string }[];
     fields?: ModuleField[];
+    key?: string;
 };
 
 export type Collection = {
@@ -42,6 +45,7 @@ export type Collection = {
 export type CollectionModule = {
     moduleKey: string;
     moduleName?: string;
+    version?: string;
 };
 
 export type ProviderLookupResult = {

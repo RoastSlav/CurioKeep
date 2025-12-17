@@ -12,11 +12,11 @@ export default function ModulesPage() {
         void listModules().then(setModules).catch(() => setModules([]));
     }, []);
 
-    const loadDetails = async (key: string) => {
-        if (details[key]) return;
+    const loadDetails = async (moduleKey: string) => {
+        if (details[moduleKey]) return;
         try {
-            const d = await getModule(key);
-            setDetails((prev) => ({ ...prev, [key]: d }));
+            const d = await getModule(moduleKey);
+            setDetails((prev) => ({ ...prev, [moduleKey]: d }));
         } catch (e) {
             console.error(e);
         }
@@ -26,10 +26,10 @@ export default function ModulesPage() {
         <Stack spacing={2}>
             <Typography variant="h4">Modules</Typography>
             {modules.map((m) => (
-                <Accordion key={m.key} onChange={(_, expanded) => expanded && void loadDetails(m.key)}>
+                <Accordion key={m.moduleKey} onChange={(_, expanded) => expanded && void loadDetails(m.moduleKey)}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%" }}>
-                            <Typography sx={{ flexGrow: 1 }}>{m.name || m.key}</Typography>
+                            <Typography sx={{ flexGrow: 1 }}>{m.name || m.moduleKey}</Typography>
                             {m.version && <Chip size="small" label={`v${m.version}`} />}
                         </Stack>
                     </AccordionSummary>
@@ -37,7 +37,7 @@ export default function ModulesPage() {
                         <Typography color="text.secondary" sx={{ mb: 1 }}>
                             {m.description || "No description"}
                         </Typography>
-                        <ModuleDetailView details={details[m.key]} />
+                        <ModuleDetailView details={details[m.moduleKey]} />
                     </AccordionDetails>
                 </Accordion>
             ))}
