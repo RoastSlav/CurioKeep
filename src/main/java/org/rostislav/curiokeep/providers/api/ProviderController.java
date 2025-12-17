@@ -5,14 +5,24 @@ import jakarta.validation.Valid;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleService;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
+import org.rostislav.curiokeep.providers.MetadataProvider;
+import org.rostislav.curiokeep.providers.ProviderDescriptor;
 import org.rostislav.curiokeep.providers.ProviderLookupService;
+import org.rostislav.curiokeep.providers.ProviderRegistry;
 import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
+import org.rostislav.curiokeep.providers.api.dto.ProviderInfoResponse;
+import org.rostislav.curiokeep.providers.api.dto.ProviderStatusResponse;
 import org.rostislav.curiokeep.providers.api.dto.ProviderLookupRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.List;
 
 @RestController
@@ -20,11 +30,31 @@ import java.util.List;
 public class ProviderController {
 
     private final ModuleService modules;
+    private final ProviderRegistry registry;
     private final ProviderLookupService lookup;
 
-    public ProviderController(ModuleService modules, ProviderLookupService lookup) {
+    public ProviderController(ModuleService modules, ProviderRegistry registry, ProviderLookupService lookup) {
         this.modules = modules;
+        this.registry = registry;
         this.lookup = lookup;
+    }
+
+    @GetMapping
+    @Operation(summary = "List available metadata providers")
+    public List<ProviderInfoResponse> listProviders() {
+        return registry.all().stream()
+                .map(this::toInfo)
+                .sorted(Comparator.comparing(ProviderInfoResponse::displayName))
+                .toList();
+    }
+
+    @GetMapping("/{key}/status")
+    @Operation(summary = "Get provider readiness/status")
+    public ProviderStatusResponse status(@PathVariable String key) {
+        MetadataProvider provider = registry.get(key)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown provider: " + key));
+        ProviderDescriptor descriptor = provider.descriptor();
+        return new ProviderStatusResponse(descriptor.key(), true, "Available", descriptor.supportedIdTypes());
     }
 
     @PostMapping("/lookup")
@@ -40,5 +70,16 @@ public class ProviderController {
         }).toList();
 
         return lookup.lookup(module, ids);
+    }
+
+    private ProviderInfoResponse toInfo(MetadataProvider provider) {
+        ProviderDescriptor descriptor = provider.descriptor();
+        return new ProviderInfoResponse(
+                descriptor.key(),
+                descriptor.displayName(),
+                descriptor.description(),
+                descriptor.supportedIdTypes(),
+                descriptor.priority()
+        );
     }
 }

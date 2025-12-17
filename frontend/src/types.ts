@@ -56,6 +56,21 @@ export type ModuleDetails = {
     key?: string;
 };
 
+export type ProviderInfo = {
+    key: string;
+    displayName: string;
+    description?: string;
+    supportedIdTypes: string[];
+    priority?: number | null;
+};
+
+export type ProviderStatus = {
+    key: string;
+    available: boolean;
+    message?: string;
+    supportedIdTypes: string[];
+};
+
 export type Collection = {
     id: string;
     name: string;
