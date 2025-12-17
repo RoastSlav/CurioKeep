@@ -1,4 +1,4 @@
-import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus, ProviderLookupRequest, CreateItemRequest } from "./types";
+import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus, ProviderLookupRequest, CreateItemRequest, Page, Item } from "./types";
 
 async function jsonFetch<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
     let res: Response;
@@ -171,6 +171,16 @@ export async function createItem(collectionId: string, payload: CreateItemReques
         method: "POST",
         body: JSON.stringify(payload),
     });
+}
+
+export async function listItems(collectionId: string, moduleId: string, page = 0, size = 25): Promise<Page<Item>> {
+    return jsonFetch<Page<Item>>(`/api/collections/${encodeURIComponent(collectionId)}/items?moduleId=${encodeURIComponent(moduleId)}&page=${page}&size=${size}`, {
+        method: "GET",
+    });
+}
+
+export async function getItem(collectionId: string, itemId: string): Promise<Item> {
+    return jsonFetch<Item>(`/api/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`, { method: "GET" });
 }
 
 export type { User };
