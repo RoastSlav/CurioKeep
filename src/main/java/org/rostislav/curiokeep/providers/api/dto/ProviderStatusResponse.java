@@ -12,6 +12,8 @@ public record ProviderStatusResponse(
         @Schema(description = "Optional status detail (errors or confirmations)") String message,
         @Schema(description = "Identifier types that the provider still accepts") List<ItemIdentifierEntity.IdType> supportedIdTypes,
         @Schema(description = "True when the status response is rate limited") boolean rateLimited,
-        @Schema(description = "Seconds until the next allowed status check") Integer retryAfterSeconds
+        @Schema(description = "Seconds until the next allowed status check") Integer retryAfterSeconds,
+        @Schema(description = "True when the provider requires stored credentials") boolean credentialsRequired,
+        @Schema(description = "True when the required credentials are stored") boolean credentialsConfigured
 ) {
 }

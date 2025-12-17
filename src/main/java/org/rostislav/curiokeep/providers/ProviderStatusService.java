@@ -10,6 +10,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
+import org.rostislav.curiokeep.providers.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.ProviderCredentialService;
 import org.rostislav.curiokeep.providers.ProviderDescriptor;
 import org.rostislav.curiokeep.providers.ProviderProfile;
 
@@ -29,15 +31,18 @@ public class ProviderStatusService {
     private final ProviderRegistry registry;
     private final ProviderKnowledgeBase knowledgeBase;
     private final RestClient restClient;
+    private final ProviderCredentialService credentialService;
 
     private final Map<String, ProviderStatusEntry> cache = new ConcurrentHashMap<>();
 
     public ProviderStatusService(ProviderRegistry registry,
                                  ProviderKnowledgeBase knowledgeBase,
-                                 RestClient restClient) {
+                                 RestClient restClient,
+                                 ProviderCredentialService credentialService) {
         this.registry = registry;
         this.knowledgeBase = knowledgeBase;
         this.restClient = restClient;
+        this.credentialService = credentialService;
     }
 
     public ProviderStatusResponse getStatus(String key) {
@@ -54,12 +59,14 @@ public class ProviderStatusService {
                 long retryAfter = RATE_LIMIT.minus(since).getSeconds();
                 ProviderStatusResponse rateLimited = existing.response();
                 return new ProviderStatusResponse(
-                        rateLimited.key(),
-                        rateLimited.available(),
-                        "Rate limited – try again in " + retryAfter + "s",
-                        rateLimited.supportedIdTypes(),
-                        true,
-                        (int) Math.max(1, retryAfter)
+                    rateLimited.key(),
+                    rateLimited.available(),
+                    "Rate limited – try again in " + retryAfter + "s",
+                    rateLimited.supportedIdTypes(),
+                    true,
+                    (int) Math.max(1, retryAfter),
+                    rateLimited.credentialsRequired(),
+                    rateLimited.credentialsConfigured()
                 );
             }
         }
@@ -77,8 +84,14 @@ public class ProviderStatusService {
 
         boolean available = descriptor != null;
         String message;
+        List<ProviderCredentialField> credentialFields = descriptor.credentialFields();
+        boolean credentialsRequired = !credentialFields.isEmpty();
+        boolean credentialsConfigured = credentialService.hasCredentials(key, credentialFields);
 
-        if (target == null || target.contains("{")) {
+        if (credentialsRequired && !credentialsConfigured) {
+            message = "Credentials not configured for this provider";
+            available = false;
+        } else if (target == null || target.contains("{")) {
             // Avoid calling templated URLs or missing endpoints; treat as not configured.
             message = "Health check not configured for this provider";
             available = false;
@@ -110,6 +123,8 @@ public class ProviderStatusService {
                 ids == null ? Collections.emptyList() : ids,
                 false,
                 null
+                , credentialsRequired
+                , credentialsConfigured
         );
         return new ProviderStatusEntry(response, Instant.now());
     }

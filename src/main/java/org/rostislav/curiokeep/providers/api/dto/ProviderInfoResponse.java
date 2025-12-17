@@ -2,6 +2,7 @@ package org.rostislav.curiokeep.providers.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
+import org.rostislav.curiokeep.providers.ProviderCredentialField;
 
 import java.util.List;
 
@@ -15,6 +16,8 @@ public record ProviderInfoResponse(
         @Schema(description = "Primary provider website") String websiteUrl,
         @Schema(description = "API documentation or base endpoint") String apiUrl,
         @Schema(description = "Short description of the data returned") String dataReturned,
-        @Schema(description = "Highlight bullets such as notable fields") List<String> highlights
+        @Schema(description = "Highlight bullets such as notable fields") List<String> highlights,
+        @Schema(description = "Credential fields required for this provider") List<ProviderCredentialField> credentialFields,
+        @Schema(description = "True when credentials are stored for this provider") boolean credentialsConfigured
 ) {
 }
