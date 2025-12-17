@@ -17,7 +17,8 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import DoNotDisturbIcon from "@mui/icons-material/DoNotDisturb";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import KeyIcon from "@mui/icons-material/Key";
-import { listUsers, resetUserPassword, setUserAdmin, setUserStatus } from "../api";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { deleteUser, listUsers, resetUserPassword, setUserAdmin, setUserStatus } from "../api";
 import { useToasts } from "../components/Toasts";
 import { useOutletContext } from "react-router-dom";
 import type { AdminUser, User } from "../types";
@@ -87,6 +88,21 @@ export default function UsersPage() {
             toasts.show("Password reset request sent", "info");
         } catch (err) {
             toasts.show((err as Error).message || "Reset failed", "error");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    const handleDelete = async (u: AdminUser) => {
+        const confirmed = window.confirm(`Delete user ${u.email}? This cannot be undone.`);
+        if (!confirmed) return;
+        setBusyId(u.id);
+        try {
+            await deleteUser(u.id);
+            toasts.show("User deleted", "success");
+            await refresh();
+        } catch (err) {
+            toasts.show((err as Error).message || "Delete failed", "error");
         } finally {
             setBusyId(null);
         }
@@ -181,6 +197,16 @@ export default function UsersPage() {
                                             disabled={busyId === u.id}
                                         >
                                             Reset password
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            color="error"
+                                            startIcon={<DeleteIcon fontSize="small" />}
+                                            onClick={() => handleDelete(u)}
+                                            disabled={busyId === u.id}
+                                        >
+                                            Delete
                                         </Button>
                                     </Stack>
                                 </TableCell>

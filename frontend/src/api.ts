@@ -183,3 +183,7 @@ export async function setUserAdmin(userId: string, admin: boolean): Promise<void
 export async function resetUserPassword(userId: string): Promise<void> {
     await jsonFetch(`/api/admin/users/${encodeURIComponent(userId)}/reset-password`, { method: "POST" });
 }
+
+export async function deleteUser(userId: string): Promise<void> {
+    await jsonFetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
