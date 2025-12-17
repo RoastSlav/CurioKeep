@@ -103,7 +103,12 @@ export async function getModule(key: string): Promise<ModuleDetails> {
         version: data.version,
         description: contract.description ?? data.description,
         states: contract.states,
-        providers: contract.providers,
+        providers: (contract.providers || []).map((p: any) => ({
+            key: p.key,
+            label: p.label ?? p.key,
+            description: p.description,
+            supportsIdentifiers: p.supportsIdentifiers,
+        })),
         fields: contract.fields,
         workflows: contract.workflows,
     } satisfies ModuleDetails;
