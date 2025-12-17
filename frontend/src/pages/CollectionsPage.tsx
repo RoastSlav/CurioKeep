@@ -140,11 +140,13 @@ export default function CollectionsPage() {
                                     <MenuItem value="">
                                         <em>Select module to enable</em>
                                     </MenuItem>
-                                    {modules.map((m) => (
-                                        <MenuItem key={m.moduleKey} value={m.moduleKey}>
-                                            {m.name || m.moduleKey}
-                                        </MenuItem>
-                                    ))}
+                                    {modules
+                                        .filter((m) => !enabledModules.some((em) => em.moduleKey === m.moduleKey))
+                                        .map((m) => (
+                                            <MenuItem key={m.moduleKey} value={m.moduleKey}>
+                                                {m.name || m.moduleKey}
+                                            </MenuItem>
+                                        ))}
                                 </Select>
                                 <Button variant="contained" onClick={handleEnable} disabled={!pendingModule || !selectedCollection || !canManage}>
                                     Enable
