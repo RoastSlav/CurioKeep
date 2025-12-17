@@ -1,4 +1,4 @@
-import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation } from "./types";
+import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus } from "./types";
 
 async function jsonFetch<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
     let res: Response;
@@ -137,6 +137,14 @@ export async function disableCollectionModule(collectionId: string, moduleKey: s
 
 export async function lookupProviders(payload: ProviderLookupResult["request"]): Promise<ProviderLookupResult> {
     return jsonFetch<ProviderLookupResult>("/api/providers/lookup", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function listProviders(): Promise<ProviderInfo[]> {
+    return jsonFetch<ProviderInfo[]>("/api/providers", { method: "GET" });
+}
+
+export async function getProviderStatus(key: string): Promise<ProviderStatus> {
+    return jsonFetch<ProviderStatus>(`/api/providers/${encodeURIComponent(key)}/status`, { method: "GET" });
 }
 
 export type { User };

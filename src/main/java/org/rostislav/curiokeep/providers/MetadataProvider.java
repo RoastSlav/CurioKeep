@@ -11,4 +11,8 @@ public interface MetadataProvider {
     boolean supports(ItemIdentifierEntity.IdType idType);
 
     Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue);
+
+    default ProviderDescriptor descriptor() {
+        return ProviderDescriptor.basic(this);
+    }
 }
