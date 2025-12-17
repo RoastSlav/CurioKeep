@@ -151,6 +151,19 @@ export async function checkProviderStatus(key: string): Promise<ProviderStatus> 
     return jsonFetch<ProviderStatus>(`/api/providers/${encodeURIComponent(key)}/status/check`, { method: "POST" });
 }
 
+export type ProviderCredentialValues = Record<string, string>;
+
+export async function saveProviderCredentials(key: string, values: ProviderCredentialValues): Promise<void> {
+    await jsonFetch(`/api/providers/${encodeURIComponent(key)}/credentials`, {
+        method: "POST",
+        body: JSON.stringify({ values }),
+    });
+}
+
+export async function deleteProviderCredentials(key: string): Promise<void> {
+    await jsonFetch(`/api/providers/${encodeURIComponent(key)}/credentials`, { method: "DELETE" });
+}
+
 export type { User };
 
 // Admin invites

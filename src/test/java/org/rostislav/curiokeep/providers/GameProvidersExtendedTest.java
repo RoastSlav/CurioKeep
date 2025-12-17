@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +40,9 @@ class GameProvidersExtendedTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
 
-        IgdbProvider provider = new IgdbProvider(client, objectMapper, "client123", "token123");
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+                .with("igdb", Map.of("clientId", "client123", "token", "token123"));
+        IgdbProvider provider = new IgdbProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.CUSTOM, "123");
 
@@ -67,7 +70,9 @@ class GameProvidersExtendedTest {
         server.expect(requestTo(containsString("api.rawg.io/api/games/42?key=rawg-key")))
                 .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
 
-        RawgProvider provider = new RawgProvider(client, objectMapper, "rawg-key");
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+                .with("rawg", Map.of("apiKey", "rawg-key"));
+        RawgProvider provider = new RawgProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.CUSTOM, "42");
 

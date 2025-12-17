@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +37,9 @@ class ScreenProvidersTest {
         server.expect(requestTo("https://api.themoviedb.org/3/movie/550?api_key=token123&append_to_response=credits,images"))
                 .andRespond(withSuccess(movieJson, MediaType.APPLICATION_JSON));
 
-        TmdbProvider provider = new TmdbProvider(client, objectMapper, "token123");
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+                .with("tmdb", Map.of("apiKey", "token123"));
+        TmdbProvider provider = new TmdbProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.CUSTOM, "550");
 

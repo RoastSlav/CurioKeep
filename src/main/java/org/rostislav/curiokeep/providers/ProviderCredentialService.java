@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Service;
-import tools.jackson.core.JsonProcessingException;
+import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -29,23 +29,50 @@ public class ProviderCredentialService implements ProviderCredentialLookup {
     private final ObjectMapper objectMapper;
     private final TextEncryptor encryptor;
     private final ConcurrentMap<String, ProviderCredential> cache = new ConcurrentHashMap<>();
+    private volatile boolean loaded = false;
 
     public ProviderCredentialService(ProviderCredentialRepository repository,
                                      ObjectMapper objectMapper,
                                      @Value("${curiokeep.providers.credentials.encryption.password:changeme}") String password,
-                                     @Value("${curiokeep.providers.credentials.encryption.salt:changeme-salt}") String salt) {
+                                     @Value("${curiokeep.providers.credentials.encryption.salt:0123456789abcdef}") String salt) {
         this.repository = repository;
         this.objectMapper = objectMapper;
-        this.encryptor = Encryptors.text(password, salt);
-        loadExistingCredentials();
+        TextEncryptor enc;
+        try {
+            if (salt != null && salt.matches("(?i)[0-9a-f]+") && (salt.length() % 2 == 0)) {
+                enc = Encryptors.text(password, salt);
+            } else {
+                log.warn("Invalid hex salt for provider credential encryption; using no-op encryptor");
+                enc = Encryptors.noOpText();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to initialize encryptor, falling back to no-op: {}", e.getMessage());
+            enc = Encryptors.noOpText();
+        }
+        this.encryptor = enc;
     }
 
     private void loadExistingCredentials() {
         repository.findAll().forEach(entity -> decode(entity).ifPresent(credential -> cache.put(entity.getProviderKey(), credential)));
     }
 
+    private void ensureLoaded() {
+        if (loaded) return;
+        synchronized (this) {
+            if (loaded) return;
+            try {
+                loadExistingCredentials();
+            } catch (Exception e) {
+                log.debug("Failed to load existing provider credentials at startup: {}", e.getMessage());
+            } finally {
+                loaded = true;
+            }
+        }
+    }
+
     @Override
     public Optional<ProviderCredential> getCredentials(String providerKey) {
+        ensureLoaded();
         ProviderCredential cached = cache.get(providerKey);
         if (cached != null) {
             return Optional.of(cached);
@@ -59,6 +86,7 @@ public class ProviderCredentialService implements ProviderCredentialLookup {
     }
 
     public boolean hasCredentials(String providerKey, List<ProviderCredentialField> requiredFields) {
+        ensureLoaded();
         if (requiredFields == null || requiredFields.isEmpty()) {
             return true;
         }
@@ -76,7 +104,7 @@ public class ProviderCredentialService implements ProviderCredentialLookup {
         String payload;
         try {
             payload = objectMapper.writeValueAsString(normalized);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Unable to serialize provider credentials", e);
         }
         String encrypted = encryptor.encrypt(payload);
