@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Alert, Box, Card, CardContent, Stack, Typography } from "@mui/material";
-import { getHealth, listCollections, listModules } from "../api";
-import type { Collection, ModuleSummary } from "../types";
+import {useEffect, useState} from "react";
+import {Alert, Box, Card, CardContent, Stack, Typography} from "@mui/material";
+import {getHealth, listCollections, listModules} from "../api";
+import type {Collection, ModuleSummary} from "../types";
 
 export default function DashboardPage() {
     const [health, setHealth] = useState<string>("loading");
@@ -68,7 +68,8 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
             </Card>
-            {health !== "UP" && health !== "loading" && <Alert severity="warning">Backend not reporting UP.</Alert>}
+            {health !== "UP" && health !== "OK" && health !== "loading" &&
+                <Alert severity="warning">Backend not reporting UP.</Alert>}
         </Stack>
     );
 }
