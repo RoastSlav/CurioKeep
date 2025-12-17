@@ -68,7 +68,13 @@ export async function logout(): Promise<void> {
 }
 
 export async function getMe(): Promise<User> {
-    return jsonFetch<User>("/api/auth/me", { method: "GET" });
+    const raw = await jsonFetch<any>("/api/auth/me", { method: "GET" });
+    return {
+        id: raw.id,
+        email: raw.email,
+        displayName: raw.displayName,
+        admin: raw.admin ?? raw.isAdmin ?? false,
+    } satisfies User;
 }
 
 export async function getHealth(): Promise<{ status: string }> {
