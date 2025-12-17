@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ProviderStatusService {
     private static final Duration RATE_LIMIT = Duration.ofSeconds(30);
+    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final Logger log = LoggerFactory.getLogger(ProviderStatusService.class);
 
@@ -80,7 +81,7 @@ public class ProviderStatusService {
     private ProviderStatusEntry buildStatusEntry(String key, ProviderDescriptor descriptor) {
         List<ItemIdentifierEntity.IdType> ids = descriptor.supportedIdTypes();
         ProviderProfile profile = knowledgeBase.profileFor(key);
-        String target = profile != null ? (profile.apiUrl() != null ? profile.apiUrl() : profile.websiteUrl()) : null;
+        String target = resolveHealthCheckTarget(key, profile);
 
         boolean available = descriptor != null;
         String message;
@@ -98,7 +99,11 @@ public class ProviderStatusService {
         } else {
             String safeTarget = normalizeTarget(key, target);
             try {
-                restClient.get().uri(safeTarget).retrieve().toBodilessEntity();
+                restClient.get()
+                        .uri(safeTarget)
+                        .header("User-Agent", USER_AGENT)
+                        .retrieve()
+                        .toBodilessEntity();
                 message = "Successfully contacted provider";
                 available = true;
             } catch (RestClientResponseException ex) {
@@ -135,6 +140,19 @@ public class ProviderStatusService {
             return target + "?q=ping";
         }
         return target;
+    }
+
+    private String resolveHealthCheckTarget(String key, ProviderProfile profile) {
+        if (key.equals("internetarchive")) {
+            return "https://archive.org/robots.txt";
+        }
+        if (key.equals("coverartarchive")) {
+            return "https://coverartarchive.org/";
+        }
+
+        if (profile == null) return null;
+        if (profile.apiUrl() != null) return profile.apiUrl();
+        return profile.websiteUrl();
     }
 
     private ProviderDescriptor descriptorFor(String key) {
