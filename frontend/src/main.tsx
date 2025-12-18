@@ -8,14 +8,14 @@ import theme from "./theme";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
+    <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <StrictMode>
             <BrowserRouter>
                 <ToastProvider>
                     <App />
                 </ToastProvider>
             </BrowserRouter>
-        </ThemeProvider>
-    </StrictMode>
+        </StrictMode>
+    </ThemeProvider>
 );

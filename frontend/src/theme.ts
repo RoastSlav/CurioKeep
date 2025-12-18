@@ -1,21 +1,46 @@
 import { createTheme } from "@mui/material/styles";
 
+declare module "@mui/material/styles" {
+    interface Palette {
+        accent: Palette["primary"];
+    }
+
+    interface PaletteOptions {
+        accent?: PaletteOptions["primary"];
+    }
+}
+
 const theme = createTheme({
     palette: {
+        mode: "light",
         primary: {
-            main: "#2f6fed",
+            main: "#7A37A7",
         },
         secondary: {
-            main: "#00a38c",
+            main: "#8AA2A9",
+        },
+        accent: {
+            main: "#000F08",
         },
         background: {
-            default: "#f7f9fc",
+            default: "#f7f7fb",
+            paper: "#ffffff",
+        },
+        text: {
+            primary: "#000F08",
         },
     },
     shape: {
         borderRadius: 10,
     },
     components: {
+        MuiCssBaseline: {
+            styleOverrides: {
+                body: {
+                    backgroundColor: "#f7f7fb",
+                },
+            },
+        },
         MuiCard: {
             defaultProps: { elevation: 0 },
             styleOverrides: {
