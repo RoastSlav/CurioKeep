@@ -1,54 +1,114 @@
-import { useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
-import { createAdmin, getSetupStatus } from "../api";
+import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { apiFetch } from "../api/client";
+import { ApiError, isApiError } from "../api/errors";
+import { useSetupStatus } from "../components/AppGate";
+import { useToast } from "../components/Toasts";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
 
-type Props = { onCompleted: () => void };
+export default function SetupPage() {
+    const navigate = useNavigate();
+    const { setupRequired, loading, error, reload, setSetupRequired } = useSetupStatus();
+    const { showToast } = useToast();
 
-export default function SetupPage({ onCompleted }: Props) {
     const [email, setEmail] = useState("");
     const [displayName, setDisplayName] = useState("");
     const [password, setPassword] = useState("");
-    const [confirm, setConfirm] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password !== confirm) {
-            setError("Passwords do not match");
+    const emailValid = useMemo(() => /.+@.+/.test(email), [email]);
+
+    if (loading) {
+        return <LoadingState message="Checking setup..." />;
+    }
+
+    if (error) {
+        return <ErrorState title="Setup check failed" message={error} onRetry={reload} />;
+    }
+
+    if (!setupRequired) {
+        return <Navigate to="/login" replace />;
+    }
+
+    const onSubmit = async (evt: FormEvent) => {
+        evt.preventDefault();
+        setSubmitError(null);
+
+        if (!emailValid) {
+            setSubmitError("Please enter a valid email");
             return;
         }
+        if (!password || !confirmPassword) {
+            setSubmitError("Password is required");
+            return;
+        }
+        if (password !== confirmPassword) {
+            setSubmitError("Passwords do not match");
+            return;
+        }
+
+        setSubmitting(true);
         try {
-            setLoading(true);
-            setError(null);
-            await createAdmin(email, displayName, password);
-            const status = await getSetupStatus();
-            if (!status.setupRequired) {
-                onCompleted();
-            }
+            await apiFetch("/setup/admin", { method: "POST", body: { email, password, displayName } });
+            setSetupRequired(false);
+            showToast("Admin account created", "success");
+            navigate("/login", { replace: true });
         } catch (err) {
-            setError((err as Error).message);
+            const apiErr = err as ApiError;
+            setSubmitError(isApiError(apiErr) ? apiErr.message : "Setup failed");
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
     return (
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: "100vh", p: 2 }}>
-            <Card sx={{ maxWidth: 460, width: "100%" }}>
+        <Box maxWidth={520} mx="auto" mt={6}>
+            <Card>
                 <CardContent>
-                    <Stack spacing={3} component="form" onSubmit={handleSubmit}>
-                        <Typography variant="h5">Set up CurioKeep</Typography>
+                    <Stack component="form" spacing={2} onSubmit={onSubmit}>
+                        <Typography variant="h5" fontWeight={700}>First-time setup</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Create the first admin account to finish setup. This form is only available until the first admin exists.
+                            Create the initial administrator account to finish setup.
                         </Typography>
-                        {error && <Alert severity="error">{error}</Alert>}
-                        <TextField label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} fullWidth />
-                        <TextField label="Display name" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} fullWidth />
-                        <TextField label="Password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} fullWidth />
-                        <TextField label="Confirm password" type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} fullWidth />
-                        <Button type="submit" variant="contained" disabled={loading} size="large">
-                            {loading ? "Creating…" : "Create admin"}
+                        {submitError && <Alert severity="error">{submitError}</Alert>}
+                        <TextField
+                            label="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            error={!!email && !emailValid}
+                            helperText={email && !emailValid ? "Enter a valid email" : ""}
+                            autoFocus
+                        />
+                        <TextField
+                            label="Display name"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            required
+                        />
+                        <TextField
+                            label="Password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                        <TextField
+                            label="Confirm password"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                            error={!!confirmPassword && password !== confirmPassword}
+                            helperText={confirmPassword && password !== confirmPassword ? "Passwords must match" : ""}
+                        />
+                        <Button type="submit" variant="contained" disabled={submitting}>
+                            {submitting ? "Creating..." : "Create admin"}
                         </Button>
                     </Stack>
                 </CardContent>

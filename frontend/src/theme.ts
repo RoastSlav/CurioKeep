@@ -1,46 +1,34 @@
 import { createTheme } from "@mui/material/styles";
 
-const primary = "#7A37A7";
-const secondary = "#8AA2A9";
-const accent = "#000F08";
-
 const theme = createTheme({
     palette: {
-        primary: { main: primary },
-        secondary: { main: secondary },
-        common: {
-            black: accent,
+        primary: {
+            main: "#2f6fed",
+        },
+        secondary: {
+            main: "#00a38c",
         },
         background: {
-            default: "#f7f7fb",
-            paper: "#ffffff",
-        },
-        text: {
-            primary: accent,
-            secondary: secondary,
+            default: "#f7f9fc",
         },
     },
-    shape: { borderRadius: 12 },
-    typography: {
-        fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
-        h1: { fontWeight: 700 },
-        h2: { fontWeight: 700 },
-        h3: { fontWeight: 700 },
-        h4: { fontWeight: 700 },
-        button: { textTransform: "none", fontWeight: 600 },
+    shape: {
+        borderRadius: 10,
     },
     components: {
-        MuiButton: {
+        MuiCard: {
+            defaultProps: { elevation: 0 },
             styleOverrides: {
                 root: {
-                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.06)",
                 },
             },
         },
-        MuiPaper: {
+        MuiButton: {
             styleOverrides: {
                 root: {
-                    borderRadius: 14,
+                    textTransform: "none",
+                    fontWeight: 600,
                 },
             },
         },
@@ -48,4 +36,3 @@ const theme = createTheme({
 });
 
 export default theme;
-export { primary, secondary, accent };

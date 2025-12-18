@@ -1,43 +1,75 @@
-import { useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
-import { login } from "../api";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { ApiError, isApiError } from "../api/errors";
+import { useAuth } from "../auth/useAuth";
+import { useSetupStatus } from "../components/AppGate";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
+import { useToast } from "../components/Toasts";
 
-type Props = { onLoginSuccess: () => void };
+export default function LoginPage() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [params] = useSearchParams();
+    const { user, loading: authLoading, error: authError, login } = useAuth();
+    const { setupRequired, loading: setupLoading, error: setupError, reload: reloadSetup } = useSetupStatus();
+    const { showToast } = useToast();
 
-export default function LoginPage({ onLoginSuccess }: Props) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    if (setupLoading) return <LoadingState message="Checking setup..." />;
+    if (setupError) return <ErrorState title="Setup check failed" message={setupError} onRetry={reloadSetup} />;
+    if (setupRequired) return <Navigate to="/setup" replace />;
+
+    if (authLoading) return <LoadingState message="Checking session..." />;
+    if (user) return <Navigate to="/" replace />;
+
+    const onSubmit = async (evt: FormEvent) => {
+        evt.preventDefault();
+        setSubmitError(null);
+        setSubmitting(true);
         try {
-            setLoading(true);
-            setError(null);
             await login(email, password);
-            onLoginSuccess();
+            showToast("Signed in", "success");
+            const returnTo = params.get("returnTo") || "/";
+            navigate(returnTo, { replace: true, state: { from: location } });
         } catch (err) {
-            setError((err as Error).message);
+            const apiErr = err as ApiError;
+            setSubmitError(isApiError(apiErr) ? apiErr.message : "Login failed");
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
     return (
-        <Box sx={{ display: "grid", placeItems: "center", minHeight: "100vh", p: 2 }}>
-            <Card sx={{ maxWidth: 420, width: "100%" }}>
+        <Box maxWidth={420} mx="auto" mt={6}>
+            <Card>
                 <CardContent>
-                    <Stack spacing={3} component="form" onSubmit={handleSubmit}>
-                        <Typography variant="h5">Sign in</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Use the admin credentials created during setup.
-                        </Typography>
-                        {error && <Alert severity="error">{error}</Alert>}
-                        <TextField label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} fullWidth />
-                        <TextField label="Password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} fullWidth />
-                        <Button type="submit" variant="contained" disabled={loading} size="large">
-                            {loading ? "Signing in…" : "Sign in"}
+                    <Stack component="form" spacing={2} onSubmit={onSubmit}>
+                        <Typography variant="h5" fontWeight={700}>Sign in</Typography>
+                        {authError && <Alert severity="error">{authError}</Alert>}
+                        {submitError && <Alert severity="error">{submitError}</Alert>}
+                        <TextField
+                            label="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            autoFocus
+                        />
+                        <TextField
+                            label="Password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                        <Button type="submit" variant="contained" disabled={submitting}>
+                            {submitting ? "Signing in..." : "Sign in"}
                         </Button>
                     </Stack>
                 </CardContent>
