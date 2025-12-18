@@ -1,54 +1,155 @@
-import React, { useState } from 'react';
-import { Box, Table, TableHead, TableRow, TableCell, TableBody, Select, MenuItem, IconButton, Chip } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import InviteMemberForm from './InviteMemberForm';
-import ConfirmRemoveMemberDialog from './ConfirmRemoveMemberDialog';
-import { useCollectionMembers } from '../../hooks/useCollectionMembers';
+import { Delete, Shield } from "@mui/icons-material";
+import {
+    Alert,
+    Box,
+    Chip,
+    CircularProgress,
+    IconButton,
+    MenuItem,
+    Select,
+    Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Typography,
+} from "@mui/material";
+import { useState } from "react";
+import type { CollectionMember } from "../../../../api/types";
+import ConfirmRemoveMemberDialog from "./ConfirmRemoveMemberDialog";
 
-export default function MembersSection({ collectionId, currentUserRole }:{ collectionId:string; currentUserRole:string }){
-  const { members, loading, error, changeRole, remove } = useCollectionMembers(collectionId);
-  const [confirm, setConfirm] = useState<{open:boolean; memberName?:string; userId?:string}>({ open:false });
+const ROLE_OPTIONS: Array<CollectionMember["role"]> = ["ADMIN", "EDITOR", "VIEWER"];
 
-  return (
-    <Box sx={{ display:'flex', gap:4 }}>
-      <Box sx={{ flex: 1 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {members.map(m => (
-              <TableRow key={m.userId}>
-                <TableCell>{m.displayName}</TableCell>
-                <TableCell>{m.email}</TableCell>
-                <TableCell><Chip label={m.role} /></TableCell>
-                <TableCell>
-                  { (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN') && m.role !== 'OWNER' && (
-                    <>
-                      <Select value={m.role} size="small" onChange={async (e)=>{ try{ await changeRole(m.userId, e.target.value as string); }catch(err){ alert('Failed to update role'); } }}>
-                        <MenuItem value="ADMIN">Admin</MenuItem>
-                        <MenuItem value="EDITOR">Editor</MenuItem>
-                        <MenuItem value="VIEWER">Viewer</MenuItem>
-                      </Select>
-                      <IconButton onClick={()=>setConfirm({ open:true, memberName: m.displayName, userId: m.userId })}><DeleteIcon/></IconButton>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Box>
-      <Box sx={{ width: 320 }}>
-        <InviteMemberForm collectionId={collectionId} />
-      </Box>
+type Props = {
+    currentUserId?: string;
+    members: CollectionMember[];
+    loading?: boolean;
+    saving?: boolean;
+    error?: string | null;
+    onChangeRole: (userId: string, role: CollectionMember["role"]) => Promise<void>;
+    onRemove: (userId: string) => Promise<void>;
+    onRefresh?: () => void;
+};
 
-      <ConfirmRemoveMemberDialog open={confirm.open} onClose={()=>setConfirm({ open:false })} onConfirm={async ()=>{ if(confirm.userId) await remove(confirm.userId); }} memberName={confirm.memberName||''} />
-    </Box>
-  );
+export default function MembersSection({
+    currentUserId,
+    members,
+    loading,
+    saving,
+    error,
+    onChangeRole,
+    onRemove,
+    onRefresh,
+}: Props) {
+    const [removeUserId, setRemoveUserId] = useState<string | null>(null);
+
+    const canManage = (member: CollectionMember) => {
+        // OWNER row is immutable; cannot remove or change role
+        return member.role !== "OWNER";
+    };
+
+    const handleRoleChange = async (userId: string, role: CollectionMember["role"]) => {
+        await onChangeRole(userId, role);
+    };
+
+    const removeMember = async () => {
+        if (!removeUserId) return;
+        const id = removeUserId;
+        setRemoveUserId(null);
+        await onRemove(id);
+    };
+
+    return (
+        <Stack spacing={2}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography variant="h6" fontWeight={700}>
+                    Members
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    {saving && <CircularProgress size={18} thickness={5} />}
+                    {onRefresh && (
+                        <IconButton onClick={onRefresh} disabled={loading}>
+                            <Shield fontSize="small" />
+                        </IconButton>
+                    )}
+                </Stack>
+            </Stack>
+
+            {error && <Alert severity="error">{error}</Alert>}
+
+            {loading ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <CircularProgress size={20} thickness={4} />
+                    <Typography color="text.secondary">Loading members…</Typography>
+                </Stack>
+            ) : members.length ? (
+                <Box sx={{ overflowX: "auto" }}>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>User</TableCell>
+                                <TableCell>Role</TableCell>
+                                <TableCell align="right">Actions</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {members.map((m) => {
+                                const isSelf = m.userId === currentUserId;
+                                const disableActions = !canManage(m) || saving;
+                                return (
+                                    <TableRow key={m.userId} hover>
+                                        <TableCell>
+                                            <Stack spacing={0.2}>
+                                                <Typography fontWeight={700}>{m.displayName || m.email}</Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {m.email}
+                                                </Typography>
+                                            </Stack>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip label={m.role} size="small" color={m.role === "OWNER" ? "primary" : "default"} />
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                                                <Select
+                                                    size="small"
+                                                    value={m.role}
+                                                    disabled={disableActions || isSelf}
+                                                    onChange={(e) => void handleRoleChange(m.userId, e.target.value as CollectionMember["role"])}
+                                                >
+                                                    {ROLE_OPTIONS.map((r) => (
+                                                        <MenuItem key={r} value={r} disabled={r === "OWNER"}>
+                                                            {r}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                                <IconButton
+                                                    color="error"
+                                                    size="small"
+                                                    disabled={disableActions || isSelf}
+                                                    onClick={() => setRemoveUserId(m.userId)}
+                                                >
+                                                    <Delete fontSize="small" />
+                                                </IconButton>
+                                            </Stack>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </Box>
+            ) : (
+                <Alert severity="info">No members found.</Alert>
+            )}
+
+            <ConfirmRemoveMemberDialog
+                open={Boolean(removeUserId)}
+                memberName={members.find((m) => m.userId === removeUserId)?.displayName || undefined}
+                onCancel={() => setRemoveUserId(null)}
+                onConfirm={() => void removeMember()}
+            />
+        </Stack>
+    );
 }

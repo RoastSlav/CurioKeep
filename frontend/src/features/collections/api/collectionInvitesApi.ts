@@ -1,37 +1,30 @@
-type CreateInviteResponse = { token: string };
+import { apiFetch } from "../../../api/client";
+import type { CollectionInvite, InviteValidateResponse, CollectionMember, CreateCollectionInviteRequest } from "../../../api/types";
 
-const base = '/api/collections';
-
-export async function createCollectionInvite(collectionId: string, role: 'ADMIN'|'EDITOR'|'VIEWER') {
-  const res = await fetch(`${base}/${collectionId}/invites`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role }),
-  });
-  if (!res.ok) throw new Error('Failed to create invite');
-  return (await res.json()) as CreateInviteResponse;
+export async function createCollectionInvite(collectionId: string, payload: CreateCollectionInviteRequest) {
+    return apiFetch<CollectionInvite>(`/collections/${collectionId}/invites`, {
+        method: "POST",
+        body: payload,
+    });
 }
 
-export async function validateInvite(token: string) {
-  const res = await fetch(`/api/collections/invites/${encodeURIComponent(token)}`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to validate invite');
-  return res.json();
+export async function listCollectionInvites(collectionId: string) {
+    return apiFetch<CollectionInvite[]>(`/collections/${collectionId}/invites`);
 }
 
-export async function acceptInvite(token: string) {
-  const res = await fetch('/api/collections/invites/accept', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  });
-  if (!res.ok) throw new Error('Failed to accept invite');
-  return res.json();
+export async function validateCollectionInvite(token: string) {
+    return apiFetch<InviteValidateResponse>(`/collections/invites/${token}/validate`);
 }
 
-export async function listInvites(collectionId: string) {
-  const res = await fetch(`${base}/${collectionId}/invites`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to list invites');
-  return res.json();
+export async function acceptCollectionInvite(token: string) {
+    return apiFetch<CollectionMember>("/collections/invites/accept", {
+        method: "POST",
+        body: { token },
+    });
+}
+
+export async function revokeCollectionInvite(collectionId: string, token: string) {
+    return apiFetch<void>(`/collections/${collectionId}/invites/${token}`, {
+        method: "DELETE",
+    });
 }

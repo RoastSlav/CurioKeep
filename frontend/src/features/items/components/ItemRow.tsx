@@ -1,4 +1,4 @@
-import { Chip, Stack, TableCell, TableRow, Typography } from "@mui/material";
+import { Checkbox, Chip, Stack, TableCell, TableRow, Typography } from "@mui/material";
 import type { Item, ModuleDefinition, ModuleStateDef } from "../../../api/types";
 import StateDropdown from "./StateDropdown";
 
@@ -16,6 +16,9 @@ export default function ItemRow({
     states,
     onChangeState,
     canChangeState,
+    showSelection,
+    selected,
+    onToggleSelect,
 }: {
     item: Item;
     moduleDefinition?: ModuleDefinition | null;
@@ -23,6 +26,9 @@ export default function ItemRow({
     states?: ModuleStateDef[];
     onChangeState?: (item: Item, next: string) => void;
     canChangeState?: boolean;
+    showSelection?: boolean;
+    selected?: boolean;
+    onToggleSelect?: (itemId: string, checked: boolean) => void;
 }) {
     const firstIdentifier = item.identifiers?.[0];
     const fieldsToShow = (moduleDefinition?.fields || [])
@@ -33,6 +39,17 @@ export default function ItemRow({
 
     return (
         <TableRow hover sx={{ cursor: onClick ? "pointer" : "default" }} onClick={onClick ? () => onClick(item) : undefined}>
+            {showSelection ? (
+                <TableCell padding="checkbox">
+                    <Checkbox
+                        size="small"
+                        checked={Boolean(selected)}
+                        onChange={(e) => onToggleSelect?.(item.id, e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        indeterminate={false}
+                    />
+                </TableCell>
+            ) : null}
             <TableCell>
                 <Stack spacing={0.25}>
                     <Typography fontWeight={600}>{item.id}</Typography>

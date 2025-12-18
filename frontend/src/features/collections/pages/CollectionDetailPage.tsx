@@ -1,7 +1,7 @@
 import { Alert, Paper, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Collection, CollectionModule, Item, ModuleDetails, ModuleStateDef } from "../../../api/types";
+import type { Collection, CollectionModule, Item, ModuleDetails, CollectionInvite } from "../../../api/types";
 import { useToast } from "../../../components/Toasts";
 import EmptyState from "../../../components/EmptyState";
 import ErrorState from "../../../components/ErrorState";
@@ -10,10 +10,17 @@ import CollectionHeader from "../components/CollectionHeader";
 import ModuleSelector from "../components/ModuleSelector";
 import CollectionActionsMenu from "../components/CollectionActionsMenu";
 import { getCollection, listCollectionModules } from "../api";
+// (imports consolidated above)
 import ItemsList from "../../items/components/ItemsList";
-import { changeItemState, listItems } from "../../items/api";
+import { changeItemState, deleteItem, listItems } from "../../items/api";
 import AddItemDialog from "../../items/components/AddItemDialog/AddItemDialog";
 import { getModuleDetails } from "../../modules/api";
+import CollectionSettingsDialog from "../components/CollectionSettingsDialog/CollectionSettingsDialog";
+import { useCollectionModules } from "../hooks/useCollectionModules";
+import { useCollectionMembers } from "../hooks/useCollectionMembers";
+import { createCollectionInvite, listCollectionInvites, revokeCollectionInvite } from "../api/collectionInvitesApi";
+import { useAuth } from "../../../auth/useAuth";
+import StatsPanel from "../components/StatsPanel";
 
 export default function CollectionDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -32,14 +39,33 @@ export default function CollectionDetailPage() {
     const [itemsError, setItemsError] = useState<string | null>(null);
     const [moduleError, setModuleError] = useState<string | null>(null);
     const [addOpen, setAddOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [invites, setInvites] = useState<CollectionInvite[]>([]);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [batchBusy, setBatchBusy] = useState(false);
+    const { user } = useAuth();
 
-    const role = collection?.role?.toUpperCase();
-    const canAddItems = role === "OWNER" || role === "ADMIN" || role === "EDITOR";
+    const {
+        availableModules,
+        enabledModules,
+        loading: modulesLoading,
+        saving: modulesSaving,
+        error: modulesError,
+        refresh: refreshModules,
+        enable: enableModule,
+        disable: disableModule,
+        setEnabledModules,
+    } = useCollectionModules(id);
 
-    const defaultStateKey = useMemo(() => {
-        const states = moduleDetails?.contract.states ?? [];
-        return [...states].sort((a: ModuleStateDef, b: ModuleStateDef) => (a.order ?? 0) - (b.order ?? 0))[0]?.key;
-    }, [moduleDetails]);
+    const {
+        members,
+        loading: membersLoading,
+        saving: membersSaving,
+        error: membersError,
+        refresh: refreshMembers,
+        changeRole,
+        remove,
+    } = useCollectionMembers(id);
 
     const loadCollection = useCallback(async () => {
         if (!id) return;
@@ -50,21 +76,49 @@ export default function CollectionDetailPage() {
             setCollection(col);
             setModules(mods);
             setActiveModuleKey((prev) => prev || mods[0]?.moduleKey || null);
+            setEnabledModules(mods);
         } catch (err: any) {
             setError(err?.message || "Failed to load collection");
         } finally {
             setLoading(false);
         }
-    }, [id]);
+    }, [id, setEnabledModules]);
 
     useEffect(() => {
         void loadCollection();
     }, [loadCollection]);
 
+    useEffect(() => {
+        // keep module list in sync with hook-enabled modules
+        if (enabledModules.length) {
+            setModules(enabledModules);
+        }
+    }, [enabledModules]);
+
+    const loadInvites = useCallback(async () => {
+        if (!id) return;
+        try {
+            const data = await listCollectionInvites(id);
+            setInvites(data);
+        } catch (err) {
+            // ignore silently; invite list is best-effort
+        }
+    }, [id]);
+
+    useEffect(() => {
+        void loadInvites();
+    }, [loadInvites]);
+
     const activeModule = useMemo(
         () => modules.find((m) => m.moduleKey === activeModuleKey) || modules[0],
         [activeModuleKey, modules]
     );
+
+    const canAddItems = useMemo(() => {
+        return !!collection && ["OWNER", "ADMIN", "EDITOR"].includes((collection as any).role);
+    }, [collection]);
+
+    const defaultStateKey = moduleDetails?.contract?.states?.[0]?.key || "OWNED";
 
     const fetchModuleAndItems = async (moduleKey: string) => {
         if (!id) return;
@@ -91,6 +145,10 @@ export default function CollectionDetailPage() {
     };
 
     useEffect(() => {
+        setSelectedIds([]);
+    }, [activeModuleKey, items.length]);
+
+    useEffect(() => {
         if (activeModuleKey && id) {
             void fetchModuleAndItems(activeModuleKey);
         }
@@ -103,6 +161,19 @@ export default function CollectionDetailPage() {
         }
         setAddOpen(true);
     };
+
+    const toggleItemSelection = (itemId: string, checked: boolean) => {
+        setSelectedIds((prev) => {
+            if (checked) {
+                if (prev.includes(itemId)) return prev;
+                return [...prev, itemId];
+            }
+            return prev.filter((idValue) => idValue !== itemId);
+        });
+    };
+
+    const handleToggleAll = (ids: string[]) => setSelectedIds(ids);
+    const clearSelection = () => setSelectedIds([]);
 
     const handleChangeState = async (item: Item, stateKey: string) => {
         if (!id) return;
@@ -124,7 +195,115 @@ export default function CollectionDetailPage() {
     };
 
     const handleOpenSettings = () => {
-        showToast("Collection settings coming soon", "info");
+        setSettingsOpen(true);
+        void refreshModules();
+        void refreshMembers();
+        void loadInvites();
+    };
+
+    const handleCloseSettings = () => setSettingsOpen(false);
+
+    const handleCreateInvite = async (role: string, expiresInDays?: number) => {
+        if (!id) throw new Error("Missing collection id");
+        const resp = await createCollectionInvite(id, { role: role as any, expiresInDays });
+        setInvites((prev) => [resp, ...prev]);
+        showToast("Invite created", "success");
+        return resp;
+    };
+
+    const handleChangeRole = async (userId: string, role: string) => {
+        try {
+            await changeRole(userId, role as any);
+            showToast("Role updated", "success");
+        } catch (err: any) {
+            showToast(err?.message || "Failed to update role", "error");
+        }
+    };
+
+    const handleBatchStateChange = async (stateKey: string) => {
+        if (!id || !selectedIds.length) return;
+        setBatchBusy(true);
+        const failures: string[] = [];
+        const successes: string[] = [];
+
+        for (const itemId of selectedIds) {
+            const original = items.find((i) => i.id === itemId);
+            if (!original) {
+                failures.push(itemId);
+                continue;
+            }
+
+            setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, stateKey } : i)));
+            try {
+                const updated = await changeItemState(id, itemId, stateKey);
+                setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+                successes.push(itemId);
+            } catch (err: any) {
+                failures.push(itemId);
+                setItems((prev) => prev.map((i) => (i.id === itemId ? original : i)));
+            }
+        }
+
+        setSelectedIds(failures);
+        setBatchBusy(false);
+
+        if (failures.length && successes.length) {
+            showToast(`Updated ${successes.length}, failed ${failures.length}`, "warning");
+        } else if (failures.length) {
+            showToast(`Failed to update ${failures.length} item(s)`, "error");
+        } else {
+            showToast(`Updated ${successes.length} item(s)`, "success");
+        }
+    };
+
+    const handleBatchDelete = async () => {
+        if (!id || !selectedIds.length) return;
+        setBatchBusy(true);
+        const failures: string[] = [];
+        const deleted: string[] = [];
+
+        for (const itemId of selectedIds) {
+            try {
+                await deleteItem(id, itemId);
+                deleted.push(itemId);
+                setItems((prev) => prev.filter((i) => i.id !== itemId));
+            } catch (err: any) {
+                failures.push(itemId);
+            }
+        }
+
+        setSelectedIds(failures);
+        setBatchBusy(false);
+
+        if (failures.length && deleted.length) {
+            showToast(`Deleted ${deleted.length}, failed ${failures.length}`, "warning");
+        } else if (failures.length) {
+            showToast(`Failed to delete ${failures.length} item(s)`, "error");
+        } else {
+            showToast(`Deleted ${deleted.length} item(s)`, "success");
+        }
+    };
+
+    const handleRevokeInvite = (token: string) => {
+        if (!id) return;
+        void (async () => {
+            try {
+                await revokeCollectionInvite(id, token);
+                setInvites((prev) => prev.filter((invite) => invite.token !== token));
+                showToast("Invite revoked", "success");
+            } catch (err: any) {
+                showToast(err?.message || "Failed to revoke invite", "error");
+            }
+        })();
+    };
+
+    const handleRemoveMember = async (userId: string) => {
+        try {
+            await remove(userId);
+            showToast("Member removed", "success");
+        } catch (err: any) {
+            showToast(err?.message || "Failed to remove member", "error");
+        }
     };
 
     if (loading) return <LoadingState message="Loading collection..." />;
@@ -148,6 +327,8 @@ export default function CollectionDetailPage() {
                 </Stack>
             </Paper>
 
+            <StatsPanel items={items} states={moduleDetails?.contract?.states} />
+
             {!modules.length ? (
                 <EmptyState title="No modules enabled" description="Ask an admin to enable modules for this collection." />
             ) : (
@@ -163,6 +344,13 @@ export default function CollectionDetailPage() {
                     role={collection.role}
                     onChangeState={canAddItems ? handleChangeState : undefined}
                     onItemClick={(item) => navigate(`/collections/${id}/items/${item.id}`)}
+                    selectedIds={selectedIds}
+                    onToggleItem={toggleItemSelection}
+                    onToggleAll={handleToggleAll}
+                    onClearSelection={clearSelection}
+                    onBatchChangeState={handleBatchStateChange}
+                    onBatchDelete={handleBatchDelete}
+                    batchBusy={batchBusy}
                 />
             )}
 
@@ -177,6 +365,30 @@ export default function CollectionDetailPage() {
                     onCreated={handleItemCreated}
                 />
             ) : null}
+
+            <CollectionSettingsDialog
+                open={settingsOpen}
+                onClose={handleCloseSettings}
+                currentUserId={user?.id}
+                availableModules={availableModules}
+                enabledModules={enabledModules}
+                members={members}
+                invites={invites}
+                loadingModules={modulesLoading}
+                savingModules={modulesSaving}
+                modulesError={modulesError}
+                loadingMembers={membersLoading}
+                savingMembers={membersSaving}
+                membersError={membersError}
+                onRefreshModules={() => void refreshModules()}
+                onRefreshMembers={() => void refreshMembers()}
+                onEnableModule={(moduleKey) => enableModule(moduleKey).then(() => undefined)}
+                onDisableModule={(moduleKey) => disableModule(moduleKey).then(() => undefined)}
+                onChangeRole={handleChangeRole}
+                onRemoveMember={handleRemoveMember}
+                onCreateInvite={(role, expiresInDays) => handleCreateInvite(role, expiresInDays)}
+                onRevokeInvite={handleRevokeInvite}
+            />
         </Stack>
     );
 }
