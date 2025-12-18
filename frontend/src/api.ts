@@ -1,4 +1,4 @@
-import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus, ProviderLookupRequest, CreateItemRequest, Page, Item } from "./types";
+import type { User, Collection, ModuleSummary, ModuleDetails, SetupStatus, ProviderLookupResult, CollectionModule, AdminUser, InviteValidation, ProviderInfo, ProviderStatus, ProviderLookupRequest, CreateItemRequest, Page, Item, ItemIdentifier } from "./types";
 
 async function jsonFetch<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
     let res: Response;
@@ -95,6 +95,14 @@ export async function listModules(): Promise<ModuleSummary[]> {
 export async function getModule(key: string): Promise<ModuleDetails> {
     const data = await jsonFetch<any>(`/api/modules/${encodeURIComponent(key)}`, { method: "GET" });
     const contract = data.contract || {};
+    const mappedFields = (contract.fields || []).map((f: any) => {
+        const fieldKey = f.fieldKey ?? f.key;
+        return {
+            ...f,
+            fieldKey,
+            label: f.label ?? fieldKey,
+        };
+    });
     return {
         id: data.id,
         moduleKey: data.moduleKey ?? data.key,
@@ -109,7 +117,7 @@ export async function getModule(key: string): Promise<ModuleDetails> {
             description: p.description,
             supportsIdentifiers: p.supportsIdentifiers,
         })),
-        fields: contract.fields,
+        fields: mappedFields,
         workflows: contract.workflows,
     } satisfies ModuleDetails;
 }
@@ -186,6 +194,31 @@ export async function listItems(collectionId: string, moduleId: string, page = 0
 
 export async function getItem(collectionId: string, itemId: string): Promise<Item> {
     return jsonFetch<Item>(`/api/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`, { method: "GET" });
+}
+
+export async function deleteItem(collectionId: string, itemId: string): Promise<void> {
+    await jsonFetch(`/api/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
+}
+
+export async function changeItemState(collectionId: string, itemId: string, stateKey: string): Promise<Item> {
+    return jsonFetch<Item>(`/api/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}/state`, {
+        method: "POST",
+        body: JSON.stringify({ stateKey }),
+    });
+}
+
+export type UpdateItemRequest = {
+    stateKey?: string | null;
+    title?: string | null;
+    attributes?: Record<string, unknown> | null;
+    identifiers?: ItemIdentifier[] | null;
+};
+
+export async function updateItem(collectionId: string, itemId: string, payload: UpdateItemRequest): Promise<Item> {
+    return jsonFetch<Item>(`/api/collections/${encodeURIComponent(collectionId)}/items/${encodeURIComponent(itemId)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+    });
 }
 
 export type { User };

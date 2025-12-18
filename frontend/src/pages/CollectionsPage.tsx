@@ -315,6 +315,7 @@ export default function CollectionsPage() {
                                     const attrTitle = typeof attrs?.title === "string" ? attrs.title : undefined;
                                     const attrName = typeof attrs?.name === "string" ? attrs.name : undefined;
                                     const displayTitle = item.title || attrTitle || attrName || "Untitled item";
+                                    const savedImageUrl = typeof attrs?.providerImageUrl === "string" && attrs.providerImageUrl ? attrs.providerImageUrl : undefined;
                                     return (
                                         <Box
                                             key={item.id}
@@ -328,13 +329,41 @@ export default function CollectionsPage() {
                                                 p: 1,
                                             }}
                                         >
-                                            <Box>
-                                                <Typography fontWeight={600}>{displayTitle}</Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {displayModuleName(selectedModuleKey)}
-                                                    {item.updatedAt ? ` · Updated ${new Date(item.updatedAt).toLocaleString()}` : ""}
-                                                </Typography>
-                                            </Box>
+                                            <Stack direction="row" alignItems="center" spacing={2} sx={{ flex: 1 }}>
+                                                {savedImageUrl ? (
+                                                    <Box
+                                                        component="img"
+                                                        src={savedImageUrl}
+                                                        alt={displayTitle}
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 1,
+                                                            objectFit: "cover",
+                                                            border: 1,
+                                                            borderColor: (t) => alpha(t.palette.divider, 1),
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <Box
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 1,
+                                                            border: 1,
+                                                            borderColor: (t) => alpha(t.palette.divider, 1),
+                                                            backgroundColor: (t) => alpha(t.palette.primary.main, 0.12),
+                                                        }}
+                                                    />
+                                                )}
+                                                <Box>
+                                                    <Typography fontWeight={600}>{displayTitle}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {displayModuleName(selectedModuleKey)}
+                                                        {item.updatedAt ? ` · Updated ${new Date(item.updatedAt).toLocaleString()}` : ""}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <Chip size="small" label={item.stateKey} />
                                                 {selectedCollection && selectedModuleKey && (

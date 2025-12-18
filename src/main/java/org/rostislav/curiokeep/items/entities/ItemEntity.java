@@ -32,6 +32,9 @@ public class ItemEntity {
     @Column(name = "attributes", nullable = false, columnDefinition = "jsonb")
     private String attributes;
 
+    @Column(name = "image_name")
+    private String imageName;
+
     @Column(name = "created_by", columnDefinition = "uuid")
     private UUID createdBy;
 
@@ -100,6 +103,14 @@ public class ItemEntity {
 
     public void setAttributes(String attributes) {
         this.attributes = attributes;
+    }
+
+    public String getImageName() {
+        return imageName;
+    }
+
+    public void setImageName(String imageName) {
+        this.imageName = imageName;
     }
 
     public UUID getCreatedBy() {
