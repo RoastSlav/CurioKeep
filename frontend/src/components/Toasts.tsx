@@ -1,57 +1,52 @@
-import { Alert, Snackbar, alpha } from "@mui/material";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { Alert, Snackbar } from "@mui/material";
+import type { AlertColor } from "@mui/material";
+import { createContext, useContext, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
-export type Toast = { id: number; message: string; severity?: "success" | "info" | "warning" | "error" };
-
-type ToastContextValue = {
-    show: (message: string, severity?: Toast["severity"]) => void;
+type Toast = {
+    id: number;
+    message: string;
+    severity?: AlertColor;
+    durationMs?: number;
 };
 
-const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+type ToastContextValue = {
+    showToast: (message: string, severity?: AlertColor, durationMs?: number) => void;
+};
 
-export function useToasts() {
-    const ctx = useContext(ToastContext);
-    if (!ctx) throw new Error("ToastContext missing");
-    return ctx;
-}
+const ToastContext = createContext<ToastContextValue | null>(null);
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-    const [queue, setQueue] = useState<Toast[]>([]);
+export function ToastProvider({ children }: { children: ReactNode }) {
+    const [toast, setToast] = useState<Toast | null>(null);
 
-    const show = useCallback((message: string, severity: Toast["severity"] = "info") => {
-        setQueue((prev) => [...prev, { id: Date.now(), message, severity }]);
-    }, []);
+    const value = useMemo<ToastContextValue>(() => ({
+        showToast: (message, severity = "info", durationMs = 4000) => {
+            setToast({ id: Date.now(), message, severity, durationMs });
+        },
+    }), []);
 
-    const handleClose = (id: number) => () => setQueue((prev) => prev.filter((t) => t.id !== id));
-
-    const value = useMemo(() => ({ show }), [show]);
+    const handleClose = () => setToast(null);
 
     return (
         <ToastContext.Provider value={value}>
             {children}
-            {queue.map((toast) => (
-                <Snackbar key={toast.id} open autoHideDuration={4000} onClose={handleClose(toast.id)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-                    <Alert
-                        onClose={handleClose(toast.id)}
-                        severity={toast.severity}
-                        variant="filled"
-                        sx={{
-                            width: "100%",
-                            border: (t) => `1px solid ${alpha(t.palette.common.black, 0.08)}`,
-                            ...(toast.severity === "success" && {
-                                backgroundColor: (t) => t.palette.primary.main,
-                                color: (t) => t.palette.common.white,
-                            }),
-                            ...(toast.severity === "info" && {
-                                backgroundColor: (t) => t.palette.secondary.main,
-                                color: (t) => t.palette.common.white,
-                            }),
-                        }}
-                    >
+            <Snackbar
+                open={Boolean(toast)}
+                autoHideDuration={toast?.durationMs ?? 4000}
+                onClose={handleClose}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                children={toast ? (
+                    <Alert elevation={3} severity={toast.severity ?? "info"} onClose={handleClose} sx={{ width: "100%" }}>
                         {toast.message}
                     </Alert>
-                </Snackbar>
-            ))}
+                ) : undefined}
+            />
         </ToastContext.Provider>
     );
+}
+
+export function useToast(): ToastContextValue {
+    const ctx = useContext(ToastContext);
+    if (!ctx) throw new Error("useToast must be used within a ToastProvider");
+    return ctx;
 }
