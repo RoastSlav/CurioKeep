@@ -65,13 +65,5 @@ export default function AppGate({ children }: { children: ReactNode }) {
         [setupRequired, loading, error, checkSetup, setSetupRequired]
     );
 
-    if (loading) {
-        return <LoadingState message="Starting CurioKeep..." />;
-    }
-
-    if (error) {
-        return <ErrorState title="Unable to start" message={error} onRetry={checkSetup} />;
-    }
-
     return <SetupStatusContext.Provider value={value}>{children}</SetupStatusContext.Provider>;
 }

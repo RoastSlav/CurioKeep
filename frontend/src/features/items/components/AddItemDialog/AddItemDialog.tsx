@@ -46,8 +46,8 @@ export default function AddItemDialog({
 }) {
     const workflows = useMemo(() => {
         const base = moduleDefinition?.workflows && moduleDefinition.workflows.length ? moduleDefinition.workflows : [];
-        const fallback = buildFallbackWorkflow(moduleDefinition);
-        return [...base, fallback];
+        if (base.length) return base;
+        return [buildFallbackWorkflow(moduleDefinition)];
     }, [moduleDefinition]);
 
     const [selectedKey, setSelectedKey] = useState(workflows[0]?.key);
