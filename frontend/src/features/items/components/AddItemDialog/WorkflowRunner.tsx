@@ -6,6 +6,8 @@ import PromptAnyStep from "./steps/PromptAnyStep";
 import LookupMetadataStep from "./steps/LookupMetadataStep";
 import ApplyMetadataStep from "./steps/ApplyMetadataStep";
 import SaveItemStep from "./steps/SaveItemStep";
+import SelectItemImageStep from "../forms/SelectItemImageStep";
+import type { SelectedImage } from "../forms/SelectItemImageStep";
 
 export default function WorkflowRunner({
     workflow,
@@ -27,14 +29,29 @@ export default function WorkflowRunner({
     const [stepIndex, setStepIndex] = useState(0);
     const [attributes, setAttributes] = useState<Record<string, any>>({});
     const [lookupResult, setLookupResult] = useState<ProviderLookupResponse | null>(null);
+    const [selectedImage, setSelectedImage] = useState<SelectedImage>(null);
 
     useEffect(() => {
         setStepIndex(0);
         setAttributes({});
         setLookupResult(null);
+        setSelectedImage(null);
     }, [workflow]);
 
-    const steps = workflow.steps || [];
+    const steps = useMemo(() => {
+        const base = workflow.steps || [];
+        const hasSelectImage = base.some((s) => s.type === "SELECT_IMAGE");
+        if (hasSelectImage) return base;
+
+        const insert = { type: "SELECT_IMAGE" as const };
+        const saveIdx = base.findIndex((s) => s.type === "SAVE_ITEM");
+        if (saveIdx >= 0) {
+            const clone = [...base];
+            clone.splice(saveIdx, 0, insert);
+            return clone;
+        }
+        return [...base, insert];
+    }, [workflow]);
     const current = steps[stepIndex];
 
     const resolveField = (key?: string) => (moduleDefinition?.fields || []).find((f) => f.key === key);
@@ -63,15 +80,20 @@ export default function WorkflowRunner({
         onComplete(item);
     };
 
+    const lookupAssets = useMemo(() => {
+        if (!lookupResult) return [];
+        if (lookupResult.assets?.length) return lookupResult.assets;
+        if (lookupResult.best?.assets?.length) return lookupResult.best.assets;
+        return lookupResult.results?.flatMap((result) => result.assets || []) || [];
+    }, [lookupResult]);
+
     const content = useMemo(() => {
         if (!current) return <Alert severity="info">No steps defined for this workflow.</Alert>;
         switch (current.type) {
             case "PROMPT": {
                 const field = resolveField(current.field);
                 if (!field) return <Alert severity="warning">Workflow references missing field {current.field}</Alert>;
-                return (
-                    <PromptStep field={field} values={attributes} onSubmit={handlePromptSubmit} onCancel={onCancel} />
-                );
+                return <PromptStep field={field} values={attributes} onSubmit={handlePromptSubmit} onCancel={onCancel} />;
             }
             case "PROMPT_ANY": {
                 const fields = (current.fields || [])
@@ -109,12 +131,27 @@ export default function WorkflowRunner({
                         onSkip={goNext}
                     />
                 );
+            case "SELECT_IMAGE":
+                return (
+                    <SelectItemImageStep
+                        assets={lookupAssets}
+                        selected={selectedImage}
+                        onSelect={(val) => setSelectedImage(val)}
+                        onNext={goNext}
+                        onSkip={() => {
+                            setSelectedImage(null);
+                            goNext();
+                        }}
+                        onBack={stepIndex > 0 ? goPrev : undefined}
+                    />
+                );
             case "SAVE_ITEM":
                 return (
                     <SaveItemStep
                         collectionId={collectionId}
                         moduleId={moduleId}
                         attributes={attributes}
+                        selectedImage={selectedImage}
                         defaultState={defaultState}
                         moduleDefinition={moduleDefinition}
                         onSaved={handleSave}
@@ -122,9 +159,9 @@ export default function WorkflowRunner({
                     />
                 );
             default:
-                return <Alert severity="warning">Unsupported step {current.type}</Alert>;
+                return <Alert severity="warning">Unsupported step {String((current as any)?.type)}</Alert>;
         }
-    }, [current, attributes, moduleDefinition, moduleId, collectionId, lookupResult, stepIndex]);
+    }, [current, attributes, moduleDefinition, moduleId, collectionId, lookupResult, lookupAssets, stepIndex, selectedImage]);
 
     return (
         <Stack spacing={2}>

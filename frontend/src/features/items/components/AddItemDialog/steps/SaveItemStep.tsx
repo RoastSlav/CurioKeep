@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Alert, Stack, Typography } from "@mui/material";
 import type { Item, ModuleDefinition } from "../../../../../api/types";
-import { createItem } from "../../../api";
+import { createItem, setItemImageFromUrl, uploadItemImage } from "../../../api";
 import ItemForm from "../../../components/ItemForm";
+import type { SelectedImage } from "../../forms/SelectItemImageStep";
 
 export default function SaveItemStep({
     collectionId,
     moduleId,
     attributes,
+    selectedImage,
     defaultState,
     onSaved,
     onBack,
@@ -16,6 +18,7 @@ export default function SaveItemStep({
     collectionId: string;
     moduleId: string;
     attributes: Record<string, any>;
+    selectedImage: SelectedImage;
     defaultState?: string;
     onSaved: (item: Item) => void;
     onBack?: () => void;
@@ -43,7 +46,14 @@ export default function SaveItemStep({
                     setLoading(true);
                     setError(null);
                     try {
-                        const item = await createItem(collectionId, { moduleId, attributes: attrs, stateKey: defaultState });
+                        let item = await createItem(collectionId, { moduleId, attributes: attrs, stateKey: defaultState });
+
+                        if (selectedImage?.kind === "provider-url") {
+                            item = await setItemImageFromUrl(collectionId, item.id, selectedImage.url);
+                        } else if (selectedImage?.kind === "upload") {
+                            item = await uploadItemImage(collectionId, item.id, selectedImage.file);
+                        }
+
                         onSaved(item);
                     } catch (err: any) {
                         setError(err?.message || "Failed to save item");

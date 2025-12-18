@@ -1,9 +1,10 @@
 import type { IdentifierType, ItemIdentifier } from "../items/itemTypes";
 
 export type ProviderAsset = {
-    type: string;
     url: string;
+    type?: string;
     label?: string;
+    providerKey?: string;
 };
 
 export type ProviderLookupIdentifier = {

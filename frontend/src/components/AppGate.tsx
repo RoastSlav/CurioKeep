@@ -4,8 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import { ApiError, isApiError } from "../api/errors";
 import { useAuth } from "../auth/useAuth";
-import LoadingState from "./LoadingState";
-import ErrorState from "./ErrorState";
+// LoadingState and ErrorState not required here
 
 type SetupStatus = {
     setupRequired: boolean;

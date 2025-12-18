@@ -132,11 +132,10 @@ export default function ItemsTable({
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>ID</TableCell>
+                                        <TableCell>Title</TableCell>
                                         <TableCell>State</TableCell>
                                         {moduleDefinition?.fields?.length ? <TableCell>Fields</TableCell> : null}
-                                        <TableCell>Created</TableCell>
-                                        <TableCell>Updated</TableCell>
+                                        <TableCell>Identifier</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>

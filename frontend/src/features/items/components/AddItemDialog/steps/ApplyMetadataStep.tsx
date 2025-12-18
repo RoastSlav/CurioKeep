@@ -25,7 +25,7 @@ export default function ApplyMetadataStep({
         );
     }
 
-    const suggestions = lookup.fieldValues || lookup.merged || {};
+    const suggestions = lookup.mergedAttributes || {};
     const fields = moduleDefinition?.fields ?? [];
 
     const diffEntries = Object.entries<Record<string, unknown>>(suggestions).filter(([key, val]) => {

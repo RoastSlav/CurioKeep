@@ -1,11 +1,25 @@
-import { Card, CardContent, Chip, Stack, Typography } from "@mui/material";
+import { Avatar, Card, CardContent, CardMedia, Chip, Stack, Typography } from "@mui/material";
 import type { Item } from "../../../api/types";
 
 export default function ItemCard({ item }: { item: Item }) {
     const firstIdentifier = item.identifiers?.[0];
+    const imageUrl = item.attributes?.providerImageUrl as string | undefined;
+    const title = (item.attributes?.title as string | undefined) || item.id;
 
     return (
         <Card variant="outlined" sx={{ height: "100%" }}>
+            {imageUrl ? (
+                    <CardMedia
+                        component="img"
+                        image={imageUrl}
+                        alt={title}
+                        sx={{ height: 160, objectFit: "cover", borderBottom: 1, borderColor: "divider" }}
+                    />
+            ) : (
+                    <Stack alignItems="center" justifyContent="center" sx={{ height: 160, borderBottom: 1, borderColor: "divider" }}>
+                        <Avatar sx={{ width: 72, height: 72 }}>{(title || "?").substring(0, 1)}</Avatar>
+                    </Stack>
+            )}
             <CardContent>
                 <Stack spacing={1.25}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">

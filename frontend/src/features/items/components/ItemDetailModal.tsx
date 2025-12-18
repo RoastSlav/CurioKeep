@@ -18,6 +18,7 @@ import ItemActions from "./ItemActions";
 import { changeItemState, deleteItem, getItem, updateItem } from "../api";
 import LoadingState from "../../../components/LoadingState";
 import ErrorState from "../../../components/ErrorState";
+import ImageViewerDialog from "./ImageViewerDialog";
 
 function formatValue(value: unknown): string {
     if (value === null || value === undefined) return "-";
@@ -53,6 +54,7 @@ export default function ItemDetailModal({
     const [changingState, setChangingState] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
+    const [viewerOpen, setViewerOpen] = useState(false);
 
     useEffect(() => {
         if (!open) return;
@@ -120,6 +122,8 @@ export default function ItemDetailModal({
     };
 
     const stateLabel = states.find((s) => s.key === item?.stateKey)?.label || item?.stateKey;
+    const imageUrl = (item?.attributes?.providerImageUrl as string) || null;
+    const title = (item?.attributes?.title as string) || item?.id || "";
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -150,6 +154,26 @@ export default function ItemDetailModal({
                     />
                 ) : item && !editing ? (
                     <Stack spacing={2}>
+                        {imageUrl && (
+                            <Box
+                                sx={{
+                                    width: "100%",
+                                    borderRadius: 1.5,
+                                    overflow: "hidden",
+                                    border: 1,
+                                    borderColor: "divider",
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => setViewerOpen(true)}
+                            >
+                                <Box
+                                    component="img"
+                                    src={imageUrl}
+                                    alt={title}
+                                    sx={{ width: "100%", maxHeight: 360, objectFit: "contain", backgroundColor: "black" }}
+                                />
+                            </Box>
+                        )}
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Typography variant="subtitle1" fontWeight={700}>
                                 Details
@@ -202,6 +226,7 @@ export default function ItemDetailModal({
                     />
                 )}
             </DialogActions>
+            <ImageViewerDialog open={viewerOpen} src={imageUrl} title={title || "Image"} onClose={() => setViewerOpen(false)} />
         </Dialog>
     );
 }
