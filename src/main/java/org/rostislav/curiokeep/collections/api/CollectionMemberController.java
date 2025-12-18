@@ -97,6 +97,20 @@ public class CollectionMemberController {
         return inviteService.listPending(collectionId);
     }
 
+    @Operation(summary = "Revoke invite", description = "Requires ADMIN or OWNER")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Invite revoked", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "401", description = "Not authenticated", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "Not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
+    })
+    @SecurityRequirement(name = "sessionAuth")
+    @DeleteMapping("/{collectionId}/invites/{token}")
+    public OkResponse revokeInvite(@PathVariable UUID collectionId, @PathVariable String token) {
+        inviteService.revokeInvite(collectionId, token);
+        return new OkResponse(true);
+    }
+
     @Operation(summary = "Validate invite token", description = "Public endpoint to check if an invite can be accepted")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Validation result", content = @Content(schema = @Schema(implementation = InviteValidateResponse.class)))

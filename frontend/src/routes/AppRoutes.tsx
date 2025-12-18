@@ -6,6 +6,7 @@ import SetupPage from "../pages/SetupPage";
 import DashboardPage from "../pages/DashboardPage";
 import CollectionsPage from "../features/collections/pages/CollectionsPage";
 import CollectionDetailPage from "../features/collections/pages/CollectionDetailPage";
+import AcceptCollectionInvitePage from "../features/collections/pages/AcceptCollectionInvitePage";
 import ItemDetailPage from "../features/items/pages/ItemDetailPage";
 import RequireAuth from "../auth/RequireAuth";
 import RequireSetupComplete from "../auth/RequireSetupComplete";
@@ -85,6 +86,7 @@ export default function AppRoutes() {
                 { path: "collections", element: <CollectionsPage /> },
                 { path: "collections/:id", element: <CollectionDetailPage /> },
                 { path: "collections/:id/items/:itemId", element: <ItemDetailPage /> },
+                { path: "invites/collection/:token", element: <AcceptCollectionInvitePage /> },
                 { path: "modules", element: <StubPage title="Modules" note="Modules page placeholder" /> },
                 { path: "providers", element: <StubPage title="Providers" note="Providers page placeholder" /> },
                 { path: "profile", element: <StubPage title="Profile" note="Profile editing coming soon" /> },

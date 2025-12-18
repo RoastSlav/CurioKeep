@@ -1,4 +1,4 @@
-import type { ItemIdentifier } from "../items/itemTypes";
+import type { IdentifierType, ItemIdentifier } from "../items/itemTypes";
 
 export type ProviderAsset = {
     type: string;
@@ -6,24 +6,33 @@ export type ProviderAsset = {
     label?: string;
 };
 
+export type ProviderLookupIdentifier = {
+    idType: IdentifierType;
+    idValue: string;
+};
+
 export type ProviderLookupRequest = {
     moduleId: string;
-    identifiers: ItemIdentifier[];
+    identifiers: Array<ProviderLookupIdentifier | ItemIdentifier>;
     providers?: string[];
 };
 
 export type ProviderLookupResult = {
     providerKey: string;
-    merged?: Record<string, any>;
-    fieldValues?: Record<string, any>;
+    rawData?: Record<string, any>;
+    normalizedFields?: Record<string, any> | string | null;
     assets?: ProviderAsset[];
+    confidence?: { score?: number; reason?: string };
     error?: string;
-    raw?: unknown;
 };
 
 export type ProviderLookupResponse = {
-    merged: Record<string, any>;
-    fieldValues: Record<string, any>;
+    results: ProviderLookupResult[];
+    best?: ProviderLookupResult | null;
+    mergedAttributes: Record<string, any>;
     assets?: ProviderAsset[];
+    // Legacy aliases used by UI components
     providerResults?: ProviderLookupResult[];
+    merged?: Record<string, any>;
+    fieldValues?: Record<string, any>;
 };

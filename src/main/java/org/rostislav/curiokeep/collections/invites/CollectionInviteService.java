@@ -99,7 +99,7 @@ public class CollectionInviteService {
         AppUserEntity acting = currentUser.requireCurrentUser();
         access.requireRole(collectionId, acting.getId(), Role.ADMIN);
 
-        return invites.findAllByCollectionIdAndAcceptedAtIsNull(collectionId).stream()
+        return invites.findAllByCollectionIdAndAcceptedAtIsNullAndRevokedAtIsNull(collectionId).stream()
                 .map(inv -> new CreateCollectionInviteResponse(inv.getToken(), inv.getRole(), inv.getExpiresAt(), inv.getCollectionId()))
                 .toList();
     }
@@ -146,6 +146,29 @@ public class CollectionInviteService {
 
         log.info("Invite accepted: collectionId={} userId={} role={}", invite.getCollectionId(), user.getId(), member.getRole());
         return memberService.toResponse(member, user);
+    }
+
+    @Transactional
+    public void revokeInvite(UUID collectionId, String token) {
+        AppUserEntity acting = currentUser.requireCurrentUser();
+        access.requireRole(collectionId, acting.getId(), Role.ADMIN);
+
+        CollectionInviteEntity invite = invites.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found"));
+        if (!invite.getCollectionId().equals(collectionId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invite not found");
+        }
+        if (invite.getAcceptedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite already accepted");
+        }
+        if (invite.getRevokedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite already revoked");
+        }
+
+        invite.setRevokedAt(OffsetDateTime.now());
+        invites.save(invite);
+
+        log.info("Invite revoked: collectionId={} token={} byUserId={}", collectionId, token, acting.getId());
     }
 
     private String validationFailure(CollectionInviteEntity invite) {

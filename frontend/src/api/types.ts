@@ -28,6 +28,42 @@ export type Collection = {
     enabledModules?: CollectionModuleRef[];
 };
 
+export type CollectionMember = {
+    userId: string;
+    email: string;
+    displayName?: string | null;
+    role: "OWNER" | "ADMIN" | "EDITOR" | "VIEWER" | string;
+    joinedAt?: string;
+};
+
+export type CollectionInvite = {
+    token: string;
+    role: "ADMIN" | "EDITOR" | "VIEWER" | string;
+    expiresAt?: string | null;
+    collectionId: string;
+};
+
+export type InviteValidateResponse = {
+    valid: boolean;
+    reason?: string | null;
+    collectionId?: string | null;
+    role?: "ADMIN" | "EDITOR" | "VIEWER" | string | null;
+};
+
+export type CreateCollectionInviteRequest = {
+    role: "ADMIN" | "EDITOR" | "VIEWER" | string;
+    expiresInDays?: number | null;
+};
+
+export type ModuleSummary = {
+    id: string;
+    moduleKey: string;
+    name?: string;
+    version?: string;
+    source?: "BUILTIN" | "USER" | string;
+    updatedAt?: string;
+};
+
 export type CollectionModule = {
     moduleKey: string;
     name?: string;
@@ -91,3 +127,4 @@ export type {
     ProviderLookupResponse,
     ProviderLookupResult,
 } from "../features/providers/providerTypes";
+

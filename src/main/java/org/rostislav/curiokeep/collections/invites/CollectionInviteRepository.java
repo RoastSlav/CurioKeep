@@ -8,6 +8,5 @@ import java.util.UUID;
 
 public interface CollectionInviteRepository extends JpaRepository<CollectionInviteEntity, String> {
     Optional<CollectionInviteEntity> findByToken(String token);
-
-    List<CollectionInviteEntity> findAllByCollectionIdAndAcceptedAtIsNull(UUID collectionId);
+    List<CollectionInviteEntity> findAllByCollectionIdAndAcceptedAtIsNullAndRevokedAtIsNull(UUID collectionId);
 }

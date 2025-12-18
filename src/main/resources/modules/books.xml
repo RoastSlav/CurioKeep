@@ -48,9 +48,24 @@
 
     <fields>
         <!-- Core -->
-        <field key="title" label="Title" type="TEXT" required="true" searchable="true" sortable="true" order="1"/>
-        <field key="authors" label="Authors" type="TEXT" searchable="true" filterable="true" order="2"/>
-        <field key="subtitle" label="Subtitle" type="TEXT" searchable="true" order="3"/>
+        <field key="title" label="Title" type="TEXT" required="true" searchable="true" sortable="true" order="1">
+            <providerMappings>
+                <map provider="openlibrary" path="/title"/>
+                <map provider="googlebooks" path="/title"/>
+            </providerMappings>
+        </field>
+        <field key="authors" label="Authors" type="TEXT" searchable="true" filterable="true" order="2">
+            <providerMappings>
+                <map provider="openlibrary" path="/authors"/>
+                <map provider="googlebooks" path="/authors"/>
+            </providerMappings>
+        </field>
+        <field key="subtitle" label="Subtitle" type="TEXT" searchable="true" order="3">
+            <providerMappings>
+                <map provider="openlibrary" path="/subtitle"/>
+                <map provider="googlebooks" path="/subtitle"/>
+            </providerMappings>
+        </field>
 
         <!-- Series -->
         <field key="series" label="Series" type="TEXT" searchable="true" filterable="true" order="10"/>
@@ -78,10 +93,30 @@
         </field>
 
         <!-- Publishing -->
-        <field key="publisher" label="Publisher" type="TEXT" filterable="true" order="30"/>
-        <field key="published_year" label="Published year" type="NUMBER" filterable="true" sortable="true" order="31"/>
-        <field key="language" label="Language" type="TEXT" filterable="true" order="32"/>
-        <field key="pages" label="Pages" type="NUMBER" sortable="true" order="33"/>
+        <field key="publisher" label="Publisher" type="TEXT" filterable="true" order="30">
+            <providerMappings>
+                <map provider="openlibrary" path="/publisher"/>
+                <map provider="googlebooks" path="/publisher"/>
+            </providerMappings>
+        </field>
+        <field key="published_year" label="Published year" type="NUMBER" filterable="true" sortable="true" order="31">
+            <providerMappings>
+                <map provider="openlibrary" path="/published_year"/>
+                <map provider="googlebooks" path="/published_year"/>
+            </providerMappings>
+        </field>
+        <field key="language" label="Language" type="TEXT" filterable="true" order="32">
+            <providerMappings>
+                <map provider="openlibrary" path="/language"/>
+                <map provider="googlebooks" path="/language"/>
+            </providerMappings>
+        </field>
+        <field key="pages" label="Pages" type="NUMBER" sortable="true" order="33">
+            <providerMappings>
+                <map provider="openlibrary" path="/pages"/>
+                <map provider="googlebooks" path="/pages"/>
+            </providerMappings>
+        </field>
 
         <!-- Physical / collecting-specific -->
         <field key="format" label="Format" type="ENUM" filterable="true" order="40">

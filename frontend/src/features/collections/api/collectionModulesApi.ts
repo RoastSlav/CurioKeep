@@ -1,19 +1,18 @@
-export type ModuleToggle = { moduleKey: string; enabled: boolean };
-const base = '/api/collections';
+import { apiFetch } from "../../../api/client";
+import type { CollectionModule, ModuleSummary } from "../../../api/types";
 
-export async function listCollectionModules(collectionId: string) {
-  const res = await fetch(`${base}/${collectionId}/modules`, { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to load modules');
-  return res.json();
+export async function listAvailableModules() {
+    return apiFetch<ModuleSummary[]>("/modules");
 }
 
-export async function toggleCollectionModule(collectionId: string, moduleKey: string, enabled: boolean) {
-  const res = await fetch(`${base}/${collectionId}/modules/${encodeURIComponent(moduleKey)}`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled }),
-  });
-  if (!res.ok) throw new Error('Failed to update module');
-  return res.json();
+export async function listEnabledModules(collectionId: string) {
+    return apiFetch<CollectionModule[]>(`/collections/${collectionId}/modules`);
+}
+
+export async function enableCollectionModule(collectionId: string, moduleKey: string) {
+    return apiFetch<{ enabled: boolean }>(`/collections/${collectionId}/modules/${moduleKey}`, { method: "POST" });
+}
+
+export async function disableCollectionModule(collectionId: string, moduleKey: string) {
+    return apiFetch<{ enabled: boolean }>(`/collections/${collectionId}/modules/${moduleKey}`, { method: "DELETE" });
 }
