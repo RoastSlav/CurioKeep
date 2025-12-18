@@ -41,6 +41,7 @@ export type ModuleField = {
     fieldKey: string;
     label: string;
     fieldType: string;
+    key?: string;
     required?: boolean;
     order?: number;
     searchable?: boolean;
@@ -159,6 +160,7 @@ export type ProviderResult = {
     confidence?: { score?: number; reason?: string } | null;
     raw?: Record<string, unknown>;
     normalized?: Record<string, unknown>;
+    normalizedFields?: { json?: string };
     mappedAttributes?: Record<string, unknown>;
 };
 
@@ -173,6 +175,13 @@ export type CreateItemRequest = {
     title?: string;
     attributes: Record<string, unknown>;
     identifiers?: ItemIdentifier[];
+};
+
+export type UpdateItemRequest = {
+    stateKey?: string | null;
+    title?: string | null;
+    attributes?: Record<string, unknown> | null;
+    identifiers?: ItemIdentifier[] | null;
 };
 
 export type Item = {

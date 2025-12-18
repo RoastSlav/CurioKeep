@@ -38,6 +38,7 @@ public class ItemService {
     private final CollectionAccessService access;
     private final ModuleQueryService modules;
     private final ObjectMapper objectMapper;
+    private final ItemImageService imageService;
 
     public ItemService(
             ItemRepository items,
@@ -45,7 +46,8 @@ public class ItemService {
             CurrentUserService currentUser,
             CollectionAccessService access,
             ModuleQueryService modules,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            ItemImageService imageService
     ) {
         this.items = items;
         this.identifiers = identifiers;
@@ -53,6 +55,7 @@ public class ItemService {
         this.access = access;
         this.modules = modules;
         this.objectMapper = objectMapper;
+        this.imageService = imageService;
     }
 
     @Transactional(readOnly = true)
@@ -72,7 +75,9 @@ public class ItemService {
 
         ModuleContract contract = modules.getContract(def);
 
-        JsonNode attrs = toJsonNode(req.attributes());
+        Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes() == null ? Map.of() : req.attributes());
+        ImageProcessResult imageResult = handleImage(attrsMap);
+        JsonNode attrs = toJsonNode(attrsMap);
         validateState(contract, req.stateKey());
         validateAttributes(contract, attrs);
 
@@ -82,6 +87,9 @@ public class ItemService {
         e.setStateKey(normalizeState(req.stateKey(), contract));
         e.setTitle(req.title());
         e.setAttributes(writeJson(attrs));
+        if (imageResult.fileName() != null) {
+            e.setImageName(imageResult.fileName());
+        }
         e.setCreatedBy(u.getId());
 
         items.save(e);
@@ -118,7 +126,14 @@ public class ItemService {
 
         ModuleContract contract = modules.getContract(def);
 
-        JsonNode attrs = toJsonNode(req.attributes());
+        JsonNode attrs = null;
+        ImageProcessResult imageResult = new ImageProcessResult(null, false);
+
+        if (req.attributes() != null) {
+            Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes());
+            imageResult = handleImage(attrsMap);
+            attrs = toJsonNode(attrsMap);
+        }
 
         if (req.stateKey() != null) {
             validateState(contract, req.stateKey());
@@ -128,6 +143,12 @@ public class ItemService {
         if (req.attributes() != null) {
             validateAttributes(contract, attrs);
             e.setAttributes(writeJson(attrs));
+        }
+
+        if (imageResult.cleared()) {
+            e.setImageName(null);
+        } else if (imageResult.fileName() != null) {
+            e.setImageName(imageResult.fileName());
         }
 
         items.save(e);
@@ -242,4 +263,33 @@ public class ItemService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ATTRIBUTES_SERIALIZATION_FAILED", e);
         }
     }
+
+    private ImageProcessResult handleImage(Map<String, Object> attrs) {
+        Object urlObj = attrs.get("providerImageUrl");
+        if (!(urlObj instanceof String urlRaw)) {
+            return new ImageProcessResult(null, false);
+        }
+
+        String url = urlRaw.trim();
+        if (url.isBlank()) {
+            attrs.remove("providerImageUrl");
+            return new ImageProcessResult(null, true);
+        }
+
+        // Already cached locally
+        if (url.startsWith("/api/assets/")) {
+            String fileName = url.substring("/api/assets/".length());
+            return new ImageProcessResult(fileName, false);
+        }
+
+        String fileName = imageService.downloadToLocal(url);
+        if (fileName != null) {
+            attrs.put("providerImageUrl", "/api/assets/" + fileName);
+            return new ImageProcessResult(fileName, false);
+        }
+
+        return new ImageProcessResult(null, false);
+    }
+
+    private record ImageProcessResult(String fileName, boolean cleared) {}
 }

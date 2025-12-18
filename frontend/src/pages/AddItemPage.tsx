@@ -14,8 +14,10 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
+import AssetGallery from "../components/AssetGallery";
+import AssetPreviewDialog from "../components/AssetPreviewDialog";
 import { createItem, getModule, lookupProviders } from "../api";
-import type { ItemIdentifier, ModuleDetails, ProviderLookupResult } from "../types";
+import type { ItemIdentifier, ModuleDetails, ProviderAsset, ProviderLookupResult } from "../types";
 
 function byOrder(a: { order?: number }, b: { order?: number }) {
     const ao = a.order ?? Number.MAX_SAFE_INTEGER;
@@ -37,6 +39,17 @@ function pickDefaultIdentifierType(mod?: ModuleDetails | null): string {
     return preferred || supported[0] || "CUSTOM";
 }
 
+function parseJsonMaybe(value?: string | null): Record<string, unknown> | undefined {
+    if (!value) return undefined;
+    try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+    } catch {
+        // swallow
+    }
+    return undefined;
+}
+
 export default function AddItemPage() {
     const { collectionId, moduleKey } = useParams();
     const navigate = useNavigate();
@@ -54,6 +67,9 @@ export default function AddItemPage() {
     const [lookupLoading, setLookupLoading] = useState(false);
     const [lookupResult, setLookupResult] = useState<ProviderLookupResult | null>(null);
     const [appliedKeys, setAppliedKeys] = useState<string[]>([]);
+    const [assets, setAssets] = useState<ProviderAsset[]>([]);
+    const [selectedAsset, setSelectedAsset] = useState<ProviderAsset | null>(null);
+    const [previewAsset, setPreviewAsset] = useState<ProviderAsset | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -109,6 +125,15 @@ export default function AddItemPage() {
         return applied;
     };
 
+    const handleUsePreviewAsset = () => {
+        if (!previewAsset) return;
+        setSelectedAsset(previewAsset);
+    };
+
+    const closePreview = () => {
+        setPreviewAsset(null);
+    };
+
     const handleLookup = async () => {
         if (!module?.id) {
             setError("Module id missing; cannot run provider lookup.");
@@ -122,6 +147,8 @@ export default function AddItemPage() {
         setLookupLoading(true);
         setError(undefined);
         setAppliedKeys([]);
+        setAssets([]);
+        setSelectedAsset(null);
         try {
             const result = await lookupProviders({ moduleId: module.id, identifiers: ids });
             setLookupResult(result);
@@ -129,10 +156,20 @@ export default function AddItemPage() {
             if (mergedApplied.length > 0) {
                 setAppliedKeys(mergedApplied);
             } else {
-                const fallback = (result.best?.mappedAttributes as Record<string, unknown> | undefined) || (result.best?.normalized as Record<string, unknown> | undefined);
+                const fromMapped = result.best?.mappedAttributes as Record<string, unknown> | undefined;
+                const fromNormalized = result.best?.normalized as Record<string, unknown> | undefined;
+                const fromNormalizedFields = parseJsonMaybe(result.best?.normalizedFields?.json);
+                const fallback = fromMapped || fromNormalized || fromNormalizedFields;
                 const fallbackApplied = applyMergedAttributes(fallback);
                 setAppliedKeys(fallbackApplied);
             }
+            const fetchedAssets = result.assets ?? [];
+            setAssets(fetchedAssets);
+            setSelectedAsset((prev) => {
+                if (fetchedAssets.length === 0) return null;
+                const preserved = prev && fetchedAssets.find((asset) => asset.url === prev.url);
+                return preserved ?? fetchedAssets[0];
+            });
         } catch (e) {
             setError((e as Error).message);
         } finally {
@@ -148,11 +185,21 @@ export default function AddItemPage() {
         setSaving(true);
         setError(undefined);
         try {
+            const payloadAttributes = { ...attributes };
+            if (selectedAsset) {
+                payloadAttributes.providerImageUrl = selectedAsset.url;
+                if (selectedAsset.type) {
+                    payloadAttributes.providerImageType = selectedAsset.type;
+                }
+            } else {
+                delete payloadAttributes.providerImageUrl;
+                delete payloadAttributes.providerImageType;
+            }
             const payload = {
                 moduleId: module.id,
                 stateKey,
                 title: title.trim() || undefined,
-                attributes,
+                attributes: payloadAttributes,
                 identifiers: identifiers.filter((i) => i.idValue.trim().length > 0),
             };
             await createItem(collectionId, payload);
@@ -209,6 +256,44 @@ export default function AddItemPage() {
                         {appliedKeys.length > 0 ? ` · Applied ${appliedKeys.length} field${appliedKeys.length === 1 ? "" : "s"}` : ""}
                     </Alert>
                 )}
+                {assets.length > 0 && (
+                    <Card variant="outlined">
+                        <CardContent>
+                            <Stack spacing={1}>
+                                <AssetGallery
+                                    assets={assets}
+                                    label="Suggested images"
+                                    selectable
+                                    selectedUrl={selectedAsset?.url}
+                                    onPreview={(asset) => setPreviewAsset(asset)}
+                                    onSelect={(asset) => setSelectedAsset(asset)}
+                                />
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Typography variant="body2" color="text.secondary">
+                                        {selectedAsset
+                                            ? `Selected image (${selectedAsset.type || "primary"})`
+                                            : "Selected image will be updated from the preview dialog."
+                                        }
+                                    </Typography>
+                                    {selectedAsset && (
+                                        <Button size="small" onClick={() => setSelectedAsset(null)}>
+                                            Clear selection
+                                        </Button>
+                                    )}
+                                </Stack>
+                            </Stack>
+                        </CardContent>
+                    </Card>
+                )}
+
+                <AssetPreviewDialog
+                    open={Boolean(previewAsset)}
+                    asset={previewAsset}
+                    title="Suggested image"
+                    useLabel="Keep this image"
+                    onClose={closePreview}
+                    onUse={handleUsePreviewAsset}
+                />
                 <Card>
                     <CardContent>
                         <Stack spacing={2}>
