@@ -73,8 +73,8 @@ public class ProviderLookupService {
         record Candidate(ProviderResult result, int priority, int score) {}
 
         Comparator<Candidate> candidateComparator = Comparator
-                .comparingInt(Candidate::priority)
-                .thenComparing(Comparator.comparingInt(Candidate::score).reversed());
+            .comparingInt(Candidate::priority).reversed()
+            .thenComparing(Comparator.comparingInt(Candidate::score).reversed());
 
         List<Candidate> candidates = results.stream()
                 .map(r -> new Candidate(
@@ -87,9 +87,21 @@ public class ProviderLookupService {
 
         Map<String, Map<String, Object>> mappedCache = new LinkedHashMap<>();
 
+        // Build map of providerKey -> candidate for quick lookup
+        Map<String, Candidate> candidateByProvider = new LinkedHashMap<>();
+        for (Candidate c : candidates) {
+            candidateByProvider.put(c.result().providerKey(), c);
+        }
+
+        // Merge attributes using module-declared provider order: earlier providers fill
+        // attributes first; later providers only fill missing values. This respects
+        // the module author's preferred attribute sourcing while best-provider
+        // selection is still based on priority/score.
         for (ModuleFieldEntity field : fields) {
             String key = field.getFieldKey();
-            for (Candidate candidate : candidates) {
+            for (ModuleProviderSpec spec : providerSpecs) {
+                Candidate candidate = candidateByProvider.get(spec.key());
+                if (candidate == null) continue;
                 Map<String, Object> mapped = mappedCache.computeIfAbsent(candidate.result().providerKey(), providerKey -> {
                     JsonNode normNode = safeNormalizedNode(candidate.result());
                     try {
@@ -106,9 +118,17 @@ public class ProviderLookupService {
             }
         }
 
-        for (Candidate candidate : candidates) {
-            if (candidate.result().assets() != null) {
-                assets.addAll(candidate.result().assets());
+        // Collect assets in module-declared provider order (so module provider ordering
+        // determines preferred asset ordering) but using the candidate results for each
+        // provider. This ensures assets are ordered as module authors expect while
+        // best provider selection still uses priority/score.
+        for (ModuleProviderSpec spec : providerSpecs) {
+            for (Candidate candidate : candidates) {
+                if (candidate.result().providerKey().equals(spec.key())) {
+                    if (candidate.result().assets() != null) {
+                        assets.addAll(candidate.result().assets());
+                    }
+                }
             }
         }
 
