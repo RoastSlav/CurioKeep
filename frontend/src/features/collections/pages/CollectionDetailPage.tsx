@@ -1,5 +1,6 @@
-import { Alert, Paper, Stack, Typography } from "@mui/material";
+import { Alert, InputAdornment, Paper, Stack, TextField, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Collection, CollectionModule, Item, ModuleDetails, CollectionInvite } from "../../../api/types";
 import { useToast } from "../../../components/Toasts";
@@ -43,6 +44,8 @@ export default function CollectionDetailPage() {
     const [invites, setInvites] = useState<CollectionInvite[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [batchBusy, setBatchBusy] = useState(false);
+    const [search, setSearch] = useState("");
+    const [stateFilter, setStateFilter] = useState<string | null>(null);
     const { user } = useAuth();
 
     const {
@@ -146,6 +149,7 @@ export default function CollectionDetailPage() {
 
     useEffect(() => {
         setSelectedIds([]);
+        setStateFilter(null);
     }, [activeModuleKey, items.length]);
 
     useEffect(() => {
@@ -196,7 +200,6 @@ export default function CollectionDetailPage() {
 
     const handleOpenSettings = () => {
         setSettingsOpen(true);
-        void refreshModules();
         void refreshMembers();
         void loadInvites();
     };
@@ -306,6 +309,22 @@ export default function CollectionDetailPage() {
         }
     };
 
+    const filteredItems = useMemo(() => {
+        let base = items;
+        if (stateFilter) {
+            base = base.filter((item) => item.stateKey === stateFilter);
+        }
+        if (!search.trim()) return base;
+        const q = search.toLowerCase();
+        return base.filter((item) => {
+            const title = (item.attributes?.title as string) || (item.attributes?.name as string) || "";
+            const identifiers = (item.identifiers || []).map((id) => `${id.type} ${id.value}`).join(" ");
+            return [title, item.id, identifiers]
+                .filter(Boolean)
+                .some((val) => val.toLowerCase().includes(q));
+        });
+    }, [items, search, stateFilter]);
+
     if (loading) return <LoadingState message="Loading collection..." />;
     if (error || !collection || !id)
         return <ErrorState title="Could not load collection" message={error || "Collection not found"} onRetry={loadCollection} />;
@@ -327,31 +346,51 @@ export default function CollectionDetailPage() {
                 </Stack>
             </Paper>
 
-            <StatsPanel items={items} states={moduleDetails?.contract?.states} />
+            <StatsPanel
+                items={items}
+                states={moduleDetails?.contract?.states}
+                activeState={stateFilter}
+                onFilterChange={(stateKey) => setStateFilter(stateKey)}
+            />
 
             {!modules.length ? (
                 <EmptyState title="No modules enabled" description="Ask an admin to enable modules for this collection." />
             ) : (
-                <ItemsList
-                    items={items}
-                    loading={itemsLoading}
-                    error={itemsError}
-                    moduleName={moduleDetails?.name || activeModule?.name || activeModule?.moduleKey}
-                    moduleDefinition={moduleDetails?.contract}
-                    canAdd={canAddItems}
-                    onAdd={canAddItems ? handleAddItem : undefined}
-                    onRetry={activeModuleKey ? () => fetchModuleAndItems(activeModuleKey) : undefined}
-                    role={collection.role}
-                    onChangeState={canAddItems ? handleChangeState : undefined}
-                    onItemClick={(item) => navigate(`/collections/${id}/items/${item.id}`)}
-                    selectedIds={selectedIds}
-                    onToggleItem={toggleItemSelection}
-                    onToggleAll={handleToggleAll}
-                    onClearSelection={clearSelection}
-                    onBatchChangeState={handleBatchStateChange}
-                    onBatchDelete={handleBatchDelete}
-                    batchBusy={batchBusy}
-                />
+                <Stack spacing={1.5}>
+                    <TextField
+                        size="small"
+                        placeholder="Search items"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                    <ItemsList
+                        items={filteredItems}
+                        loading={itemsLoading}
+                        error={itemsError}
+                        moduleName={moduleDetails?.name || activeModule?.name || activeModule?.moduleKey}
+                        moduleDefinition={moduleDetails?.contract}
+                        canAdd={canAddItems}
+                        onAdd={canAddItems ? handleAddItem : undefined}
+                        onRetry={activeModuleKey ? () => fetchModuleAndItems(activeModuleKey) : undefined}
+                        role={collection.role}
+                        onChangeState={canAddItems ? handleChangeState : undefined}
+                        onItemClick={(item) => navigate(`/collections/${id}/items/${item.id}`)}
+                        selectedIds={selectedIds}
+                        onToggleItem={toggleItemSelection}
+                        onToggleAll={handleToggleAll}
+                        onClearSelection={clearSelection}
+                        onBatchChangeState={handleBatchStateChange}
+                        onBatchDelete={handleBatchDelete}
+                        batchBusy={batchBusy}
+                    />
+                </Stack>
             )}
 
             {id && moduleDetails && activeModule ? (

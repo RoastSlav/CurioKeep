@@ -58,7 +58,13 @@ export type ModuleProviderDef = {
     supportedIdentifiers?: string[];
 };
 
-export type WorkflowStepType = "PROMPT" | "PROMPT_ANY" | "LOOKUP_METADATA" | "APPLY_METADATA" | "SAVE_ITEM";
+export type WorkflowStepType =
+    | "PROMPT"
+    | "PROMPT_ANY"
+    | "LOOKUP_METADATA"
+    | "APPLY_METADATA"
+    | "SELECT_IMAGE"
+    | "SAVE_ITEM";
 
 export type WorkflowStep = {
     type: WorkflowStepType;

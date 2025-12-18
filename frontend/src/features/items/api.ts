@@ -61,3 +61,20 @@ export async function createItem(collectionId: string, payload: { moduleId: stri
         body: payload,
     });
 }
+
+export async function setItemImageFromUrl(collectionId: string, itemId: string, url: string) {
+    return apiFetch<Item>(`/collections/${collectionId}/items/${itemId}/image/from-url`, {
+        method: "POST",
+        body: { url },
+    });
+}
+
+export async function uploadItemImage(collectionId: string, itemId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return apiFetch<Item>(`/collections/${collectionId}/items/${itemId}/image/upload`, {
+        method: "POST",
+        body: formData,
+    });
+}

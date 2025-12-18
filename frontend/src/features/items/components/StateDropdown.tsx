@@ -18,7 +18,14 @@ export default function StateDropdown({
     };
 
     return (
-        <Select size="small" value={value} onChange={handleChange} disabled={disabled}>
+        <Select
+            size="small"
+            value={value}
+            onChange={handleChange}
+            disabled={disabled}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+        >
             {states.map((state) => (
                 <MenuItem key={state.key} value={state.key} disabled={state.deprecated === true}>
                     {state.label || state.key}

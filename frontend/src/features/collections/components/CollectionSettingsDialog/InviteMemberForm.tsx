@@ -78,7 +78,12 @@ export default function InviteMemberForm({ onCreate }: Props) {
                     inputProps={{ min: 1, max: 365 }}
                 />
 
-                <Button type="submit" variant="contained" disabled={loading} sx={{ whiteSpace: "nowrap" }}>
+                <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={loading}
+                    sx={{ whiteSpace: "nowrap", flexShrink: 0, minWidth: 140 }}
+                >
                     {loading ? "Creating…" : "Create invite"}
                 </Button>
             </Stack>

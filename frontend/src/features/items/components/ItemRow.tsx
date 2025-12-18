@@ -1,4 +1,4 @@
-import { Checkbox, Chip, Stack, TableCell, TableRow, Typography } from "@mui/material";
+import { Box, Checkbox, Chip, Stack, TableCell, TableRow, Typography } from "@mui/material";
 import type { Item, ModuleDefinition, ModuleStateDef } from "../../../api/types";
 import StateDropdown from "./StateDropdown";
 
@@ -30,7 +30,18 @@ export default function ItemRow({
     selected?: boolean;
     onToggleSelect?: (itemId: string, checked: boolean) => void;
 }) {
-    const firstIdentifier = item.identifiers?.[0];
+    const identifierField = (moduleDefinition?.fields || []).find((field) => {
+        const val = formatValue((item.attributes || {})[field.key]);
+        return field.identifiers && field.identifiers.length > 0 && val.trim().length > 0;
+    });
+    const identifierDisplay = identifierField
+        ? `${identifierField.identifiers?.[0] || identifierField.label || identifierField.key}: ${formatValue(
+              (item.attributes || {})[identifierField.key]
+          )}`
+        : null;
+    const imageUrl = item.attributes?.providerImageUrl as string | undefined;
+    const displayTitle =
+        (item.attributes?.title as string) || (item.attributes?.name as string) || identifierDisplay || item.id;
     const fieldsToShow = (moduleDefinition?.fields || [])
         .slice()
         .sort((a, b) => (a.flags?.order ?? Number.MAX_SAFE_INTEGER) - (b.flags?.order ?? Number.MAX_SAFE_INTEGER))
@@ -51,13 +62,26 @@ export default function ItemRow({
                 </TableCell>
             ) : null}
             <TableCell>
-                <Stack spacing={0.25}>
-                    <Typography fontWeight={600}>{item.id}</Typography>
-                    {firstIdentifier && (
-                        <Typography variant="caption" color="text.secondary">
-                            {firstIdentifier.type}: {firstIdentifier.value}
+                <Stack direction="row" spacing={1.25} alignItems="center">
+                    {imageUrl ? (
+                        <Box
+                            component="img"
+                            src={imageUrl}
+                            alt={displayTitle}
+                            sx={{ width: 64, height: 64, objectFit: "contain", borderRadius: 1, border: 1, borderColor: "divider" }}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    ) : null}
+                    <Stack spacing={0.25} minWidth={0}>
+                        <Typography fontWeight={600} noWrap>
+                            {displayTitle}
                         </Typography>
-                    )}
+                        {identifierDisplay ? (
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                                {identifierDisplay}
+                            </Typography>
+                        ) : null}
+                    </Stack>
                 </Stack>
             </TableCell>
             <TableCell>
@@ -87,8 +111,11 @@ export default function ItemRow({
                     </Stack>
                 </TableCell>
             ) : null}
-            <TableCell sx={{ whiteSpace: "nowrap" }}>{item.createdAt || ""}</TableCell>
-            <TableCell sx={{ whiteSpace: "nowrap" }}>{item.updatedAt || ""}</TableCell>
+            <TableCell sx={{ whiteSpace: "nowrap" }}>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                    {identifierDisplay || "-"}
+                </Typography>
+            </TableCell>
         </TableRow>
     );
 }

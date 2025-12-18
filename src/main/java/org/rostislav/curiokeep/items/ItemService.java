@@ -2,6 +2,7 @@ package org.rostislav.curiokeep.items;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import org.rostislav.curiokeep.collections.CollectionAccessService;
 import org.rostislav.curiokeep.collections.api.dto.Role;
 import org.rostislav.curiokeep.items.api.dto.*;
@@ -20,8 +21,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -106,9 +109,7 @@ public class ItemService {
     public ItemResponse get(UUID collectionId, UUID itemId) {
         checkUserRole(collectionId, Role.VIEWER);
 
-        ItemEntity e = items.findById(itemId)
-                .filter(it -> it.getCollectionId().equals(collectionId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND"));
+        ItemEntity e = requireItem(collectionId, itemId);
 
         return ItemResponse.from(e, objectMapper);
     }
@@ -158,6 +159,69 @@ public class ItemService {
         }
 
         log.info("Item updated: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
+
+        return ItemResponse.from(e, objectMapper);
+    }
+
+    @Transactional
+    public ItemResponse setImageFromUrl(UUID collectionId, UUID itemId, String url) {
+        AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
+        ItemEntity e = requireItem(collectionId, itemId);
+
+        if (url == null || url.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_URL_REQUIRED");
+        }
+
+        String fileName = imageService.downloadToLocal(url.trim());
+        if (fileName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE");
+        }
+
+        applyStoredImage(e, fileName);
+        items.save(e);
+
+        log.info("Item image set from url: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
+
+        return ItemResponse.from(e, objectMapper);
+    }
+
+    @Transactional
+    public ItemResponse setImageFromUpload(UUID collectionId, UUID itemId, MultipartFile file) {
+        AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
+        ItemEntity e = requireItem(collectionId, itemId);
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_FILE_REQUIRED");
+        }
+
+        String fileName;
+        try {
+            fileName = imageService.storeUploaded(file.getBytes(), file.getOriginalFilename(), file.getContentType());
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_READ_FAILED", ex);
+        }
+
+        if (fileName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE");
+        }
+
+        applyStoredImage(e, fileName);
+        items.save(e);
+
+        log.info("Item image uploaded: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
+
+        return ItemResponse.from(e, objectMapper);
+    }
+
+    @Transactional
+    public ItemResponse clearImage(UUID collectionId, UUID itemId) {
+        AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
+        ItemEntity e = requireItem(collectionId, itemId);
+
+        clearStoredImage(e);
+        items.save(e);
+
+        log.info("Item image cleared: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
 
         return ItemResponse.from(e, objectMapper);
     }
@@ -214,6 +278,12 @@ public class ItemService {
         AppUserEntity u = currentUser.requireCurrentUser();
         access.requireRole(collectionId, u.getId(), minimumRole);
         return u;
+    }
+
+    private ItemEntity requireItem(UUID collectionId, UUID itemId) {
+        return items.findById(itemId)
+                .filter(it -> it.getCollectionId().equals(collectionId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND"));
     }
 
     private void replaceIdentifiers(UUID itemId, List<ItemIdentifierDto> ids) {
@@ -292,4 +362,33 @@ public class ItemService {
     }
 
     private record ImageProcessResult(String fileName, boolean cleared) {}
+
+    private void applyStoredImage(ItemEntity e, String fileName) {
+        e.setImageName(fileName);
+        replaceProviderImageAttribute(e, "/api/assets/" + fileName);
+    }
+
+    private void clearStoredImage(ItemEntity e) {
+        e.setImageName(null);
+        replaceProviderImageAttribute(e, null);
+    }
+
+    private void replaceProviderImageAttribute(ItemEntity e, String assetPath) {
+        try {
+            ObjectNode attrs = objectMapper.readValue(
+                    e.getAttributes() == null ? "{}" : e.getAttributes(),
+                    ObjectNode.class
+            );
+
+            if (assetPath == null) {
+                attrs.remove("providerImageUrl");
+            } else {
+                attrs.put("providerImageUrl", assetPath);
+            }
+
+            e.setAttributes(writeJson(attrs));
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ATTRIBUTES_DESERIALIZATION_FAILED", ex);
+        }
+    }
 }

@@ -44,11 +44,6 @@ export default function MembersSection({
 }: Props) {
     const [removeUserId, setRemoveUserId] = useState<string | null>(null);
 
-    const canManage = (member: CollectionMember) => {
-        // OWNER row is immutable; cannot remove or change role
-        return member.role !== "OWNER";
-    };
-
     const handleRoleChange = async (userId: string, role: CollectionMember["role"]) => {
         await onChangeRole(userId, role);
     };
@@ -96,7 +91,9 @@ export default function MembersSection({
                         <TableBody>
                             {members.map((m) => {
                                 const isSelf = m.userId === currentUserId;
-                                const disableActions = !canManage(m) || saving;
+                                const isOwner = m.role === "OWNER";
+                                const disableActions = saving || isSelf;
+                                const showActions = !isOwner;
                                 return (
                                     <TableRow key={m.userId} hover>
                                         <TableCell>
@@ -112,26 +109,30 @@ export default function MembersSection({
                                         </TableCell>
                                         <TableCell align="right">
                                             <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                                                <Select
-                                                    size="small"
-                                                    value={m.role}
-                                                    disabled={disableActions || isSelf}
-                                                    onChange={(e) => void handleRoleChange(m.userId, e.target.value as CollectionMember["role"])}
-                                                >
-                                                    {ROLE_OPTIONS.map((r) => (
-                                                        <MenuItem key={r} value={r} disabled={r === "OWNER"}>
-                                                            {r}
-                                                        </MenuItem>
-                                                    ))}
-                                                </Select>
-                                                <IconButton
-                                                    color="error"
-                                                    size="small"
-                                                    disabled={disableActions || isSelf}
-                                                    onClick={() => setRemoveUserId(m.userId)}
-                                                >
-                                                    <Delete fontSize="small" />
-                                                </IconButton>
+                                                {showActions && (
+                                                    <Select
+                                                        size="small"
+                                                        value={m.role}
+                                                        disabled={disableActions}
+                                                        onChange={(e) => void handleRoleChange(m.userId, e.target.value as CollectionMember["role"])}
+                                                    >
+                                                        {ROLE_OPTIONS.map((r) => (
+                                                            <MenuItem key={r} value={r} disabled={r === "OWNER"}>
+                                                                {r}
+                                                            </MenuItem>
+                                                        ))}
+                                                    </Select>
+                                                )}
+                                                {showActions && (
+                                                    <IconButton
+                                                        color="error"
+                                                        size="small"
+                                                        disabled={disableActions}
+                                                        onClick={() => setRemoveUserId(m.userId)}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                )}
                                             </Stack>
                                         </TableCell>
                                     </TableRow>
