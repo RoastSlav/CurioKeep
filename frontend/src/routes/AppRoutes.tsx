@@ -1,29 +1,34 @@
 import { Navigate, Outlet, useLocation, useRoutes } from "react-router-dom";
 import { Stack, Typography } from "@mui/material";
+import { lazy, Suspense } from "react";
 import AppShell from "../layout/AppShell";
 import LoginPage from "../pages/LoginPage";
 import SetupPage from "../pages/SetupPage";
-import DashboardPage from "../pages/DashboardPage";
-import CollectionsPage from "../features/collections/pages/CollectionsPage";
-import CollectionDetailPage from "../features/collections/pages/CollectionDetailPage";
-import AcceptCollectionInvitePage from "../features/collections/pages/AcceptCollectionInvitePage";
-import ItemDetailPage from "../features/items/pages/ItemDetailPage";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
+
+const DashboardPage = lazy(() => import("../pages/DashboardPage"));
+const CollectionsPage = lazy(() => import("../features/collections/pages/CollectionsPage"));
+const CollectionDetailPage = lazy(() => import("../features/collections/pages/CollectionDetailPage"));
+const AcceptCollectionInvitePage = lazy(() => import("../features/collections/pages/AcceptCollectionInvitePage"));
+const ItemDetailPage = lazy(() => import("../features/items/pages/ItemDetailPage"));
 import RequireAuth from "../auth/RequireAuth";
 import RequireSetupComplete from "../auth/RequireSetupComplete";
 import { useAuth } from "../auth/useAuth";
 import { useSetupStatus } from "../components/AppGate";
-import LoadingState from "../components/LoadingState";
-import ErrorState from "../components/ErrorState";
+function Suspended({ children }: { children: React.ReactNode }) {
+    return <Suspense fallback={<LoadingState message="Loading..." />}>{children}</Suspense>;
+}
 
 function ProtectedLayout() {
     return (
-        <RequireSetupComplete>
-            <RequireAuth>
-                <AppShell>
+        <AppShell>
+            <RequireSetupComplete>
+                <RequireAuth>
                     <Outlet />
-                </AppShell>
-            </RequireAuth>
-        </RequireSetupComplete>
+                </RequireAuth>
+            </RequireSetupComplete>
+        </AppShell>
     );
 }
 
@@ -82,11 +87,11 @@ export default function AppRoutes() {
             path: "/",
             element: <ProtectedLayout />,
             children: [
-                { index: true, element: <DashboardPage /> },
-                { path: "collections", element: <CollectionsPage /> },
-                { path: "collections/:id", element: <CollectionDetailPage /> },
-                { path: "collections/:id/items/:itemId", element: <ItemDetailPage /> },
-                { path: "invites/collection/:token", element: <AcceptCollectionInvitePage /> },
+                { index: true, element: <Suspended><DashboardPage /></Suspended> },
+                { path: "collections", element: <Suspended><CollectionsPage /></Suspended> },
+                { path: "collections/:id", element: <Suspended><CollectionDetailPage /></Suspended> },
+                { path: "collections/:id/items/:itemId", element: <Suspended><ItemDetailPage /></Suspended> },
+                { path: "invites/collection/:token", element: <Suspended><AcceptCollectionInvitePage /></Suspended> },
                 { path: "modules", element: <StubPage title="Modules" note="Modules page placeholder" /> },
                 { path: "providers", element: <StubPage title="Providers" note="Providers page placeholder" /> },
                 { path: "profile", element: <StubPage title="Profile" note="Profile editing coming soon" /> },

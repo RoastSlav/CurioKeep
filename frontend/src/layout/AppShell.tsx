@@ -1,5 +1,5 @@
-import { Box, Container, Drawer, Toolbar, useMediaQuery, useTheme } from "@mui/material";
-import { useEffect, useState, type ReactNode } from "react";
+import { Box, CircularProgress, Container, Drawer, Toolbar, useMediaQuery, useTheme } from "@mui/material";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import SideNav from "./SideNav";
@@ -64,11 +64,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     flexGrow: 1,
                     width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
                     minHeight: "100vh",
+                    minWidth: 0,
+                    overflowX: "hidden",
                 }}
             >
                 <Toolbar />
-                <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 } }}>
-                    {children}
+                <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 }, px: { xs: 2, md: 3 } }}>
+                    <Suspense
+                        fallback={
+                            <Box sx={{ display: "grid", placeItems: "center", minHeight: 240 }}>
+                                <CircularProgress />
+                            </Box>
+                        }
+                    >
+                        {children}
+                    </Suspense>
                 </Container>
             </Box>
         </Box>

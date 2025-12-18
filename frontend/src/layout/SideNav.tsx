@@ -54,8 +54,8 @@ export default function SideNav({ isAdmin, onNavigate }: { isAdmin?: boolean; on
 
     return (
         <Stack sx={{ height: "100%" }}>
-            <Toolbar>
-                <Typography variant="h6" fontWeight={700}>
+            <Toolbar sx={{ overflow: "hidden" }}>
+                <Typography variant="h6" fontWeight={700} noWrap>
                     CurioKeep
                 </Typography>
             </Toolbar>
@@ -64,7 +64,7 @@ export default function SideNav({ isAdmin, onNavigate }: { isAdmin?: boolean; on
             {isAdmin && (
                 <>
                     <Divider sx={{ my: 1 }} />
-                    <ListSubheader component="div" inset sx={{ fontWeight: 700 }}>
+                    <ListSubheader component="div" inset sx={{ fontWeight: 700, lineHeight: 1.4 }}>
                         Admin
                     </ListSubheader>
                     {renderNavList(adminNav)}
