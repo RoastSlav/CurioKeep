@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ProviderStatusService {
     private static final Duration RATE_LIMIT = Duration.ofSeconds(30);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final Logger log = LoggerFactory.getLogger(ProviderStatusService.class);
 
@@ -96,10 +95,9 @@ public class ProviderStatusService {
             String safeTarget = normalizeTarget(key, target);
             try {
                 restClient.get()
-                        .uri(safeTarget)
-                        .header("User-Agent", USER_AGENT)
-                        .retrieve()
-                        .toBodilessEntity();
+                    .uri(safeTarget)
+                    .retrieve()
+                    .toBodilessEntity();
                 message = "Successfully contacted provider";
                 available = true;
             } catch (RestClientResponseException ex) {

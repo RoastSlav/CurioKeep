@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Search, ExternalLink, Check, AlertCircle, Info } from "lucide-react";
 import { Input } from "../../../../components/ui/input";
 import { Button } from "../../../../components/ui/button";
 import { Badge } from "../../../../components/ui/badge";
 import ErrorState from "../../../components/ErrorState";
 import { useToast } from "../../../components/Toasts";
-import { listProviders, testProviderConnection } from "../api";
+import {
+  listProviders,
+  testProviderConnection,
+  clearProvidersCache,
+} from "../api";
 import { ProviderCredentialsModal } from "../components/ProviderCredentialsModal";
 import { providerAttribution } from "../providerAttribution";
 import type { Provider } from "../providerTypes";
@@ -25,17 +29,16 @@ export default function ProvidersPage() {
   const [checkResults, setCheckResults] = useState<
     Record<string, "success" | "failed" | null>
   >({});
+  const isFetchingRef = useRef(false);
   const { showToast } = useToast();
 
-  useEffect(() => {
-    loadProviders();
-  }, []);
-
-  async function loadProviders() {
+  const loadProviders = useCallback(async (forceRefresh = false) => {
+    if (isFetchingRef.current && !forceRefresh) return;
+    isFetchingRef.current = true;
     try {
       setLoading(true);
       setError(null);
-      const data = await listProviders();
+      const data = await listProviders({ forceRefresh });
       const normalizedData = Array.isArray(data)
         ? data.map((p) => ({
             ...p,
@@ -59,9 +62,14 @@ export default function ProvidersPage() {
       setError(err.message || "Failed to load providers");
       setProviders([]);
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadProviders();
+  }, [loadProviders]);
 
   const handleTestConnection = async (providerKey: string) => {
     try {
@@ -118,6 +126,7 @@ export default function ProvidersPage() {
     providerKey: string,
     status: { credentialsConfigured: boolean }
   ) => {
+    clearProvidersCache();
     setProviders((prev) =>
       prev.map((p) =>
         p.key === providerKey
@@ -183,7 +192,7 @@ export default function ProvidersPage() {
       <ErrorState
         title="Failed to load providers"
         message={error}
-        onRetry={loadProviders}
+        onRetry={() => loadProviders(true)}
       />
     );
   }

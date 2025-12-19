@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 public class CoverArtArchiveProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(CoverArtArchiveProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
     private static final Pattern MBID = Pattern.compile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$");
 
     private final RestClient http;
@@ -53,9 +52,8 @@ public class CoverArtArchiveProvider implements MetadataProvider {
         }
         String mbid = idValue.trim();
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri("https://coverartarchive.org/release/{mbid}", mbid)
-                    .header("User-Agent", USER_AGENT)
                     .retrieve()
                     .toEntity(String.class);
 

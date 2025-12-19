@@ -26,7 +26,6 @@ import java.util.Optional;
 public class PokeApiProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(PokeApiProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private final RestClient http;
     private final ObjectMapper objectMapper;
@@ -52,9 +51,8 @@ public class PokeApiProvider implements MetadataProvider {
         if (id == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri("https://pokeapi.co/api/v2/pokemon/" + id)
-                    .header("User-Agent", USER_AGENT)
                     .retrieve()
                     .toEntity(String.class);
 

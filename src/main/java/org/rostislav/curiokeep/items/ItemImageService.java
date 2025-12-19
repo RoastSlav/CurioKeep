@@ -5,14 +5,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -95,11 +92,10 @@ public class ItemImageService {
 
     private byte[] fetchBytes(String url) throws IOException {
         byte[] body = restClient.get()
-                .uri(URI.create(url))
-                .header(HttpHeaders.USER_AGENT, "CurioKeep/1.0")
-                .retrieve()
-                .toEntity(byte[].class)
-                .getBody();
+            .uri(URI.create(url))
+            .retrieve()
+            .toEntity(byte[].class)
+            .getBody();
         return body == null ? new byte[0] : body;
     }
 

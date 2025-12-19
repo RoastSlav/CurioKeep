@@ -28,7 +28,6 @@ import java.util.Optional;
 public class RawgProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(RawgProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
             ProviderCredentialField.secret("apiKey", "RAWG API key", "Rawg API key")
@@ -75,14 +74,13 @@ public class RawgProvider implements MetadataProvider {
         if (id == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri(uriBuilder -> uriBuilder
-                            .scheme("https")
-                            .host("api.rawg.io")
-                            .path("/api/games/" + id)
-                            .queryParam("key", apiKey)
-                            .build())
-                    .header("User-Agent", USER_AGENT)
+                        .scheme("https")
+                        .host("api.rawg.io")
+                        .path("/api/games/" + id)
+                        .queryParam("key", apiKey)
+                        .build())
                     .retrieve()
                     .toEntity(String.class);
 

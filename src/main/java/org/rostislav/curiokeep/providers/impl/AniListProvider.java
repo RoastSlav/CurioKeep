@@ -26,7 +26,6 @@ import java.util.Optional;
 public class AniListProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(AniListProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
     private static final String QUERY = "query ($id: Int) { Media(id: $id, type: ANIME) { id title { romaji english native } description(asHtml: false) startDate { year } seasonYear season coverImage { extraLarge large medium } siteUrl } }";
 
     private final RestClient http;
@@ -59,9 +58,8 @@ public class AniListProvider implements MetadataProvider {
             payload.put("query", QUERY);
             payload.set("variables", variables);
 
-            ResponseEntity<String> response = http.post()
+                ResponseEntity<String> response = http.post()
                     .uri("https://graphql.anilist.co")
-                    .header("User-Agent", USER_AGENT)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload.toString())
                     .retrieve()

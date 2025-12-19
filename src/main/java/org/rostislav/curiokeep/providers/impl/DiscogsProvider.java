@@ -29,7 +29,6 @@ import java.util.Optional;
 public class DiscogsProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(DiscogsProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
             ProviderCredentialField.secret("token", "Discogs token", "Discogs database token")
@@ -79,16 +78,15 @@ public class DiscogsProvider implements MetadataProvider {
         if (barcode == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri(uriBuilder -> uriBuilder
-                            .scheme("https")
-                            .host("api.discogs.com")
-                            .path("/database/search")
-                            .queryParam("barcode", barcode)
-                            .queryParam("type", "release")
-                            .queryParam("per_page", "1")
-                            .build())
-                    .header("User-Agent", USER_AGENT)
+                        .scheme("https")
+                        .host("api.discogs.com")
+                        .path("/database/search")
+                        .queryParam("barcode", barcode)
+                        .queryParam("type", "release")
+                        .queryParam("per_page", "1")
+                        .build())
                     .header("Authorization", "Discogs token=" + token)
                     .retrieve()
                     .toEntity(String.class);

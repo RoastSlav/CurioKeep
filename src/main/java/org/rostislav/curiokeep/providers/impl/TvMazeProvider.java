@@ -25,7 +25,6 @@ import java.util.Optional;
 public class TvMazeProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(TvMazeProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private final RestClient http;
     private final ObjectMapper objectMapper;
@@ -51,14 +50,13 @@ public class TvMazeProvider implements MetadataProvider {
         if (id == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri(uriBuilder -> uriBuilder
-                            .scheme("https")
-                            .host("api.tvmaze.com")
-                            .path("/shows/" + id)
-                            .queryParam("embed", "episodes,cast")
-                            .build())
-                    .header("User-Agent", USER_AGENT)
+                        .scheme("https")
+                        .host("api.tvmaze.com")
+                        .path("/shows/" + id)
+                        .queryParam("embed", "episodes,cast")
+                        .build())
                     .retrieve()
                     .toEntity(String.class);
 

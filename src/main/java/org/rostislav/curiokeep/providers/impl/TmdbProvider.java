@@ -28,7 +28,6 @@ import java.util.Optional;
 public class TmdbProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(TmdbProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
             ProviderCredentialField.secret("apiKey", "TMDB API key", "TMDB API key for movie lookups")
@@ -83,7 +82,6 @@ public class TmdbProvider implements MetadataProvider {
                             .queryParam("api_key", apiKey)
                             .queryParam("append_to_response", "credits,images")
                             .build())
-                    .header("User-Agent", USER_AGENT)
                     .retrieve()
                     .toEntity(String.class);
 

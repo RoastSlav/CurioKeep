@@ -25,7 +25,6 @@ import java.util.Optional;
 public class OpenProductDataProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(OpenProductDataProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private final RestClient http;
     private final ObjectMapper objectMapper;
@@ -51,9 +50,8 @@ public class OpenProductDataProvider implements MetadataProvider {
         if (id == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri("https://world.openfoodfacts.org/api/v2/product/" + id)
-                    .header("User-Agent", USER_AGENT)
                     .retrieve()
                     .toEntity(String.class);
 

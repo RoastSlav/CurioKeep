@@ -29,7 +29,6 @@ import java.util.Optional;
 public class IgdbProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(IgdbProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
             ProviderCredentialField.text("clientId", "Client ID", "Twitch IGDB Client ID"),
@@ -83,11 +82,10 @@ public class IgdbProvider implements MetadataProvider {
         try {
             String bodyRequest = "fields name, summary, first_release_date, cover.url, slug; where id = " + id + ";";
 
-            ResponseEntity<String> response = http.post()
+                ResponseEntity<String> response = http.post()
                     .uri("https://api.igdb.com/v4/games")
                     .header("Client-ID", clientId)
                     .header("Authorization", "Bearer " + bearerToken)
-                    .header("User-Agent", USER_AGENT)
                     .contentType(MediaType.TEXT_PLAIN)
                     .body(bodyRequest)
                     .retrieve()
