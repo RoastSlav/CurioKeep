@@ -44,6 +44,7 @@ export default function CollectionDetailPage() {
   const [modules, setModules] = useState<CollectionModule[]>([]);
   const [activeModuleKey, setActiveModuleKey] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
+  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
   const [moduleDetails, setModuleDetails] = useState<ModuleDetails | null>(
     null
   );
@@ -142,7 +143,10 @@ export default function CollectionDetailPage() {
 
   const defaultStateKey = moduleDetails?.contract?.states?.[0]?.key || "OWNED";
 
-  const fetchModuleAndItems = async (moduleKey: string) => {
+  const fetchModuleAndItems = async (
+    moduleKey: string,
+    forceRefresh = false
+  ) => {
     if (!id) return;
     const module = modules.find((m) => m.moduleKey === moduleKey);
     if (!module) return;
@@ -156,10 +160,14 @@ export default function CollectionDetailPage() {
     try {
       const [details, page] = await Promise.all([
         getModuleDetails(moduleKey),
-        listItems(id, module.moduleId),
+        listItems(id, module.moduleId, { forceRefresh }),
       ]);
       setModuleDetails(details);
       setItems(page.content);
+      setItemCounts((prev) => ({
+        ...prev,
+        [module.moduleKey]: page.totalElements ?? page.content.length,
+      }));
     } catch (err: any) {
       const message = err?.message || "Failed to load module or items";
       setModuleError(message);
@@ -219,6 +227,12 @@ export default function CollectionDetailPage() {
 
   const handleItemCreated = (item: Item) => {
     setItems((prev) => [item, ...prev]);
+    if (activeModuleKey) {
+      setItemCounts((prev) => ({
+        ...prev,
+        [activeModuleKey]: (prev[activeModuleKey] || 0) + 1,
+      }));
+    }
     showToast("Item added", "success");
   };
 
@@ -304,6 +318,15 @@ export default function CollectionDetailPage() {
         await deleteItem(id, itemId);
         deleted.push(itemId);
         setItems((prev) => prev.filter((i) => i.id !== itemId));
+        if (activeModuleKey) {
+          setItemCounts((prev) => ({
+            ...prev,
+            [activeModuleKey]: Math.max(
+              (prev[activeModuleKey] ?? items.length) - 1,
+              0
+            ),
+          }));
+        }
       } catch (err: any) {
         failures.push(itemId);
       }
@@ -367,17 +390,13 @@ export default function CollectionDetailPage() {
     });
   }, [items, search, stateFilter]);
 
-  const itemCountsByModule = useMemo(() => {
-    const counts: Record<string, number> = {};
-    modules.forEach((module) => {
-      counts[module.moduleKey] = 0;
-    });
-    // All current items belong to the active module
-    if (activeModuleKey) {
-      counts[activeModuleKey] = items.length;
-    }
-    return counts;
-  }, [modules, items.length, activeModuleKey]);
+  const itemCountsByModule = useMemo(
+    () => ({
+      ...modules.reduce((acc, m) => ({ ...acc, [m.moduleKey]: 0 }), {}),
+      ...itemCounts,
+    }),
+    [modules, itemCounts]
+  );
 
   if (loading) return <LoadingState message="Loading collection..." />;
   if (error || !collection || !id)
@@ -453,7 +472,7 @@ export default function CollectionDetailPage() {
             onAdd={canAddItems ? handleAddItem : undefined}
             onRetry={
               activeModuleKey
-                ? () => fetchModuleAndItems(activeModuleKey)
+                ? () => fetchModuleAndItems(activeModuleKey, true)
                 : undefined
             }
             role={collection.role}
