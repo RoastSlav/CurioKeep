@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS module_definition (
                                                  definition_json JSONB NOT NULL DEFAULT '{}'::jsonb,          -- normalized/compiled optional
                                                  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
                                                  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-                                                 CONSTRAINT chk_module_source CHECK (source IN ('BUILTIN','USER'))
+                                                 CONSTRAINT chk_module_source CHECK (source IN ('BUILTIN', 'IMPORTED'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_module_definition_key
@@ -169,3 +169,51 @@ CREATE TABLE IF NOT EXISTS item_identifier (
 -- Fast lookups by identifier value:
 CREATE INDEX IF NOT EXISTS idx_item_identifier_lookup
     ON item_identifier(id_type, id_value);
+
+CREATE OR REPLACE FUNCTION trg_delete_module_field_when_module_id_null()
+    RETURNS trigger AS
+$$
+BEGIN
+    -- If someone tries to null the FK, delete the row instead.
+    IF NEW.module_id IS NULL THEN
+        DELETE FROM module_field WHERE id = OLD.id;
+        RETURN NULL; -- skip the UPDATE
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS module_field_no_null_module_id ON module_field;
+
+CREATE TRIGGER module_field_no_null_module_id
+    BEFORE UPDATE OF module_id
+    ON module_field
+    FOR EACH ROW
+    WHEN (NEW.module_id IS NULL)
+EXECUTE FUNCTION trg_delete_module_field_when_module_id_null();
+
+
+-- Same idea for module_state (Hibernate can do the same "null-out" pattern)
+CREATE OR REPLACE FUNCTION trg_delete_module_state_when_module_id_null()
+    RETURNS trigger AS
+$$
+BEGIN
+    IF NEW.module_id IS NULL THEN
+        DELETE
+        FROM module_state
+        WHERE module_id = OLD.module_id
+          AND state_key = OLD.state_key;
+        RETURN NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS module_state_no_null_module_id ON module_state;
+
+CREATE TRIGGER module_state_no_null_module_id
+    BEFORE UPDATE OF module_id
+    ON module_state
+    FOR EACH ROW
+    WHEN (NEW.module_id IS NULL)
+EXECUTE FUNCTION trg_delete_module_state_when_module_id_null();
