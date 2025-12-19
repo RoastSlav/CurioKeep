@@ -1,154 +1,151 @@
-import { Add, Launch } from "@mui/icons-material";
+"use client"
+
+import {Plus, ExternalLink} from "lucide-react"
+import {useEffect, useMemo, useRef, useState} from "react"
+import {createCollection, listCollections} from "../api/collections"
+import type {Collection} from "../api/types"
+import CollectionCard from "../components/CollectionCard"
+import EmptyState from "../components/EmptyState"
+import ErrorState from "../components/ErrorState"
+import {useToast} from "../components/Toasts"
+import StatCard from "../components/StatCard"
+import {Button} from "../../components/ui/button"
 import {
-    Button,
-    Card,
-    CardContent,
     Dialog,
-    DialogActions,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
     DialogTitle,
-    Skeleton,
-    Stack,
-    TextField,
-    Typography,
-} from "@mui/material";
-import Grid from "@mui/material/Grid";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createCollection, listCollections } from "../api/collections";
-import type { Collection } from "../api/types";
-import CollectionCard from "../components/CollectionCard";
-import EmptyState from "../components/EmptyState";
-import ErrorState from "../components/ErrorState";
-import StatCard from "../components/StatCard";
-import { useToast } from "../components/Toasts";
+} from "../../components/ui/dialog"
+import {Input} from "../../components/ui/input"
+import {Label} from "../../components/ui/label"
+import {Textarea} from "../../components/ui/textarea"
+import {Card, CardContent} from "../../components/ui/card"
+import {Skeleton} from "../../components/ui/skeleton"
 
 export default function DashboardPage() {
-    const { showToast } = useToast();
-    const [collections, setCollections] = useState<Collection[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
+    const {showToast} = useToast()
+    const [collections, setCollections] = useState<Collection[]>([])
+    const [loading, setLoading] = useState<boolean>(true)
+    const [error, setError] = useState<string | null>(null)
 
-    const [createOpen, setCreateOpen] = useState<boolean>(false);
-    const [createName, setCreateName] = useState<string>("");
-    const [createDescription, setCreateDescription] = useState<string>("");
-    const [creating, setCreating] = useState<boolean>(false);
+    const [createOpen, setCreateOpen] = useState<boolean>(false)
+    const [createName, setCreateName] = useState<string>("")
+    const [createDescription, setCreateDescription] = useState<string>("")
+    const [creating, setCreating] = useState<boolean>(false)
 
-    const loggedMissingStats = useRef<boolean>(false);
+    const loggedMissingStats = useRef<boolean>(false)
 
-    const hasItemsCount = useMemo(() => collections.some((c) => c.itemsCount !== undefined), [collections]);
+    const hasItemsCount = useMemo(() => collections.some((c) => c.itemsCount !== undefined), [collections])
 
     useEffect(() => {
         const load = async () => {
-            setLoading(true);
-            setError(null);
+            setLoading(true)
+            setError(null)
             try {
-                const data = await listCollections();
-                setCollections(data);
+                const data = await listCollections()
+                setCollections(data)
             } catch (err: any) {
-                setError(err?.message || "Failed to load collections");
+                setError(err?.message || "Failed to load collections")
             } finally {
-                setLoading(false);
+                setLoading(false)
             }
-        };
+        }
 
-        void load();
-    }, []);
+        void load()
+    }, [])
 
     useEffect(() => {
         if (!hasItemsCount && !loggedMissingStats.current && !loading) {
-            loggedMissingStats.current = true;
-            // eslint-disable-next-line no-console
-            console.info("Item counts are not provided by the backend yet. Showing placeholders in the dashboard stats.");
+            loggedMissingStats.current = true
+            console.info("Item counts are not provided by the backend yet. Showing placeholders in the dashboard stats.")
         }
-    }, [hasItemsCount, loading]);
+    }, [hasItemsCount, loading])
 
-    const collectionsCount = collections.length;
-    const itemsCount = hasItemsCount ? collections.reduce((sum, c) => sum + (c.itemsCount ?? 0), 0) : undefined;
+    const collectionsCount = collections.length
+    const itemsCount = hasItemsCount ? collections.reduce((sum, c) => sum + (c.itemsCount ?? 0), 0) : undefined
 
     const openCreateDialog = () => {
-        setCreateOpen(true);
-        setCreateName("");
-        setCreateDescription("");
-    };
+        setCreateOpen(true)
+        setCreateName("")
+        setCreateDescription("")
+    }
 
     const handleCreate = async () => {
         if (!createName.trim()) {
-            showToast("Collection name is required", "warning");
-            return;
+            showToast("Collection name is required", "warning")
+            return
         }
-        setCreating(true);
+        setCreating(true)
         try {
-            const created = await createCollection({ name: createName.trim(), description: createDescription.trim() || undefined });
-            setCollections((prev) => [created, ...prev]);
-            setCreateOpen(false);
-            showToast("Collection created", "success");
+            const created = await createCollection({
+                name: createName.trim(),
+                description: createDescription.trim() || undefined,
+            })
+            setCollections((prev) => [created, ...prev])
+            setCreateOpen(false)
+            showToast("Collection created", "success")
         } catch (err: any) {
-            showToast(err?.message || "Failed to create collection", "error");
+            showToast(err?.message || "Failed to create collection", "error")
         } finally {
-            setCreating(false);
+            setCreating(false)
         }
-    };
+    }
 
     if (error) {
-        return <ErrorState title="Could not load dashboard" message={error} onRetry={() => window.location.reload()} />;
+        return <ErrorState title="Could not load dashboard" message={error} onRetry={() => window.location.reload()}/>
     }
 
     return (
-        <Stack spacing={3}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between">
-                <Stack spacing={0.5}>
-                    <Typography variant="h4" fontWeight={700}>
-                        Dashboard
-                    </Typography>
-                    <Typography color="text.secondary">Overview of your collections</Typography>
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                    <Button variant="contained" startIcon={<Add />} onClick={openCreateDialog}>
+        <div className="space-y-8">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
+                <div className="space-y-2">
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight uppercase">Dashboard</h1>
+                    <p className="text-base font-medium">Overview of your collections and items</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <Button onClick={openCreateDialog} className="w-full sm:w-auto min-w-[160px]">
+                        <Plus className="w-4 h-4 mr-2"/>
                         Create collection
                     </Button>
-                    <Button
-                        variant="text"
-                        endIcon={<Launch />}
-                        href="https://github.com/RoastSlav/CurioKeep"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        Learn about modules
+                    <Button variant="outline" asChild className="w-full sm:w-auto min-w-[160px] bg-transparent">
+                        <a href="https://github.com/RoastSlav/CurioKeep" target="_blank" rel="noreferrer">
+                            Learn more
+                            <ExternalLink className="w-4 h-4 ml-2"/>
+                        </a>
                     </Button>
-                </Stack>
-            </Stack>
+                </div>
+            </div>
 
-            <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <StatCard label="Collections" value={collectionsCount} loading={loading} />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <StatCard
-                        label="Items"
-                        value={itemsCount ?? "—"}
-                        loading={loading}
-                        hint={!hasItemsCount ? "Needs backend support" : undefined}
-                    />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <StatCard label="Owned vs Wishlist" value="—" loading={loading} hint="Needs backend support" />
-                </Grid>
-            </Grid>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <StatCard label="Collections" value={collectionsCount} loading={loading} variant="default"/>
+                <StatCard
+                    label="Total Items"
+                    value={itemsCount ?? "—"}
+                    loading={loading}
+                    hint={!hasItemsCount ? "Backend support needed" : undefined}
+                    variant="secondary"
+                />
+                <StatCard label="Quick Stats" value="—" loading={loading} hint="Backend support needed"
+                          variant="accent"/>
+            </div>
 
+            {/* Collections Grid */}
             {loading ? (
-                <Grid container spacing={2}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1, 2, 3].map((key) => (
-                        <Grid key={key} size={{ xs: 12, sm: 6, md: 4 }}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Skeleton variant="text" width="60%" height={32} />
-                                    <Skeleton variant="text" width="40%" />
-                                    <Skeleton variant="rectangular" height={80} sx={{ mt: 1 }} />
-                                </CardContent>
-                            </Card>
-                        </Grid>
+                        <Card key={key}>
+                            <CardContent className="pt-6">
+                                <Skeleton className="h-8 w-3/5 mb-2"/>
+                                <Skeleton className="h-4 w-2/5 mb-2"/>
+                                <Skeleton className="h-20 w-full mt-2"/>
+                            </CardContent>
+                        </Card>
                     ))}
-                </Grid>
+                </div>
             ) : collections.length === 0 ? (
                 <EmptyState
                     title="No collections yet"
@@ -156,58 +153,66 @@ export default function DashboardPage() {
                     actionLabel="Create collection"
                     onAction={openCreateDialog}
                     secondary={
-                        <Button
-                            variant="text"
-                            endIcon={<Launch />}
-                            href="https://github.com/RoastSlav/CurioKeep"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            Learn about modules
+                        <Button variant="link" asChild>
+                            <a href="https://github.com/RoastSlav/CurioKeep" target="_blank" rel="noreferrer">
+                                Learn about modules
+                                <ExternalLink className="w-4 h-4 ml-2"/>
+                            </a>
                         </Button>
                     }
                 />
             ) : (
-                <Grid container spacing={2}>
-                    {collections.map((collection) => (
-                        <Grid key={collection.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                            <CollectionCard collection={collection} />
-                        </Grid>
-                    ))}
-                </Grid>
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold uppercase tracking-wide">Your Collections</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {collections.map((collection) => (
+                            <CollectionCard key={collection.id} collection={collection}/>
+                        ))}
+                    </div>
+                </div>
             )}
 
-            <Dialog open={createOpen} onClose={() => !creating && setCreateOpen(false)} fullWidth maxWidth="sm">
-                <DialogTitle>Create collection</DialogTitle>
-                <DialogContent sx={{ pt: 1 }}>
-                    <Stack spacing={2}>
-                        <TextField
-                            autoFocus
-                            fullWidth
-                            label="Name"
-                            value={createName}
-                            onChange={(e) => setCreateName(e.target.value)}
-                            required
-                        />
-                        <TextField
-                            fullWidth
-                            label="Description"
-                            value={createDescription}
-                            onChange={(e) => setCreateDescription(e.target.value)}
-                            multiline
-                            minRows={2}
-                        />
-                    </Stack>
+            {/* Create Dialog */}
+            <Dialog open={createOpen} onOpenChange={(open) => !creating && setCreateOpen(open)}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Create collection</DialogTitle>
+                        <DialogDescription>Create a new collection to organize your items</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="create-name">Name *</Label>
+                            <Input
+                                id="create-name"
+                                value={createName}
+                                onChange={(e) => setCreateName(e.target.value)}
+                                placeholder="Enter collection name"
+                                autoFocus
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="create-description">Description</Label>
+                            <Textarea
+                                id="create-description"
+                                value={createDescription}
+                                onChange={(e) => setCreateDescription(e.target.value)}
+                                placeholder="Enter collection description"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleCreate} disabled={creating}
+                                className="bg-secondary hover:bg-secondary-dark">
+                            {creating ? "Creating..." : "Create"}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setCreateOpen(false)} disabled={creating}>
-                        Cancel
-                    </Button>
-                    <Button onClick={handleCreate} variant="contained" disabled={creating}>
-                        {creating ? "Creating..." : "Create"}
-                    </Button>
-                </DialogActions>
             </Dialog>
-        </Stack>
-    );
+        </div>
+    )
 }

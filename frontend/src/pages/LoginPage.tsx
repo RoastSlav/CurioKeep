@@ -1,79 +1,109 @@
-import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ApiError, isApiError } from "../api/errors";
-import { useAuth } from "../auth/useAuth";
-import { useSetupStatus } from "../components/AppGate";
-import LoadingState from "../components/LoadingState";
-import ErrorState from "../components/ErrorState";
-import { useToast } from "../components/Toasts";
+"use client"
+
+import type {FormEvent} from "react"
+import {useState} from "react"
+import {Navigate, useLocation, useNavigate, useSearchParams} from "react-router-dom"
+import {type ApiError, isApiError} from "../api/errors"
+import {useAuth} from "../auth/useAuth"
+import {useSetupStatus} from "../components/AppGate"
+import LoadingState from "../components/LoadingState"
+import ErrorState from "../components/ErrorState"
+import {useToast} from "../components/Toasts"
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../components/ui/card"
+import {Input} from "../../components/ui/input"
+import {Label} from "../../components/ui/label"
+import {Button} from "../../components/ui/button"
+import {Alert, AlertDescription} from "../../components/ui/alert"
+import {AlertCircle} from "lucide-react"
 
 export default function LoginPage() {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [params] = useSearchParams();
-    const { user, loading: authLoading, error: authError, login } = useAuth();
-    const { setupRequired, loading: setupLoading, error: setupError, reload: reloadSetup } = useSetupStatus();
-    const { showToast } = useToast();
+    const navigate = useNavigate()
+    const location = useLocation()
+    const [params] = useSearchParams()
+    const {user, loading: authLoading, error: authError, login} = useAuth()
+    const {setupRequired, loading: setupLoading, error: setupError, reload: reloadSetup} = useSetupStatus()
+    const {showToast} = useToast()
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [submitting, setSubmitting] = useState(false)
+    const [submitError, setSubmitError] = useState<string | null>(null)
 
-    if (setupLoading) return <LoadingState message="Checking setup..." />;
-    if (setupError) return <ErrorState title="Setup check failed" message={setupError} onRetry={reloadSetup} />;
-    if (setupRequired) return <Navigate to="/setup" replace />;
+    if (setupLoading) return <LoadingState message="Checking setup..."/>
+    if (setupError) return <ErrorState title="Setup check failed" message={setupError} onRetry={reloadSetup}/>
+    if (setupRequired) return <Navigate to="/setup" replace/>
 
-    if (authLoading) return <LoadingState message="Checking session..." />;
-    if (user) return <Navigate to="/" replace />;
+    if (authLoading) return <LoadingState message="Checking session..."/>
+    if (user) return <Navigate to="/" replace/>
 
     const onSubmit = async (evt: FormEvent) => {
-        evt.preventDefault();
-        setSubmitError(null);
-        setSubmitting(true);
+        evt.preventDefault()
+        setSubmitError(null)
+        setSubmitting(true)
         try {
-            await login(email, password);
-            showToast("Signed in", "success");
-            const returnTo = params.get("returnTo") || "/";
-            navigate(returnTo, { replace: true, state: { from: location } });
+            await login(email, password)
+            showToast("Signed in", "success")
+            const returnTo = params.get("returnTo") || "/"
+            navigate(returnTo, {replace: true, state: {from: location}})
         } catch (err) {
-            const apiErr = err as ApiError;
-            setSubmitError(isApiError(apiErr) ? apiErr.message : "Login failed");
+            const apiErr = err as ApiError
+            setSubmitError(isApiError(apiErr) ? apiErr.message : "Login failed")
         } finally {
-            setSubmitting(false);
+            setSubmitting(false)
         }
-    };
+    }
 
     return (
-        <Box maxWidth={420} mx="auto" mt={6}>
+        <div className="max-w-md mx-auto mt-12">
             <Card>
+                <CardHeader>
+                    <CardTitle className="text-2xl">Sign in</CardTitle>
+                    <CardDescription>Enter your credentials to access your account</CardDescription>
+                </CardHeader>
                 <CardContent>
-                    <Stack component="form" spacing={2} onSubmit={onSubmit}>
-                        <Typography variant="h5" fontWeight={700}>Sign in</Typography>
-                        {authError && <Alert severity="error">{authError}</Alert>}
-                        {submitError && <Alert severity="error">{submitError}</Alert>}
-                        <TextField
-                            label="Email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            autoFocus
-                        />
-                        <TextField
-                            label="Password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                        <Button type="submit" variant="contained" disabled={submitting}>
+                    <form onSubmit={onSubmit} className="space-y-4">
+                        {authError && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4"/>
+                                <AlertDescription>{authError}</AlertDescription>
+                            </Alert>
+                        )}
+                        {submitError && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4"/>
+                                <AlertDescription>{submitError}</AlertDescription>
+                            </Alert>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                                required
+                                autoFocus
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
+                        <Button type="submit" className="w-full bg-secondary hover:bg-secondary-dark"
+                                disabled={submitting}>
                             {submitting ? "Signing in..." : "Sign in"}
                         </Button>
-                    </Stack>
+                    </form>
                 </CardContent>
             </Card>
-        </Box>
-    );
+        </div>
+    )
 }

@@ -1,32 +1,27 @@
-import { Chip, Stack, Typography } from "@mui/material";
-import type { ReactNode } from "react";
-import type { Collection } from "../../../api/types";
+import type {ReactNode} from "react"
+import type {Collection} from "../../../api/types"
+import {Badge} from "../../../../components/ui/badge"
 
 export default function CollectionHeader({ collection, actions }: { collection: Collection; actions?: ReactNode }) {
-    const role = collection.role?.toUpperCase();
-    const isOwner = role === "OWNER";
+    const role = collection.role?.toUpperCase()
+    const isOwner = role === "OWNER"
 
     return (
-        <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "flex-start", md: "center" }}
-            justifyContent="space-between"
-        >
-            <Stack spacing={1.25} flex={1} minWidth={0}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="h4" fontWeight={700} noWrap>
-                        {collection.name}
-                    </Typography>
-                    {role && <Chip label={role} size="small" color={isOwner ? "primary" : "default"} variant={isOwner ? "filled" : "outlined"} />}
-                </Stack>
+        <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
+            <div className="space-y-2 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight uppercase">{collection.name}</h1>
+                    {role && (
+                        <Badge variant={isOwner ? "default" : "secondary"} className={isOwner ? "bg-primary" : ""}>
+                            {role}
+                        </Badge>
+                    )}
+                </div>
                 {collection.description && (
-                    <Typography color="text.secondary" variant="body1">
-                        {collection.description}
-                    </Typography>
+                    <p className="text-base text-text-secondary leading-relaxed">{collection.description}</p>
                 )}
-            </Stack>
+            </div>
             {actions}
-        </Stack>
-    );
+        </div>
+    )
 }

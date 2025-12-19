@@ -1,75 +1,49 @@
-import { FormControl, InputLabel, MenuItem, Select, Stack, Tab, Tabs, Typography, useMediaQuery } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
-import type { CollectionModule } from "../../../api/types";
+"use client"
+
+import type {CollectionModule} from "../../../api/types"
+import {Badge} from "../../../../components/ui/badge"
+import {cn} from "../../../../lib/utils"
 
 type Props = {
-    modules: CollectionModule[];
-    activeModuleKey: string | null;
-    onChange: (moduleKey: string) => void;
-};
+    modules: CollectionModule[]
+    activeModuleKey: string | null
+    onChange: (moduleKey: string) => void
+    itemCounts?: Record<string, number>
+}
 
-export default function ModuleSelector({ modules, activeModuleKey, onChange }: Props) {
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
+export default function ModuleSelector({modules, activeModuleKey, onChange, itemCounts = {}}: Props) {
     if (!modules.length) {
-        return (
-            <Typography color="text.secondary" variant="body2">
-                No modules are enabled for this collection yet.
-            </Typography>
-        );
+        return <p className="text-sm text-text-secondary">No modules are enabled for this collection yet.</p>
     }
 
-    if (isMobile) {
-        return (
-            <FormControl fullWidth size="small">
-                <InputLabel id="collection-module-selector">Module</InputLabel>
-                <Select
-                    labelId="collection-module-selector"
-                    label="Module"
-                    value={activeModuleKey || modules[0].moduleKey}
-                    onChange={(e) => onChange(e.target.value)}
-                >
-                    {modules.map((module) => (
-                        <MenuItem key={module.moduleKey} value={module.moduleKey}>
-                            <Stack direction="column" spacing={0.25}>
-                                <Typography fontWeight={600}>{module.name || module.moduleKey}</Typography>
-                                {module.version && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        v{module.version}
-                                    </Typography>
-                                )}
-                            </Stack>
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-        );
-    }
+    const currentValue = activeModuleKey || modules[0].moduleKey
 
     return (
-        <Tabs
-            value={activeModuleKey || modules[0].moduleKey}
-            onChange={(_, value) => onChange(value)}
-            variant="scrollable"
-            scrollButtons="auto"
-        >
-            {modules.map((module) => (
-                <Tab
-                    key={module.moduleKey}
-                    value={module.moduleKey}
-                    label={
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography fontWeight={600}>{module.name || module.moduleKey}</Typography>
-                            {module.version && (
-                                <Typography variant="caption" color="text.secondary">
-                                    v{module.version}
-                                </Typography>
-                            )}
-                        </Stack>
-                    }
-                />
-            ))}
-        </Tabs>
-    );
+        <div className="flex items-center gap-3 flex-wrap border-4 border-border bg-card p-4 brutal-shadow-sm">
+            <h3 className="text-base font-bold uppercase min-w-[120px]">Modules</h3>
+            {modules.map((module) => {
+                const isActive = currentValue === module.moduleKey
+                const count = itemCounts[module.moduleKey] || 0
+
+        return (
+            <Badge
+                key={module.moduleKey}
+                variant={isActive ? "default" : "outline"}
+                className={cn(
+                    "cursor-pointer transition-colors text-sm px-4 py-2 border-2",
+                    isActive && "bg-primary hover:bg-primary-dark text-white border-primary",
+                    !isActive && "hover:bg-muted",
+                )}
+                onClick={() => onChange(module.moduleKey)}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold">{module.name || module.moduleKey}</span>
+                    {module.version && <span className="text-xs opacity-70">v{module.version}</span>}
+                    <span className="font-bold">({count})</span>
+                </div>
+            </Badge>
+        )
+            })}
+        </div>
+    )
 }

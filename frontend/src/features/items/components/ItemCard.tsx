@@ -1,48 +1,43 @@
-import { Avatar, Card, CardContent, CardMedia, Chip, Stack, Typography } from "@mui/material";
-import type { Item } from "../../../api/types";
+"use client"
+
+import type {Item} from "../../../api/types"
+import {Card, CardContent} from "../../../../components/ui/card"
+import {Badge} from "../../../../components/ui/badge"
+import {Avatar, AvatarFallback} from "../../../../components/ui/avatar"
 
 export default function ItemCard({ item }: { item: Item }) {
-    const firstIdentifier = item.identifiers?.[0];
-    const imageUrl = item.attributes?.providerImageUrl as string | undefined;
-    const title = (item.attributes?.title as string | undefined) || item.id;
+    const firstIdentifier = item.identifiers?.[0]
+    const imageUrl = item.attributes?.providerImageUrl as string | undefined
+    const title = (item.attributes?.title as string | undefined) || item.id
 
     return (
-        <Card variant="outlined" sx={{ height: "100%" }}>
+        <Card className="h-full">
             {imageUrl ? (
-                    <CardMedia
-                        component="img"
-                        image={imageUrl}
-                        alt={title}
-                        sx={{ height: 160, objectFit: "cover", borderBottom: 1, borderColor: "divider" }}
-                    />
+                <div className="h-40 border-b-2 border-border overflow-hidden">
+                    <img src={imageUrl || "/placeholder.svg"} alt={title} className="w-full h-full object-cover"/>
+                </div>
             ) : (
-                    <Stack alignItems="center" justifyContent="center" sx={{ height: 160, borderBottom: 1, borderColor: "divider" }}>
-                        <Avatar sx={{ width: 72, height: 72 }}>{(title || "?").substring(0, 1)}</Avatar>
-                    </Stack>
+                <div className="h-40 border-b-2 border-border flex items-center justify-center bg-muted">
+                    <Avatar className="w-16 h-16">
+                        <AvatarFallback className="text-xl font-bold">{(title || "?").substring(0, 1)}</AvatarFallback>
+                    </Avatar>
+                </div>
             )}
-            <CardContent>
-                <Stack spacing={1.25}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="subtitle1" fontWeight={700} noWrap>
-                            {item.id}
-                        </Typography>
-                        <Chip size="small" label={item.stateKey} />
-                    </Stack>
-                    {firstIdentifier && (
-                        <Typography variant="body2" color="text.secondary">
-                            {firstIdentifier.type}: {firstIdentifier.value}
-                        </Typography>
-                    )}
-                    <Stack direction="row" spacing={2}>
-                        <Typography variant="caption" color="text.secondary">
-                            Created: {item.createdAt || ""}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            Updated: {item.updatedAt || ""}
-                        </Typography>
-                    </Stack>
-                </Stack>
+            <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold truncate">{item.id}</p>
+                    <Badge variant="secondary">{item.stateKey}</Badge>
+                </div>
+                {firstIdentifier && (
+                    <p className="text-sm text-muted-foreground">
+                        {firstIdentifier.type}: {firstIdentifier.value}
+                    </p>
+                )}
+                <div className="flex gap-4">
+                    <span className="text-xs text-muted-foreground">Created: {item.createdAt || ""}</span>
+                    <span className="text-xs text-muted-foreground">Updated: {item.updatedAt || ""}</span>
+                </div>
             </CardContent>
         </Card>
-    );
+    )
 }

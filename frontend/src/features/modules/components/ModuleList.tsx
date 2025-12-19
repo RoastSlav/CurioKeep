@@ -1,113 +1,107 @@
-import { Box, Button, Chip, Divider, List, ListItemButton, Stack, TextField, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
-import type { ModuleDetails, ModuleSummary } from "../api/modulesApi";
+"use client"
+
+import {useMemo, useState} from "react"
+import type {ModuleDetails, ModuleSummary} from "../api/modulesApi"
+import {Input} from "../../../../components/ui/input"
+import {Badge} from "../../../../components/ui/badge"
+import {cn} from "../../../../lib/utils"
 
 type Props = {
-    modules: ModuleSummary[];
-    details: Record<string, ModuleDetails>;
-    selectedKey?: string;
-    onSelect: (moduleKey: string) => void;
-    onViewXml: (moduleKey: string) => void;
-};
+    modules: ModuleSummary[]
+    details: Record<string, ModuleDetails>
+    selectedKey?: string
+    onSelect: (moduleKey: string) => void
+    onViewXml: (moduleKey: string) => void
+}
 
-const sourceColors: Record<ModuleSummary["source"], "default" | "primary" | "success"> = {
-    BUILTIN: "primary",
-    IMPORTED: "success",
-    USER: "default",
-};
+const sourceColors: Record<ModuleSummary["source"], string> = {
+    BUILTIN: "bg-primary text-primary-foreground brutal-border",
+    IMPORTED: "bg-secondary text-secondary-foreground brutal-border",
+    USER: "bg-accent text-accent-foreground brutal-border",
+}
 
 export default function ModuleList({ modules, details, selectedKey, onSelect, onViewXml }: Props) {
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState("")
 
     const filtered = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        if (!term) return modules;
+        const term = search.trim().toLowerCase()
+        if (!term) return modules
         return modules.filter((module) => {
-            const target = `${module.name} ${module.moduleKey} ${module.version}`.toLowerCase();
-            if (target.includes(term)) return true;
-            const tags = details[module.moduleKey]?.contract.meta?.tags ?? [];
-            return tags.some((tag) => tag.toLowerCase().includes(term));
-        });
-    }, [modules, search, details]);
+            const target = `${module.name} ${module.moduleKey} ${module.version}`.toLowerCase()
+            if (target.includes(term)) return true
+            const tags = details[module.moduleKey]?.contract.meta?.tags ?? []
+            return tags.some((tag) => tag.toLowerCase().includes(term))
+        })
+    }, [modules, search, details])
 
     const formatUpdated = (value?: string) => {
-        if (!value) return null;
-        const date = new Date(value);
-        return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-    };
+        if (!value) return null
+        const date = new Date(value)
+        return date.toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})
+    }
 
     return (
-        <Stack spacing={1} sx={{ width: "100%" }}>
-            <TextField
-                label="Search modules"
-                size="small"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
+        <div className="flex flex-col gap-3 w-full">
+            <Input
                 placeholder="Filter by name, key, or tag"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="brutal-border shadow-sm bg-background text-foreground"
             />
-            <List component="nav" sx={{ p: 0 }}>
+            <nav className="flex flex-col gap-2">
                 {filtered.map((module) => {
-                    const updatedLabel = formatUpdated(module.updatedAt);
-                    const tags = details[module.moduleKey]?.contract.meta?.tags ?? [];
+                    const updatedLabel = formatUpdated(module.updatedAt)
+                    const tags = details[module.moduleKey]?.contract.meta?.tags ?? []
+                    const isSelected = module.moduleKey === selectedKey
                     return (
-                        <Box key={module.moduleKey}>
-                            <ListItemButton
-                                selected={module.moduleKey === selectedKey}
+                        <div key={module.moduleKey}>
+                            <div
                                 onClick={() => onSelect(module.moduleKey)}
-                                sx={{ flexWrap: "wrap" }}
+                                className={cn(
+                                    "w-full p-4 transition-all duration-200 flex flex-col gap-3 cursor-pointer",
+                                    "brutal-border brutal-shadow-sm",
+                                    isSelected ? "bg-muted border-primary" : "bg-card hover:translate-x-1 hover:-translate-y-1",
+                                )}
                             >
-                                <Stack flexGrow={1} spacing={0.5} sx={{ minWidth: 0 }}>
-                                    <Stack direction="row" alignItems="center" spacing={1} justifyContent="space-between">
-                                        <Stack>
-                                            <Typography variant="subtitle1" fontWeight={600} noWrap>
-                                                {module.name}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap>
-                                                {module.moduleKey}
-                                            </Typography>
-                                        </Stack>
-                                        <Chip label={module.source} color={sourceColors[module.source] || "default"} size="small" />
-                                    </Stack>
-                                    <Stack direction="row" alignItems="center" spacing={1} justifyContent="space-between">
-                                        <Typography variant="body2" color="text.secondary">
-                                            v{module.version}
-                                        </Typography>
-                                        {updatedLabel && (
-                                            <Typography variant="body2" color="text.secondary">
-                                                Updated {updatedLabel}
-                                            </Typography>
-                                        )}
-                                    </Stack>
+                                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-card-foreground truncate uppercase">{module.name}</p>
+                                            <p className="text-xs text-muted-foreground truncate font-mono">{module.moduleKey}</p>
+                                        </div>
+                                        <Badge className={sourceColors[module.source]}>{module.source}</Badge>
+                                    </div>
+                                    <div
+                                        className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+                                        <span className="font-medium">v{module.version}</span>
+                                        {updatedLabel && <span className="text-xs">Updated {updatedLabel}</span>}
+                                    </div>
                                     {tags.length > 0 && (
-                                        <Stack direction="row" spacing={0.5} flexWrap="wrap" pt={0.25}>
+                                        <div className="flex flex-wrap gap-1 pt-1">
                                             {tags.slice(0, 3).map((tag) => (
-                                                <Chip key={`${module.moduleKey}-${tag}`} label={tag} size="small" />
+                                                <Badge key={`${module.moduleKey}-${tag}`} variant="outline"
+                                                       className="text-xs brutal-border">
+                                                    {tag}
+                                                </Badge>
                                             ))}
-                                            {tags.length > 3 && <Chip label={`+${tags.length - 3}`} size="small" />}
-                                        </Stack>
+                                            {tags.length > 3 && (
+                                                <Badge variant="outline" className="text-xs brutal-border">
+                                                    +{tags.length - 3}
+                                                </Badge>
+                                            )}
+                                        </div>
                                     )}
-                                </Stack>
-                                <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        onViewXml(module.moduleKey);
-                                    }}
-                                >
-                                    View XML
-                                </Button>
-                            </ListItemButton>
-                            <Divider component="li" />
-                        </Box>
-                    );
+                                </div>
+                            </div>
+                        </div>
+                    )
                 })}
                 {filtered.length === 0 && (
-                    <Box p={2} textAlign="center">
-                        <Typography color="text.secondary">No modules match that search.</Typography>
-                    </Box>
+                    <div className="p-6 text-center brutal-border bg-muted">
+                        <p className="text-muted-foreground font-medium">No modules match that search.</p>
+                    </div>
                 )}
-            </List>
-        </Stack>
-    );
+            </nav>
+        </div>
+    )
 }

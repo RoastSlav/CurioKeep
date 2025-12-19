@@ -1,281 +1,280 @@
-import { Box, Button, Chip, Divider, Paper, Skeleton, Stack, Typography, useTheme } from "@mui/material";
-import { useState, type ReactNode } from "react";
-import ErrorState from "../../../components/ErrorState";
-import type { ModuleDetails, ModuleSummary } from "../api/modulesApi";
-import DeleteModuleDialog from "./DeleteModuleDialog";
-import ModuleInfoCards from "./ModuleInfoCards";
-import { useAuth } from "../../../auth/useAuth";
+"use client"
+
+import type {ReactNode} from "react"
+import {useState} from "react"
+import ErrorState from "../../../components/ErrorState"
+import type {ModuleDetails, ModuleSummary} from "../api/modulesApi"
+import DeleteModuleDialog from "./DeleteModuleDialog"
+import ModuleInfoCards from "./ModuleInfoCards"
+import {useAuth} from "../../../auth/useAuth"
+import {Skeleton} from "../../../../components/ui/skeleton"
+import {Button} from "../../../../components/ui/button"
+import {Badge} from "../../../../components/ui/badge"
 
 type Props = {
-    module?: ModuleDetails;
-    summary?: ModuleSummary;
-    loading?: boolean;
-    error?: string;
-    onViewRaw?: () => void;
-    onViewContract?: () => void;
-    onModuleDeleted?: (moduleKey: string) => void;
-};
+    module?: ModuleDetails
+    summary?: ModuleSummary
+    loading?: boolean
+    error?: string
+    onViewRaw?: () => void
+    onViewContract?: () => void
+    onModuleDeleted?: (moduleKey: string) => void
+}
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-    <Box>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            {title}
-        </Typography>
-        <Stack spacing={1}>{children}</Stack>
-    </Box>
-);
+    <div>
+        <p className="text-sm font-medium text-muted-foreground mb-2">{title}</p>
+        <div className="flex flex-col gap-2">{children}</div>
+    </div>
+)
 
 export default function ModuleDetailsPanel({
-    module,
-    summary,
-    loading,
-    error,
-    onViewRaw,
-    onViewContract,
-    onModuleDeleted,
+                                               module,
+                                               summary,
+                                               loading,
+                                               error,
+                                               onViewRaw,
+                                               onViewContract,
+                                               onModuleDeleted,
 }: Props) {
-    const theme = useTheme();
-    const { user } = useAuth();
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const canDelete = Boolean(user?.isAdmin && module?.source === "IMPORTED");
+    const {user} = useAuth()
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const canDelete = Boolean(user?.isAdmin && module?.source === "IMPORTED")
 
-    const showSkeleton = !!loading && !module && !error;
+    console.log("[v0] ModuleDetailsPanel render:", {
+        hasModule: !!module,
+        hasSummary: !!summary,
+        loading,
+        error,
+        moduleKey: module?.moduleKey || summary?.moduleKey,
+    })
+
+    const showSkeleton = loading && !module
 
     if (showSkeleton) {
+        console.log("[v0] Showing skeleton")
         return (
-            <Paper sx={{ p: 3, minHeight: 280 }}>
-                <Stack spacing={2}>
-                    <Skeleton variant="text" width="45%" height={32} />
-                    <Skeleton variant="text" width="30%" height={20} />
-                    <Skeleton variant="rectangular" height={160} sx={{ borderRadius: 2 }} />
-                </Stack>
-            </Paper>
-        );
+            <div className="brutal-border brutal-shadow-sm bg-card p-6 min-h-[280px]">
+                <div className="flex flex-col gap-4">
+                    <Skeleton className="h-8 w-[45%]"/>
+                    <Skeleton className="h-5 w-[30%]"/>
+                    <Skeleton className="h-40 w-full rounded-md"/>
+                </div>
+            </div>
+        )
     }
 
     if (error) {
         return (
-            <Paper sx={{ p: 3 }}>
-                <ErrorState message={error} />
-            </Paper>
-        );
+            <div className="brutal-border brutal-shadow-sm bg-card p-6">
+                <ErrorState message={error}/>
+            </div>
+        )
     }
 
     if (!module) {
         if (summary) {
             return (
-                <Paper sx={{ p: 3, minHeight: 220 }}>
-                    <Stack spacing={1}>
-                        <Box sx={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 1 }}>
-                            <Typography variant="h5" fontWeight={600} color="accent.main">
-                                {summary.name}
-                            </Typography>
-                            <Chip label={summary.source} size="small" color="primary" />
-                        </Box>
-                        <Typography color="text.secondary">
+                <div className="brutal-border brutal-shadow-sm bg-card p-6 min-h-[220px]">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-wrap justify-between gap-2">
+                            <h2 className="text-xl font-bold text-primary">{summary.name}</h2>
+                            <Badge className="brutal-border bg-primary text-primary-foreground">{summary.source}</Badge>
+                        </div>
+                        <p className="text-muted-foreground">
                             Version {summary.version} · {summary.moduleKey}
-                        </Typography>
-                        <Typography color="secondary.main">
+                        </p>
+                        <p className="text-secondary-foreground">
                             Module details are syncing. The detailed contract metadata will appear shortly.
-                        </Typography>
-                    </Stack>
-                </Paper>
-            );
+                        </p>
+                    </div>
+                </div>
+            )
         }
 
         return (
-            <Paper sx={{ p: 3, minHeight: 220 }}>
-                <Stack spacing={1} alignItems="center" justifyContent="center" sx={{ height: "100%" }}>
-                    <Typography variant="h6" color="accent.main">
-                        Select a module
-                    </Typography>
-                    <Typography color="secondary.main" textAlign="center">
+            <div className="brutal-border brutal-shadow-sm bg-card p-6 min-h-[220px]">
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                    <h3 className="text-lg font-bold text-primary uppercase">Select a module</h3>
+                    <p className="text-muted-foreground text-center">
                         Choose a module from the left column to view its contract and associated metadata.
-                    </Typography>
-                </Stack>
-            </Paper>
-        );
+                    </p>
+                </div>
+            </div>
+        )
     }
 
-    const description = module.contract.description || "No description provided.";
+    const description = module.contract.description || "No description provided."
 
-    const handleOpenDelete = () => setDeleteDialogOpen(true);
-    const handleCloseDelete = () => setDeleteDialogOpen(false);
+    const handleOpenDelete = () => setDeleteDialogOpen(true)
+    const handleCloseDelete = () => setDeleteDialogOpen(false)
 
     return (
-        <Paper sx={{ p: 3, minHeight: 320 }}>
-            <Stack spacing={2}>
-                <Stack
-                    direction="row"
-                    alignItems="flex-start"
-                    justifyContent="space-between"
-                    flexWrap="wrap"
-                    spacing={1}
-                >
-                    <Box sx={{ minWidth: 0 }}>
-                        <Typography
-                            variant="h5"
-                            fontWeight={600}
-                            color="accent.main"
-                            noWrap
-                            sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+        <div className="brutal-border brutal-shadow-sm bg-card p-6 min-h-[320px]">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-wrap items-start justify-between gap-3 pb-4 border-b-4 border-border">
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-2xl font-bold text-card-foreground truncate uppercase">{module.name}</h2>
+                        <p className="text-sm text-muted-foreground mt-1">{description}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={onViewRaw}
+                            disabled={!onViewRaw}
+                            className="brutal-border brutal-shadow-sm bg-card hover:bg-muted uppercase"
                         >
-                            {module.name}
-                        </Typography>
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            noWrap
-                            sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
-                        >
-                            {description}
-                        </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1}>
-                        <Button size="small" variant="outlined" onClick={onViewRaw} disabled={!onViewRaw}>
-                            View Raw XML
-                        </Button>
-                        <Button size="small" variant="outlined" onClick={onViewContract} disabled={!onViewContract}>
-                            View Contract JSON
+                            View XML
                         </Button>
                         <Button
-                            size="small"
-                            variant="outlined"
-                            color="error"
-                            onClick={handleOpenDelete}
-                            disabled={!canDelete}
+                            size="sm"
+                            variant="outline"
+                            onClick={onViewContract}
+                            disabled={!onViewContract}
+                            className="brutal-border brutal-shadow-sm bg-card hover:bg-muted uppercase"
                         >
-                            Delete module
+                            Contract
                         </Button>
-                    </Stack>
-                </Stack>
-                <ModuleInfoCards module={module} />
-                <Divider />
-                <Section title="States">
-                    {module.contract.states.map((state) => (
-                        <Chip key={state.key} label={`${state.label} (${state.key})`} size="small" />
-                    ))}
+                        {canDelete && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleOpenDelete}
+                                className="brutal-border brutal-shadow-sm text-destructive hover:bg-destructive hover:text-destructive-foreground uppercase bg-transparent"
+                            >
+                                Delete
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                <ModuleInfoCards module={module}/>
+
+                <Section title="STATES">
+                    <div className="flex flex-wrap gap-2">
+                        {module.contract.states.map((state) => (
+                            <Badge key={state.key} variant="outline" className="brutal-border uppercase">
+                                {state.label} ({state.key})
+                            </Badge>
+                        ))}
+                    </div>
                 </Section>
-                <Section title="Providers">
+
+                <Section title="PROVIDERS">
                     {module.contract.providers.map((provider) => (
-                        <Stack key={provider.key} spacing={0.25}>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                                <Typography variant="body2" fontWeight={600}>
-                                    {provider.key}
-                                </Typography>
-                                <Chip
-                                    label={provider.enabled ? "Enabled" : "Disabled"}
-                                    size="small"
-                                    color={provider.enabled ? "success" : "default"}
-                                />
-                                <Chip label={`Priority: ${provider.priority}`} size="small" />
-                            </Stack>
+                        <div key={provider.key} className="flex flex-col gap-2 p-3 brutal-border bg-muted/30">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-card-foreground uppercase">{provider.key}</span>
+                                <Badge
+                                    className={`brutal-border uppercase ${provider.enabled ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"}`}
+                                >
+                                    {provider.enabled ? "Enabled" : "Disabled"}
+                                </Badge>
+                                <Badge variant="outline" className="brutal-border">
+                                    Priority: {provider.priority}
+                                </Badge>
+                            </div>
                             {provider.supportsIdentifiers.length > 0 && (
-                                <Typography variant="caption" color="text.secondary">
-                                    Supports {provider.supportsIdentifiers.join(", ")}
-                                </Typography>
+                                <p className="text-xs text-muted-foreground">Supports: {provider.supportsIdentifiers.join(", ")}</p>
                             )}
-                        </Stack>
+                        </div>
                     ))}
                 </Section>
-                <Divider />
-                <Section title="Fields">
-                    {module.contract.fields.map((field) => (
-                        <Paper key={field.key} variant="outlined" sx={{ p: 1 }}>
-                            <Stack spacing={0.25}>
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                    <Typography variant="body2" fontWeight={600} noWrap>
-                                        {field.label}
-                                    </Typography>
-                                    <Chip label={field.type} size="small" />
-                                    {field.required && (
-                                        <Chip label="Required" size="small" color="warning" />
+
+                <Section title="FIELDS">
+                    <div className="grid gap-3">
+                        {module.contract.fields.map((field) => (
+                            <div key={field.key} className="brutal-border brutal-shadow-sm bg-muted/50 p-4">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span
+                                            className="font-bold text-card-foreground truncate uppercase">{field.label}</span>
+                                        <Badge variant="outline" className="brutal-border uppercase">
+                                            {field.type}
+                                        </Badge>
+                                        {field.required && (
+                                            <Badge
+                                                className="brutal-border bg-amber-500 text-white uppercase">Required</Badge>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground truncate font-mono">{field.key}</p>
+                                    {(() => {
+                                        const status = [
+                                            field.searchable ? "Searchable" : null,
+                                            field.filterable ? "Filterable" : null,
+                                            field.sortable ? "Sortable" : null,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" · ")
+                                        return status ? <p className="text-xs text-muted-foreground">{status}</p> : null
+                                    })()}
+                                    {field.identifiers.length > 0 && (
+                                        <p className="text-xs text-muted-foreground">Identifiers: {field.identifiers.join(", ")}</p>
                                     )}
-                                </Stack>
-                                <Typography variant="caption" color="text.secondary" noWrap>
-                                    {field.key}
-                                </Typography>
-                                {(() => {
-                                    const status = [
-                                        field.searchable ? "Searchable" : null,
-                                        field.filterable ? "Filterable" : null,
-                                        field.sortable ? "Sortable" : null,
-                                    ]
-                                        .filter(Boolean)
-                                        .join(" • ");
-                                    return status ? (
-                                        <Typography variant="caption" color="text.secondary">
-                                            {status}
-                                        </Typography>
-                                    ) : null;
-                                })()}
-                                {field.identifiers.length > 0 && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Identifier types: {field.identifiers.join(", ")}
-                                    </Typography>
-                                )}
-                                {field.enumValues.length > 0 && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Enum: {field.enumValues.map((value) => value.key).join(", ")}
-                                    </Typography>
-                                )}
-                            </Stack>
-                        </Paper>
-                    ))}
+                                    {field.enumValues.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 pt-1">
+                                            {field.enumValues.map((value) => (
+                                                <Badge key={value.key} variant="outline"
+                                                       className="text-xs brutal-border">
+                                                    {value.key}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </Section>
-                <Divider />
-                <Section title="Workflows">
-                    {module.contract.workflows.map((workflow) => (
-                        <Paper key={workflow.key} variant="outlined" sx={{ p: 1 }}>
-                            <Stack spacing={0.5}>
-                                <Typography variant="body2" fontWeight={600} color={theme.palette.text.primary}>
-                                    {workflow.label}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {workflow.key}
-                                </Typography>
-                                <Stack spacing={0.5}>
-                                    {workflow.steps.map((step, idx) => (
-                                        <Paper key={`${workflow.key}-${idx}`} variant="outlined" sx={{ p: 1 }}>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Step {idx + 1}: {step.type}
-                                            </Typography>
-                                            {step.label && (
-                                                <Typography variant="body2">{step.label}</Typography>
-                                            )}
-                                            {step.field && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Field: {step.field}
-                                                </Typography>
-                                            )}
-                                            {step.fields.length > 0 && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Fields: {step.fields.join(", ")}
-                                                </Typography>
-                                            )}
-                                            {step.providers.length > 0 && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Providers: {step.providers.join(", ")}
-                                                </Typography>
-                                            )}
-                                        </Paper>
-                                    ))}
-                                </Stack>
-                            </Stack>
-                        </Paper>
-                    ))}
+
+                <Section title="WORKFLOWS">
+                    <div className="grid gap-3">
+                        {module.contract.workflows.map((workflow) => (
+                            <div key={workflow.key} className="brutal-border brutal-shadow-sm bg-muted/50 p-4">
+                                <div className="flex flex-col gap-3">
+                                    <div>
+                                        <p className="font-bold text-card-foreground uppercase">{workflow.label}</p>
+                                        <p className="text-xs text-muted-foreground font-mono">{workflow.key}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        {workflow.steps.map((step, idx) => (
+                                            <div key={`${workflow.key}-${idx}`} className="brutal-border bg-card p-3">
+                                                <div className="flex flex-col gap-1">
+                                                    <p className="text-sm font-bold text-card-foreground uppercase">
+                                                        Step {idx + 1}: {step.type}
+                                                    </p>
+                                                    {step.label &&
+                                                        <p className="text-sm text-muted-foreground">{step.label}</p>}
+                                                    {step.field &&
+                                                        <p className="text-xs text-muted-foreground font-mono">Field: {step.field}</p>}
+                                                    {step.fields.length > 0 && (
+                                                        <p className="text-xs text-muted-foreground">Fields: {step.fields.join(", ")}</p>
+                                                    )}
+                                                    {step.providers.length > 0 && (
+                                                        <p className="text-xs text-muted-foreground">Providers: {step.providers.join(", ")}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </Section>
-            </Stack>
+            </div>
+
             <DeleteModuleDialog
                 open={deleteDialogOpen}
                 moduleKey={module.moduleKey}
                 moduleName={module.name}
                 onClose={handleCloseDelete}
                 onModuleDeleted={() => {
-                    handleCloseDelete();
-                    onModuleDeleted?.(module.moduleKey);
+                    handleCloseDelete()
+                    onModuleDeleted?.(module.moduleKey)
                 }}
             />
-        </Paper>
-    );
+        </div>
+    )
 }
