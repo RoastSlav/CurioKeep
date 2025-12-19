@@ -2,11 +2,7 @@ package org.rostislav.curiokeep.providers;
 
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class ProviderKnowledgeBase {
@@ -25,9 +21,9 @@ public class ProviderKnowledgeBase {
                 "Returns GraphQL payloads with cover URLs and airing schedules",
                 "Good for anime/manga titles across seasons and arcs"
         ));
-        map.put("bgg", profile(
-                "bgg",
-                "BoardGameGeek",
+        map.put("boardgamegeek", profile(
+                "boardgamegeek",
+                "Board Game Geek",
                 "The community-driven board game catalog with ratings, mechanics, player counts, and designers.",
                 "https://boardgamegeek.com",
                 "https://boardgamegeek.com/wiki/page/BGG_XML_API2",
