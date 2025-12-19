@@ -1,33 +1,37 @@
-import { Add, Settings } from "@mui/icons-material";
-import { Button, Stack } from "@mui/material";
+"use client"
+
+import {Plus, Settings} from "lucide-react"
+import {Button} from "../../../../components/ui/button"
 
 export default function CollectionActionsMenu({
-    role,
-    onAddItem,
-    onOpenSettings,
+                                                  role,
+                                                  onAddItem,
+                                                  onOpenSettings,
 }: {
-    role?: string;
-    onAddItem?: () => void;
-    onOpenSettings?: () => void;
+    role?: string
+    onAddItem?: () => void
+    onOpenSettings?: () => void
 }) {
-    const roleUpper = role?.toUpperCase();
-    const canAdd = roleUpper === "OWNER" || roleUpper === "ADMIN" || roleUpper === "EDITOR";
-    const canManage = roleUpper === "OWNER" || roleUpper === "ADMIN";
+    const roleUpper = role?.toUpperCase()
+    const canAdd = roleUpper === "OWNER" || roleUpper === "ADMIN" || roleUpper === "EDITOR"
+    const canManage = roleUpper === "OWNER" || roleUpper === "ADMIN"
 
-    if (!canAdd && !canManage) return null;
+    if (!canAdd && !canManage) return null
 
     return (
-        <Stack direction="row" spacing={1} flexShrink={0}>
+        <div className="flex gap-3 flex-shrink-0">
             {canAdd && (
-                <Button variant="contained" startIcon={<Add />} onClick={onAddItem}>
+                <Button onClick={onAddItem} className="bg-secondary hover:bg-secondary-dark">
+                    <Plus className="w-4 h-4 mr-2"/>
                     Add Item
                 </Button>
             )}
             {canManage && (
-                <Button variant="outlined" startIcon={<Settings />} onClick={onOpenSettings}>
+                <Button variant="outline" onClick={onOpenSettings}>
+                    <Settings className="w-4 h-4 mr-2"/>
                     Collection Settings
                 </Button>
             )}
-        </Stack>
-    );
+        </div>
+    )
 }

@@ -1,36 +1,31 @@
-import { MenuItem, Select, type SelectChangeEvent } from "@mui/material";
-import type { ModuleStateDef } from "../../../api/types";
+"use client"
+
+import type {ModuleStateDef} from "../../../api/types"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../components/ui/select"
 
 export default function StateDropdown({
-    states,
-    value,
-    disabled,
-    onChange,
+                                          states,
+                                          value,
+                                          disabled,
+                                          onChange,
 }: {
-    states: ModuleStateDef[];
-    value: string;
-    disabled?: boolean;
-    onChange: (stateKey: string) => void;
+    states: ModuleStateDef[]
+    value: string
+    disabled?: boolean
+    onChange: (stateKey: string) => void
 }) {
-    const handleChange = (e: SelectChangeEvent) => {
-        const next = e.target.value as string;
-        onChange(next);
-    };
-
     return (
-        <Select
-            size="small"
-            value={value}
-            onChange={handleChange}
-            disabled={disabled}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-        >
-            {states.map((state) => (
-                <MenuItem key={state.key} value={state.key} disabled={state.deprecated === true}>
-                    {state.label || state.key}
-                </MenuItem>
-            ))}
+        <Select value={value} onValueChange={onChange} disabled={disabled}>
+            <SelectTrigger className="w-32" onClick={(e) => e.stopPropagation()}>
+                <SelectValue/>
+            </SelectTrigger>
+            <SelectContent>
+                {states.map((state) => (
+                    <SelectItem key={state.key} value={state.key} disabled={state.deprecated === true}>
+                        {state.label || state.key}
+                    </SelectItem>
+                ))}
+            </SelectContent>
         </Select>
-    );
+    )
 }

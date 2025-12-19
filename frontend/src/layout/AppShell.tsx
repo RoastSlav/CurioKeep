@@ -1,86 +1,70 @@
-import { Box, CircularProgress, Container, Drawer, Toolbar, useMediaQuery, useTheme } from "@mui/material";
-import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
-import { useAuth } from "../auth/useAuth";
-import SideNav from "./SideNav";
-import TopBar from "./TopBar";
+"use client"
 
-const DRAWER_WIDTH = 260;
+import {Suspense, useEffect, useState, type ReactNode} from "react"
+import {useLocation} from "react-router-dom"
+import {useAuth} from "../auth/useAuth"
+import SideNav from "./SideNav"
+import TopBar from "./TopBar"
+import {Loader2} from "lucide-react"
+
+const DRAWER_WIDTH = 260
 
 export default function AppShell({ children }: { children: ReactNode }) {
-    const theme = useTheme();
-    const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
-    const { user } = useAuth();
-    const location = useLocation();
-    const [mobileOpen, setMobileOpen] = useState(false);
+    const {user} = useAuth()
+    const location = useLocation()
+    const [mobileOpen, setMobileOpen] = useState(false)
 
     useEffect(() => {
-        setMobileOpen(false);
-    }, [location.pathname, location.search]);
+        setMobileOpen(false)
+    }, [location.pathname, location.search])
 
     useEffect(() => {
-        if (!mobileOpen) return undefined;
+        if (!mobileOpen) return undefined
         const handleKey = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
-                setMobileOpen(false);
+                setMobileOpen(false)
             }
-        };
-        window.addEventListener("keydown", handleKey);
-        return () => window.removeEventListener("keydown", handleKey);
-    }, [mobileOpen]);
+        }
+        window.addEventListener("keydown", handleKey)
+        return () => window.removeEventListener("keydown", handleKey)
+    }, [mobileOpen])
 
     return (
-        <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: (t) => t.palette.background.default }}>
-            <TopBar onMenuToggle={() => setMobileOpen(true)} drawerWidth={DRAWER_WIDTH} isDesktop={isDesktop} />
+        <div className="flex min-h-screen bg-background text-foreground">
+            <TopBar onMenuToggle={() => setMobileOpen(true)} drawerWidth={DRAWER_WIDTH}/>
 
-            <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }} aria-label="navigation">
-                <Drawer
-                    variant="temporary"
-                    open={mobileOpen}
-                    onClose={() => setMobileOpen(false)}
-                    ModalProps={{ keepMounted: true }}
-                    sx={{
-                        display: { xs: "block", md: "none" },
-                        "& .MuiDrawer-paper": { boxSizing: "border-box", width: DRAWER_WIDTH },
-                    }}
-                >
-                    <SideNav isAdmin={user?.isAdmin} onNavigate={() => setMobileOpen(false)} />
-                </Drawer>
-                <Drawer
-                    variant="permanent"
-                    open
-                    sx={{
-                        display: { xs: "none", md: "block" },
-                        "& .MuiDrawer-paper": { boxSizing: "border-box", width: DRAWER_WIDTH },
-                    }}
-                >
-                    <SideNav isAdmin={user?.isAdmin} />
-                </Drawer>
-            </Box>
+            {/* Mobile sidebar overlay */}
+            {mobileOpen &&
+                <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileOpen(false)}/>}
 
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-                    minHeight: "100vh",
-                    minWidth: 0,
-                    overflowX: "hidden",
-                }}
+            <aside
+                className="fixed inset-y-0 left-0 z-50 w-[260px] transform transition-transform duration-300 md:hidden border-r-4 border-border bg-sidebar"
+                style={{transform: mobileOpen ? "translateX(0)" : "translateX(-100%)"}}
             >
-                <Toolbar />
-                <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 }, px: { xs: 2, md: 3 } }}>
+                <SideNav isAdmin={user?.isAdmin} onNavigate={() => setMobileOpen(false)}/>
+            </aside>
+
+            <aside
+                className="hidden md:block w-[260px] fixed inset-y-0 left-0 z-30 border-r-4 border-border bg-sidebar">
+                <SideNav isAdmin={user?.isAdmin}/>
+            </aside>
+
+            {/* Main content */}
+            <main className="flex-1 md:ml-[260px] min-h-screen overflow-x-hidden bg-background">
+                <div className="h-16 md:h-[72px]"/>
+                {/* Spacer for fixed header */}
+                <div className="container mx-auto py-6 md:py-8 px-4 md:px-8 max-w-[1536px]">
                     <Suspense
                         fallback={
-                            <Box sx={{ display: "grid", placeItems: "center", minHeight: 240 }}>
-                                <CircularProgress />
-                            </Box>
+                            <div className="flex items-center justify-center min-h-[240px]">
+                                <Loader2 className="w-8 h-8 animate-spin text-secondary"/>
+                            </div>
                         }
                     >
                         {children}
                     </Suspense>
-                </Container>
-            </Box>
-        </Box>
-    );
+                </div>
+            </main>
+        </div>
+    )
 }

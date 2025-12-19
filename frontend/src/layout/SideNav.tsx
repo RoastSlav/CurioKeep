@@ -1,88 +1,92 @@
-import { Divider, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Stack, Toolbar, Typography } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import FolderIcon from "@mui/icons-material/Folder";
-import ExtensionIcon from "@mui/icons-material/Extension";
-import HubIcon from "@mui/icons-material/Hub";
-import GroupIcon from "@mui/icons-material/Group";
-import MailIcon from "@mui/icons-material/Mail";
-import BookIcon from "@mui/icons-material/Book";
-import { useLocation, Link as RouterLink } from "react-router-dom";
-import type { ReactElement } from "react";
+"use client"
 
-const SHOW_DOCS_LINK = false;
+import {LayoutDashboard, Folder, PuzzleIcon, Network, Mail, Users, BookOpen} from "lucide-react"
+import {useLocation, Link as RouterLink} from "react-router-dom"
+import type {ReactElement} from "react"
+import {cn} from "../../lib/utils"
 
-type NavItem = { label: string; to: string; icon: ReactElement };
+const SHOW_DOCS_LINK = false
+
+type NavItem = { label: string; to: string; icon: ReactElement }
 
 const mainNav: NavItem[] = [
-    { label: "Dashboard", to: "/", icon: <DashboardIcon fontSize="small" /> },
-    { label: "Collections", to: "/collections", icon: <FolderIcon fontSize="small" /> },
-    { label: "Modules", to: "/modules", icon: <ExtensionIcon fontSize="small" /> },
-    { label: "Providers", to: "/providers", icon: <HubIcon fontSize="small" /> },
-];
+    {label: "Dashboard", to: "/", icon: <LayoutDashboard className="w-4 h-4"/>},
+    {label: "Collections", to: "/collections", icon: <Folder className="w-4 h-4"/>},
+    {label: "Modules", to: "/modules", icon: <PuzzleIcon className="w-4 h-4"/>},
+    {label: "Providers", to: "/providers", icon: <Network className="w-4 h-4"/>},
+]
 
 const adminNav: NavItem[] = [
-    { label: "Admin Invites", to: "/admin/invites", icon: <MailIcon fontSize="small" /> },
-    { label: "Users", to: "/admin/users", icon: <GroupIcon fontSize="small" /> },
-];
+    {label: "Admin Invites", to: "/admin/invites", icon: <Mail className="w-4 h-4"/>},
+    {label: "Users", to: "/admin/users", icon: <Users className="w-4 h-4"/>},
+]
 
 export default function SideNav({ isAdmin, onNavigate }: { isAdmin?: boolean; onNavigate?: () => void }) {
-    const location = useLocation();
+    const location = useLocation()
 
     const isActive = (path: string) => {
-        if (path === "/") return location.pathname === "/";
-        return location.pathname === path || location.pathname.startsWith(`${path}/`);
-    };
+        if (path === "/") return location.pathname === "/"
+        return location.pathname === path || location.pathname.startsWith(`${path}/`)
+    }
 
     const renderNavList = (items: NavItem[]) => (
-        <List disablePadding>
-            {items.map((item) => (
-                <ListItemButton
-                    key={item.to}
-                    component={RouterLink}
-                    to={item.to}
-                    selected={isActive(item.to)}
-                    onClick={onNavigate}
-                >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                        {item.icon}
-                    </ListItemIcon>
-                    <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 600 }} />
-                </ListItemButton>
-            ))}
-        </List>
-    );
+        <nav className="space-y-2 px-3">
+            {items.map((item) => {
+                const active = isActive(item.to)
+                return (
+                    <RouterLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={onNavigate}
+                        className={cn(
+                            "flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wide transition-all border-2 border-border",
+                            active
+                                ? "bg-secondary text-secondary-foreground brutal-shadow-sm"
+                                : "bg-card text-card-foreground hover:bg-muted brutal-shadow-hover",
+                        )}
+                    >
+                        <span>{item.icon}</span>
+                        <span>{item.label}</span>
+                    </RouterLink>
+                )
+            })}
+        </nav>
+    )
 
     return (
-        <Stack sx={{ height: "100%" }}>
-            <Toolbar sx={{ overflow: "hidden" }}>
-                <Typography variant="h6" fontWeight={700} noWrap>
-                    CurioKeep
-                </Typography>
-            </Toolbar>
-            <Divider />
-            {renderNavList(mainNav)}
+        <div className="h-full bg-sidebar text-sidebar-foreground flex flex-col">
+            <div className="h-16 md:h-[72px] flex items-center px-6 border-b-4 border-border">
+                <h1 className="text-xl font-bold tracking-tight uppercase">CurioKeep</h1>
+            </div>
+
+            <div className="py-4">{renderNavList(mainNav)}</div>
+
             {isAdmin && (
                 <>
-                    <Divider sx={{ my: 1 }} />
-                    <ListSubheader component="div" inset sx={{ fontWeight: 700, lineHeight: 1.4 }}>
-                        Admin
-                    </ListSubheader>
+                    <div className="border-t-2 border-border my-2"/>
+                    <div className="px-6 py-2">
+                        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Admin</h2>
+                    </div>
                     {renderNavList(adminNav)}
                 </>
             )}
+
             {SHOW_DOCS_LINK && (
                 <>
-                    <Divider sx={{ mt: "auto" }} />
-                    <List disablePadding>
-                        <ListItemButton component="a" href="https://github.com/RoastSlav/CurioKeep" target="_blank" rel="noreferrer">
-                            <ListItemIcon sx={{ minWidth: 36 }}>
-                                <BookIcon fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText primary="Docs" primaryTypographyProps={{ fontWeight: 600 }} />
-                        </ListItemButton>
-                    </List>
+                    <div className="border-t-2 border-border mt-auto"/>
+                    <nav className="px-3 py-3">
+                        <a
+                            href="https://github.com/RoastSlav/CurioKeep"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-3 px-4 py-3 text-sm font-bold uppercase tracking-wide bg-card text-card-foreground hover:bg-muted transition-all border-2 border-border brutal-shadow-hover"
+                        >
+                            <BookOpen className="w-4 h-4"/>
+                            <span>Docs</span>
+                        </a>
+                    </nav>
                 </>
             )}
-        </Stack>
-    );
+        </div>
+    )
 }

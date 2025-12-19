@@ -1,121 +1,113 @@
-import { Box, Checkbox, Chip, Stack, TableCell, TableRow, Typography } from "@mui/material";
-import type { Item, ModuleDefinition, ModuleStateDef } from "../../../api/types";
-import StateDropdown from "./StateDropdown";
+"use client"
+
+import type {Item, ModuleDefinition, ModuleStateDef} from "../../../api/types"
+import StateDropdown from "./StateDropdown"
+import {TableCell, TableRow} from "../../../../components/ui/table"
+import {Checkbox} from "../../../../components/ui/checkbox"
+import {Badge} from "../../../../components/ui/badge"
 
 function formatValue(value: unknown): string {
-    if (value === null || value === undefined) return "";
-    if (Array.isArray(value)) return value.join(", ");
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
+    if (value === null || value === undefined) return ""
+    if (Array.isArray(value)) return value.join(", ")
+    if (typeof value === "object") return JSON.stringify(value)
+    return String(value)
 }
 
 export default function ItemRow({
-    item,
-    moduleDefinition,
-    onClick,
-    states,
-    onChangeState,
-    canChangeState,
-    showSelection,
-    selected,
-    onToggleSelect,
+                                    item,
+                                    moduleDefinition,
+                                    onClick,
+                                    states,
+                                    onChangeState,
+                                    canChangeState,
+                                    showSelection,
+                                    selected,
+                                    onToggleSelect,
 }: {
-    item: Item;
-    moduleDefinition?: ModuleDefinition | null;
-    onClick?: (item: Item) => void;
-    states?: ModuleStateDef[];
-    onChangeState?: (item: Item, next: string) => void;
-    canChangeState?: boolean;
-    showSelection?: boolean;
-    selected?: boolean;
-    onToggleSelect?: (itemId: string, checked: boolean) => void;
+    item: Item
+    moduleDefinition?: ModuleDefinition | null
+    onClick?: (item: Item) => void
+    states?: ModuleStateDef[]
+    onChangeState?: (item: Item, next: string) => void
+    canChangeState?: boolean
+    showSelection?: boolean
+    selected?: boolean
+    onToggleSelect?: (itemId: string, checked: boolean) => void
 }) {
     const identifierField = (moduleDefinition?.fields || []).find((field) => {
-        const val = formatValue((item.attributes || {})[field.key]);
-        return field.identifiers && field.identifiers.length > 0 && val.trim().length > 0;
-    });
+        const val = formatValue((item.attributes || {})[field.key])
+        return field.identifiers && field.identifiers.length > 0 && val.trim().length > 0
+    })
     const identifierDisplay = identifierField
         ? `${identifierField.identifiers?.[0] || identifierField.label || identifierField.key}: ${formatValue(
-              (item.attributes || {})[identifierField.key]
-          )}`
-        : null;
-    const imageUrl = item.attributes?.providerImageUrl as string | undefined;
+            (item.attributes || {})[identifierField.key],
+        )}`
+        : null
+    const imageUrl = item.attributes?.providerImageUrl as string | undefined
     const displayTitle =
-        (item.attributes?.title as string) || (item.attributes?.name as string) || identifierDisplay || item.id;
+        (item.attributes?.title as string) || (item.attributes?.name as string) || identifierDisplay || item.id
     const fieldsToShow = (moduleDefinition?.fields || [])
         .slice()
         .sort((a, b) => (a.flags?.order ?? Number.MAX_SAFE_INTEGER) - (b.flags?.order ?? Number.MAX_SAFE_INTEGER))
-        .slice(0, 3);
-    const stateLabel = moduleDefinition?.states?.find((s) => s.key === item.stateKey)?.label;
+        .slice(0, 3)
+    const stateLabel = moduleDefinition?.states?.find((s) => s.key === item.stateKey)?.label
 
     return (
-        <TableRow hover sx={{ cursor: onClick ? "pointer" : "default" }} onClick={onClick ? () => onClick(item) : undefined}>
+        <TableRow
+            className={onClick ? "cursor-pointer hover:bg-muted" : ""}
+            onClick={onClick ? () => onClick(item) : undefined}
+        >
             {showSelection ? (
-                <TableCell padding="checkbox">
+                <TableCell className="w-10">
                     <Checkbox
-                        size="small"
                         checked={Boolean(selected)}
-                        onChange={(e) => onToggleSelect?.(item.id, e.target.checked)}
+                        onCheckedChange={(checked) => onToggleSelect?.(item.id, Boolean(checked))}
                         onClick={(e) => e.stopPropagation()}
-                        indeterminate={false}
                     />
                 </TableCell>
             ) : null}
             <TableCell>
-                <Stack direction="row" spacing={1.25} alignItems="center">
+                <div className="flex items-center gap-3">
                     {imageUrl ? (
-                        <Box
-                            component="img"
-                            src={imageUrl}
+                        <img
+                            src={imageUrl || "/placeholder.svg"}
                             alt={displayTitle}
-                            sx={{ width: 64, height: 64, objectFit: "contain", borderRadius: 1, border: 1, borderColor: "divider" }}
+                            className="w-16 h-16 object-contain border-2 border-border"
                             onClick={(e) => e.stopPropagation()}
                         />
                     ) : null}
-                    <Stack spacing={0.25} minWidth={0}>
-                        <Typography fontWeight={600} noWrap>
-                            {displayTitle}
-                        </Typography>
-                        {identifierDisplay ? (
-                            <Typography variant="caption" color="text.secondary" noWrap>
-                                {identifierDisplay}
-                            </Typography>
-                        ) : null}
-                    </Stack>
-                </Stack>
+                    <div className="min-w-0 space-y-0.5">
+                        <p className="font-bold truncate">{displayTitle}</p>
+                        {identifierDisplay ?
+                            <p className="text-xs text-muted-foreground truncate">{identifierDisplay}</p> : null}
+                    </div>
+                </div>
             </TableCell>
             <TableCell>
                 {canChangeState && states?.length ? (
-                    <StateDropdown
-                        states={states}
-                        value={item.stateKey}
-                        onChange={(next) => onChangeState?.(item, next)}
-                    />
+                    <StateDropdown states={states} value={item.stateKey}
+                                   onChange={(next) => onChangeState?.(item, next)}/>
                 ) : (
-                    <Chip size="small" label={stateLabel || item.stateKey} />
+                    <Badge variant="secondary">{stateLabel || item.stateKey}</Badge>
                 )}
             </TableCell>
             {fieldsToShow.length ? (
-                <TableCell sx={{ maxWidth: 420 }}>
-                    <Stack spacing={0.25}>
+                <TableCell className="max-w-[420px]">
+                    <div className="space-y-0.5">
                         {fieldsToShow.map((field) => (
-                            <Stack key={field.key} direction="row" spacing={0.75} alignItems="baseline">
-                                <Typography variant="caption" color="text.secondary" noWrap>
-                                    {field.label || field.key}:
-                                </Typography>
-                                <Typography variant="body2" noWrap>
-                                    {formatValue((item.attributes || {})[field.key]) || "-"}
-                                </Typography>
-                            </Stack>
+                            <div key={field.key} className="flex items-baseline gap-1.5">
+                                <span
+                                    className="text-xs text-muted-foreground truncate">{field.label || field.key}:</span>
+                                <span
+                                    className="text-sm truncate">{formatValue((item.attributes || {})[field.key]) || "-"}</span>
+                            </div>
                         ))}
-                    </Stack>
+                    </div>
                 </TableCell>
             ) : null}
-            <TableCell sx={{ whiteSpace: "nowrap" }}>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                    {identifierDisplay || "-"}
-                </Typography>
+            <TableCell className="whitespace-nowrap">
+                <span className="text-sm text-muted-foreground truncate">{identifierDisplay || "-"}</span>
             </TableCell>
         </TableRow>
-    );
+    )
 }

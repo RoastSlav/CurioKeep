@@ -1,148 +1,150 @@
-import { Delete, Shield } from "@mui/icons-material";
-import {
-    Alert,
-    Box,
-    Chip,
-    CircularProgress,
-    IconButton,
-    MenuItem,
-    Select,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableRow,
-    Typography,
-} from "@mui/material";
-import { useState } from "react";
-import type { CollectionMember } from "../../../../api/types";
-import ConfirmRemoveMemberDialog from "./ConfirmRemoveMemberDialog";
+"use client"
 
-const ROLE_OPTIONS: Array<CollectionMember["role"]> = ["ADMIN", "EDITOR", "VIEWER"];
+import {useState} from "react"
+import {Loader2, RefreshCw, Trash2} from "lucide-react"
+import type {CollectionMember} from "../../../../api/types"
+import ConfirmRemoveMemberDialog from "./ConfirmRemoveMemberDialog"
+import {Button} from "../../../../../components/ui/button"
+import {Badge} from "../../../../../components/ui/badge"
+import {Alert, AlertDescription} from "../../../../../components/ui/alert"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../../components/ui/select"
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "../../../../../components/ui/table"
+
+const ROLE_OPTIONS: Array<CollectionMember["role"]> = ["ADMIN", "EDITOR", "VIEWER"]
 
 type Props = {
-    currentUserId?: string;
-    members: CollectionMember[];
-    loading?: boolean;
-    saving?: boolean;
-    error?: string | null;
-    onChangeRole: (userId: string, role: CollectionMember["role"]) => Promise<void>;
-    onRemove: (userId: string) => Promise<void>;
-    onRefresh?: () => void;
-};
+    currentUserId?: string
+    members: CollectionMember[]
+    loading?: boolean
+    saving?: boolean
+    error?: string | null
+    onChangeRole: (userId: string, role: CollectionMember["role"]) => Promise<void>
+    onRemove: (userId: string) => Promise<void>
+    onRefresh?: () => void
+}
 
 export default function MembersSection({
-    currentUserId,
-    members,
-    loading,
-    saving,
-    error,
-    onChangeRole,
-    onRemove,
-    onRefresh,
+                                           currentUserId,
+                                           members,
+                                           loading,
+                                           saving,
+                                           error,
+                                           onChangeRole,
+                                           onRemove,
+                                           onRefresh,
 }: Props) {
-    const [removeUserId, setRemoveUserId] = useState<string | null>(null);
+    const [removeUserId, setRemoveUserId] = useState<string | null>(null)
 
     const handleRoleChange = async (userId: string, role: CollectionMember["role"]) => {
-        await onChangeRole(userId, role);
-    };
+        await onChangeRole(userId, role)
+    }
 
     const removeMember = async () => {
-        if (!removeUserId) return;
-        const id = removeUserId;
-        setRemoveUserId(null);
-        await onRemove(id);
-    };
+        if (!removeUserId) return
+        const id = removeUserId
+        setRemoveUserId(null)
+        await onRemove(id)
+    }
 
     return (
-        <Stack spacing={2}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography variant="h6" fontWeight={700}>
-                    Members
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                    {saving && <CircularProgress size={18} thickness={5} />}
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold uppercase">Members</h3>
+                <div className="flex items-center gap-2">
+                    {saving && <Loader2 className="w-4 h-4 animate-spin"/>}
                     {onRefresh && (
-                        <IconButton onClick={onRefresh} disabled={loading}>
-                            <Shield fontSize="small" />
-                        </IconButton>
+                        <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
+                            <RefreshCw className="w-4 h-4"/>
+                        </Button>
                     )}
-                </Stack>
-            </Stack>
+                </div>
+            </div>
 
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && (
+                <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
 
             {loading ? (
-                <Stack direction="row" spacing={1} alignItems="center">
-                    <CircularProgress size={20} thickness={4} />
-                    <Typography color="text.secondary">Loading members…</Typography>
-                </Stack>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin"/>
+                    <span>Loading members...</span>
+                </div>
             ) : members.length ? (
-                <Box sx={{ overflowX: "auto" }}>
-                    <Table size="small">
-                        <TableHead>
+                <div className="border-2 border-border overflow-x-auto">
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell>User</TableCell>
-                                <TableCell>Role</TableCell>
-                                <TableCell align="right">Actions</TableCell>
+                                <TableHead className="font-bold uppercase">User</TableHead>
+                                <TableHead className="font-bold uppercase">Role</TableHead>
+                                <TableHead className="font-bold uppercase text-right">Actions</TableHead>
                             </TableRow>
-                        </TableHead>
+                        </TableHeader>
                         <TableBody>
                             {members.map((m) => {
-                                const isSelf = m.userId === currentUserId;
-                                const isOwner = m.role === "OWNER";
-                                const disableActions = saving || isSelf;
-                                const showActions = !isOwner;
+                                const isSelf = m.userId === currentUserId
+                                const isOwner = m.role === "OWNER"
+                                const disableActions = saving || isSelf
+                                const showActions = !isOwner
                                 return (
-                                    <TableRow key={m.userId} hover>
+                                    <TableRow key={m.userId}>
                                         <TableCell>
-                                            <Stack spacing={0.2}>
-                                                <Typography fontWeight={700}>{m.displayName || m.email}</Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {m.email}
-                                                </Typography>
-                                            </Stack>
+                                            <div className="space-y-0.5">
+                                                <p className="font-bold">{m.displayName || m.email}</p>
+                                                <p className="text-sm text-muted-foreground">{m.email}</p>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip label={m.role} size="small" color={m.role === "OWNER" ? "primary" : "default"} />
+                                            <Badge variant={m.role === "OWNER" ? "default" : "secondary"}
+                                                   className="bg-secondary">
+                                                {m.role}
+                                            </Badge>
                                         </TableCell>
-                                        <TableCell align="right">
-                                            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
                                                 {showActions && (
                                                     <Select
-                                                        size="small"
                                                         value={m.role}
+                                                        onValueChange={(value) =>
+                                                            void handleRoleChange(m.userId, value as CollectionMember["role"])
+                                                        }
                                                         disabled={disableActions}
-                                                        onChange={(e) => void handleRoleChange(m.userId, e.target.value as CollectionMember["role"])}
                                                     >
-                                                        {ROLE_OPTIONS.map((r) => (
-                                                            <MenuItem key={r} value={r} disabled={r === "OWNER"}>
-                                                                {r}
-                                                            </MenuItem>
-                                                        ))}
+                                                        <SelectTrigger className="w-28">
+                                                            <SelectValue/>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {ROLE_OPTIONS.map((r) => (
+                                                                <SelectItem key={r} value={r}>
+                                                                    {r}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
                                                     </Select>
                                                 )}
                                                 {showActions && (
-                                                    <IconButton
-                                                        color="error"
-                                                        size="small"
+                                                    <Button
+                                                        size="icon-sm"
+                                                        variant="destructive"
                                                         disabled={disableActions}
                                                         onClick={() => setRemoveUserId(m.userId)}
                                                     >
-                                                        <Delete fontSize="small" />
-                                                    </IconButton>
+                                                        <Trash2 className="w-4 h-4"/>
+                                                    </Button>
                                                 )}
-                                            </Stack>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
-                                );
+                                )
                             })}
                         </TableBody>
                     </Table>
-                </Box>
+                </div>
             ) : (
-                <Alert severity="info">No members found.</Alert>
+                <Alert>
+                    <AlertDescription>No members found.</AlertDescription>
+                </Alert>
             )}
 
             <ConfirmRemoveMemberDialog
@@ -151,6 +153,6 @@ export default function MembersSection({
                 onCancel={() => setRemoveUserId(null)}
                 onConfirm={() => void removeMember()}
             />
-        </Stack>
-    );
+        </div>
+    )
 }

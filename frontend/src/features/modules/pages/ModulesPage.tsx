@@ -1,243 +1,305 @@
-import { Box, Container, Drawer, Paper, Skeleton, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import ErrorState from "../../../components/ErrorState";
-import type { ModuleDetails, ModuleSummary } from "../api/modulesApi";
-import { getModuleDetails, getModuleRawXml, listModules } from "../api/modulesApi";
-import ModuleContractDialog from "../components/ModuleContractDialog";
-import ModuleDetailsPanel from "../components/ModuleDetailsPanel";
-import ModuleList from "../components/ModuleList";
-import ModuleRawXmlDialog from "../components/ModuleRawXmlDialog";
+"use client"
+import {useCallback, useEffect, useMemo, useState} from "react"
+import ErrorState from "../../../components/ErrorState"
+import type {ModuleDetails, ModuleSummary} from "../api/modulesApi"
+import {getModuleDetails, getModuleRawXml, listModules} from "../api/modulesApi"
+import ModuleContractDialog from "../components/ModuleContractDialog"
+import ModuleDetailsPanel from "../components/ModuleDetailsPanel"
+import ModuleList from "../components/ModuleList"
+import ModuleRawXmlDialog from "../components/ModuleRawXmlDialog"
+import ImportModuleDialog from "../components/ImportModuleDialog"
+import ScanModulesDialog from "../components/ScanModulesDialog"
+import {useAuth} from "../../../auth/useAuth"
+import {Skeleton} from "../../../../components/ui/skeleton"
+import {Button} from "../../../../components/ui/button"
+import {FileUp, FolderSearch} from "lucide-react"
 
 type RawDialogState = {
-    open: boolean;
-    moduleKey?: string;
-    xml?: string;
-    loading: boolean;
-};
-
-const listSkeleton = (
-    <Stack spacing={1} sx={{ mt: 1 }}>
-        <Skeleton height={36} />
-        <Skeleton height={36} width="80%" />
-        <Skeleton height={36} width="60%" />
-    </Stack>
-);
+    open: boolean
+    moduleKey?: string
+    xml?: string
+    loading: boolean
+}
 
 export default function ModulesPage() {
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+    const [modules, setModules] = useState<ModuleSummary[]>([])
+    const [listError, setListError] = useState<string | null>(null)
+    const [listLoading, setListLoading] = useState(true)
+    const [selectedKey, setSelectedKey] = useState<string | null>(null)
+    const [detailsMap, setDetailsMap] = useState<Record<string, ModuleDetails>>({})
+    const [detailsLoading, setDetailsLoading] = useState<Record<string, boolean>>({})
+    const [detailsError, setDetailsError] = useState<string | null>(null)
 
-    const [modules, setModules] = useState<ModuleSummary[]>([]);
-    const [listError, setListError] = useState<string | null>(null);
-    const [listLoading, setListLoading] = useState(true);
-    const [selectedKey, setSelectedKey] = useState<string | null>(null);
-    const [detailsMap, setDetailsMap] = useState<Record<string, ModuleDetails>>({});
-    const [detailsLoading, setDetailsLoading] = useState<Record<string, boolean>>({});
-    const [detailsError, setDetailsError] = useState<string | null>(null);
+    const [rawDialog, setRawDialog] = useState<RawDialogState>({open: false, loading: false})
+    const [contractDialogOpen, setContractDialogOpen] = useState(false)
 
-    const [rawDialog, setRawDialog] = useState<RawDialogState>({ open: false, loading: false });
-    const [contractDialogOpen, setContractDialogOpen] = useState(false);
-    const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+    const {user} = useAuth()
+    const [importDialogOpen, setImportDialogOpen] = useState(false)
+    const [scanDialogOpen, setScanDialogOpen] = useState(false)
+    const isAdmin = Boolean(user?.isAdmin)
 
     useEffect(() => {
-        let canceled = false;
-        setListLoading(true);
+        let canceled = false
+        setListLoading(true)
         listModules()
             .then((data) => {
-                if (canceled) return;
-                setModules(data);
-                if (!data.length) return;
-                setSelectedKey((prev) => prev ?? data[0].moduleKey);
+                if (canceled) return
+                console.log("[v0] Modules list loaded:", data)
+                setModules(data)
+                if (!data.length) return
+                setSelectedKey((prev) => prev ?? data[0].moduleKey)
             })
             .catch((error) => {
-                console.error(error);
-                setListError(error?.message || "Failed to load modules");
+                console.error(error)
+                setListError(error?.message || "Failed to load modules")
             })
             .finally(() => {
-                if (canceled) return;
-                setListLoading(false);
-            });
+                if (canceled) return
+                setListLoading(false)
+            })
         return () => {
-            canceled = true;
-        };
-    }, []);
+            canceled = true
+        }
+    }, [])
 
     useEffect(() => {
         const missingKeys = modules
             .map((module) => module.moduleKey)
-            .filter((key) => !detailsMap[key] && !detailsLoading[key]);
-        if (!missingKeys.length) return;
+            .filter((key) => !detailsMap[key] && !detailsLoading[key])
+
+        if (!missingKeys.length) return
+
+        console.log("[v0] Loading details for modules:", missingKeys)
+        console.log("[v0] Current detailsMap keys:", Object.keys(detailsMap))
+        console.log("[v0] Current detailsLoading:", detailsLoading)
 
         setDetailsLoading((prev) => {
-            const next = { ...prev };
+            const next = {...prev}
             missingKeys.forEach((key) => {
-                next[key] = true;
-            });
-            return next;
-        });
-
-        let canceled = false;
-        Promise.allSettled(missingKeys.map((key) => getModuleDetails(key)))
-            .then((results) => {
-                if (canceled) return;
-                setDetailsMap((prev) => {
-                    const next = { ...prev };
-                    results.forEach((result, idx) => {
-                        if (result.status === "fulfilled") {
-                            next[missingKeys[idx]] = result.value;
-                        } else {
-                            console.error("Failed to load module details", missingKeys[idx], result.reason);
-                            setDetailsError("Failed to load some module details");
-                        }
-                    });
-                    return next;
-                });
+                next[key] = true
             })
-            .finally(() => {
-                if (canceled) return;
-                setDetailsLoading((prev) => {
-                    const next = { ...prev };
-                    missingKeys.forEach((key) => {
-                        delete next[key];
-                    });
-                    return next;
-                });
-            });
-        return () => {
-            canceled = true;
-        };
-    }, [modules, detailsMap, detailsLoading]);
+            console.log("[v0] Updated detailsLoading:", next)
+            return next
+        })
 
-    const selectedModule = useMemo(() => (selectedKey ? detailsMap[selectedKey] : undefined), [selectedKey, detailsMap]);
+        const loadDetails = async () => {
+            try {
+                const results = await Promise.allSettled(missingKeys.map((key) => getModuleDetails(key)))
+
+                console.log("[v0] Promise resolved, processing results:", results)
+
+                const newDetails: Record<string, ModuleDetails> = {}
+                results.forEach((result, idx) => {
+                    const key = missingKeys[idx]
+                    if (result.status === "fulfilled") {
+                        newDetails[key] = result.value
+                        console.log(`[v0] Successfully loaded ${key}:`, result.value)
+                    } else {
+                        console.error(`[v0] Failed to load ${key}:`, result.reason)
+                        setDetailsError("Failed to load some module details")
+                    }
+                })
+
+                console.log("[v0] About to update detailsMap with:", newDetails)
+
+                setDetailsMap((prev) => {
+                    const next = {...prev, ...newDetails}
+                    console.log("[v0] detailsMap updated, keys:", Object.keys(next))
+                    return next
+                })
+
+                setDetailsLoading((prev) => {
+                    const next = {...prev}
+                    missingKeys.forEach((key) => {
+                        next[key] = false
+                    })
+                    return next
+                })
+            } catch (error) {
+                console.error("[v0] Error in loadDetails:", error)
+                setDetailsError("Failed to load module details")
+                setDetailsLoading((prev) => {
+                    const next = {...prev}
+                    missingKeys.forEach((key) => {
+                        next[key] = false
+                    })
+                    return next
+                })
+            }
+        }
+
+        loadDetails()
+    }, [modules, detailsMap, detailsLoading])
+
+    const selectedModule = useMemo(() => {
+        const module = selectedKey ? detailsMap[selectedKey] : undefined
+        console.log("[v0] selectedModule useMemo:", {
+            selectedKey,
+            hasModule: !!module,
+            detailsMapKeys: Object.keys(detailsMap),
+            moduleData: module,
+        })
+        return module
+    }, [selectedKey, detailsMap])
+
     const selectedSummary = useMemo(
         () => modules.find((module) => module.moduleKey === selectedKey),
-        [modules, selectedKey]
-    );
-    const selectedLoading = selectedKey ? Boolean(detailsLoading[selectedKey]) : false;
+        [modules, selectedKey],
+    )
 
-    const handleSelect = useCallback(
-        (moduleKey: string) => {
-            setSelectedKey(moduleKey);
-            if (isMobile) {
-                setMobilePanelOpen(true);
-            }
-        },
-        [isMobile]
-    );
+    const selectedLoading = useMemo(() => {
+        const loading = selectedKey ? Boolean(detailsLoading[selectedKey]) : false
+        console.log("[v0] selectedLoading useMemo:", {
+            selectedKey,
+            loading,
+            detailsLoadingState: detailsLoading[selectedKey ?? ""],
+        })
+        return loading
+    }, [selectedKey, detailsLoading])
+
+    const handleSelect = useCallback((moduleKey: string) => {
+        console.log("[v0] Module selected:", moduleKey)
+        setSelectedKey(moduleKey)
+    }, [])
 
     const handleRaw = useCallback(async (moduleKey: string) => {
-        setRawDialog({ open: true, moduleKey, loading: true });
+        setRawDialog({open: true, moduleKey, loading: true})
         try {
-            const payload = await getModuleRawXml(moduleKey);
-            setRawDialog({ open: true, moduleKey, xml: payload.xmlRaw, loading: false });
+            const payload = await getModuleRawXml(moduleKey)
+            setRawDialog({open: true, moduleKey, xml: payload.xmlRaw, loading: false})
         } catch (error) {
-            console.error(error);
-            setRawDialog({ open: true, moduleKey, xml: "Failed to load XML", loading: false });
+            console.error(error)
+            setRawDialog({open: true, moduleKey, xml: "Failed to load XML", loading: false})
         }
-    }, []);
+    }, [])
 
     const handleCloseRaw = useCallback(() => {
-        setRawDialog({ open: false, loading: false });
-    }, []);
+        setRawDialog({open: false, loading: false})
+    }, [])
 
     const handleOpenContract = useCallback(() => {
-        setContractDialogOpen(true);
-    }, []);
+        setContractDialogOpen(true)
+    }, [])
 
     const handleCloseContract = useCallback(() => {
-        setContractDialogOpen(false);
-    }, []);
+        setContractDialogOpen(false)
+    }, [])
 
     const handleModuleDeleted = useCallback((moduleKey: string) => {
         setModules((prev) => {
-            const nextModules = prev.filter((module) => module.moduleKey !== moduleKey);
-            setSelectedKey((current) => (current === moduleKey ? nextModules[0]?.moduleKey ?? null : current));
-            return nextModules;
-        });
+            const nextModules = prev.filter((module) => module.moduleKey !== moduleKey)
+            setSelectedKey((current) => (current === moduleKey ? (nextModules[0]?.moduleKey ?? null) : current))
+            return nextModules
+        })
         setDetailsMap((prev) => {
-            const next = { ...prev };
-            delete next[moduleKey];
-            return next;
-        });
-        setContractDialogOpen(false);
-        setMobilePanelOpen(false);
-    }, []);
+            const next = {...prev}
+            delete next[moduleKey]
+            return next
+        })
+        setContractDialogOpen(false)
+    }, [])
 
-    const modulesEmpty = !listLoading && !modules.length && !listError;
+    const handleRefreshModules = useCallback(async () => {
+        setListLoading(true)
+        try {
+            const data = await listModules()
+            setModules(data)
+            if (!data.length) return
+            setSelectedKey((prev) => prev ?? data[0].moduleKey)
+        } catch (error) {
+            console.error(error)
+            setListError("Failed to refresh modules")
+        } finally {
+            setListLoading(false)
+        }
+    }, [])
+
+    const handleModuleImported = useCallback(() => {
+        handleRefreshModules()
+        setImportDialogOpen(false)
+    }, [handleRefreshModules])
+
+    const handleModulesScanned = useCallback(() => {
+        handleRefreshModules()
+    }, [handleRefreshModules])
+
+    const modulesEmpty = !listLoading && !modules.length && !listError
 
     return (
-        <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 } }}>
-            <Stack spacing={1} mb={3}>
-                <Typography variant="h4" fontWeight={600} color="accent.main">
-                    Module catalog
-                </Typography>
-                <Typography variant="body2" color="secondary.main">
-                    {modules.length} module{modules.length === 1 ? "" : "s"} · {listLoading ? "Loading catalog…" : "Freshly synced"}
-                </Typography>
-            </Stack>
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight uppercase">MODULE CATALOG</h1>
+                        <p className="text-base text-muted-foreground">
+                            {modules.length} module{modules.length === 1 ? "" : "s"} ·{" "}
+                            {listLoading ? "Loading catalog…" : "Freshly synced"}
+                        </p>
+                    </div>
+                    {isAdmin && (
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                onClick={() => setImportDialogOpen(true)}
+                                className="brutal-border brutal-shadow-sm bg-primary text-primary-foreground hover:bg-primary/90 uppercase"
+                            >
+                                <FileUp className="h-4 w-4 mr-2"/>
+                                Import XML
+                            </Button>
+                            <Button
+                                onClick={() => setScanDialogOpen(true)}
+                                className="brutal-border brutal-shadow-sm bg-secondary text-secondary-foreground hover:bg-secondary/90 uppercase"
+                            >
+                                <FolderSearch className="h-4 w-4 mr-2"/>
+                                Scan Folder
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {listError && (
-                <Box mb={3}>
-                    <ErrorState message={listError} />
-                </Box>
+                <div className="mb-6">
+                    <ErrorState message={listError}/>
+                </div>
             )}
 
-            <Box
-                sx={{
-                    display: "grid",
-                    gridTemplateColumns: { xs: "1fr", md: "minmax(0, 400px) minmax(0, 1fr)" },
-                    gap: 3,
-                }}
-            >
-                <Paper
-                    elevation={0}
-                    sx={{
-                        p: 3,
-                        borderRadius: 3,
-                        minWidth: 0,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                    }}
-                >
-                    <Stack spacing={0.5}>
-                        <Typography variant="subtitle1" fontWeight={600} color="primary.main">
-                            Installed modules
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            Search, filter, and peek at existing contracts.
-                        </Typography>
-                    </Stack>
-                    {listLoading && !modules.length ? listSkeleton : null}
-                    <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                        <ModuleList
-                            modules={modules}
-                            details={detailsMap}
-                            selectedKey={selectedKey ?? undefined}
-                            onSelect={handleSelect}
-                            onViewXml={handleRaw}
-                        />
-                    </Box>
-                </Paper>
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] gap-6">
+                <div className="brutal-border brutal-shadow-sm bg-card">
+                    <div className="p-6 border-b-4 border-border">
+                        <h2 className="text-xl font-bold uppercase">Installed modules</h2>
+                        <p className="text-sm text-muted-foreground mt-1">Search, filter, and peek at existing
+                            contracts.</p>
+                    </div>
+                    <div className="p-6">
+                        {listLoading && !modules.length ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-10 w-full"/>
+                                <Skeleton className="h-10 w-4/5"/>
+                                <Skeleton className="h-10 w-3/5"/>
+                            </div>
+                        ) : (
+                            <ModuleList
+                                modules={modules}
+                                details={detailsMap}
+                                selectedKey={selectedKey ?? undefined}
+                                onSelect={handleSelect}
+                                onViewXml={handleRaw}
+                            />
+                        )}
+                    </div>
+                </div>
 
-                <Box sx={{ minWidth: 0 }}>
+                <div>
                     {modulesEmpty ? (
-                        <Paper
-                            sx={{
-                                p: 4,
-                                borderRadius: 3,
-                                bgcolor: "secondary.light",
-                            }}
-                        >
-                            <Stack spacing={1}>
-                                <Typography variant="h6" color="accent.main">
-                                    No modules found
-                                </Typography>
-                                <Typography color="text.secondary">
-                                    This workspace has no modules yet. Head to the admin import flow to add curated contract packages.
-                                </Typography>
-                            </Stack>
-                        </Paper>
+                        <div className="brutal-border brutal-shadow-sm bg-card p-6">
+                            <div className="space-y-3">
+                                <h3 className="text-xl font-bold uppercase">No modules found</h3>
+                                <p className="text-muted-foreground">
+                                    This workspace has no modules yet. Head to the admin import flow to add curated
+                                    contract packages.
+                                </p>
+                            </div>
+                        </div>
                     ) : (
                         <ModuleDetailsPanel
                             module={selectedModule}
@@ -249,8 +311,8 @@ export default function ModulesPage() {
                             onModuleDeleted={handleModuleDeleted}
                         />
                     )}
-                </Box>
-            </Box>
+                </div>
+            </div>
 
             <ModuleRawXmlDialog
                 open={rawDialog.open}
@@ -265,19 +327,20 @@ export default function ModulesPage() {
                 contract={selectedModule?.contract}
                 onClose={handleCloseContract}
             />
-            <Drawer anchor="right" open={isMobile && mobilePanelOpen} onClose={() => setMobilePanelOpen(false)}>
-                <Box sx={{ width: { xs: "100vw", sm: 500 }, p: 2 }}>{selectedSummary && (
-                    <ModuleDetailsPanel
-                        module={selectedModule}
-                        summary={selectedSummary}
-                        loading={selectedLoading}
-                        error={detailsError ?? undefined}
-                        onViewRaw={() => selectedModule && handleRaw(selectedModule.moduleKey)}
-                        onViewContract={selectedModule ? handleOpenContract : undefined}
-                        onModuleDeleted={handleModuleDeleted}
+            {isAdmin && (
+                <>
+                    <ImportModuleDialog
+                        open={importDialogOpen}
+                        onClose={() => setImportDialogOpen(false)}
+                        onModuleImported={handleModuleImported}
                     />
-                )}</Box>
-            </Drawer>
-        </Container>
-    );
+                    <ScanModulesDialog
+                        open={scanDialogOpen}
+                        onClose={() => setScanDialogOpen(false)}
+                        onModulesScanned={handleModulesScanned}
+                    />
+                </>
+            )}
+        </div>
+    )
 }

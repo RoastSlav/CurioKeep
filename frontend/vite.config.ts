@@ -1,9 +1,15 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import {defineConfig} from "vite"
+import react from "@vitejs/plugin-react"
+import path from "path"
 
 // Manual chunks keep the main bundle smaller so we avoid the 500 kB warning.
 export default defineConfig({
   plugins: [react()],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "./"),
+        },
+    },
   server: {
     proxy: {
       "/api": "http://localhost:8080",
@@ -21,4 +27,4 @@ export default defineConfig({
       },
     },
   },
-});
+})

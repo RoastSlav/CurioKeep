@@ -1,52 +1,67 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack } from "@mui/material";
-import { useState } from "react";
-import type { ModuleStateDef } from "../../../api/types";
+"use client"
+
+import {useState} from "react"
+import type {ModuleStateDef} from "../../../api/types"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "../../../../components/ui/dialog"
+import {Button} from "../../../../components/ui/button"
+import {Label} from "../../../../components/ui/label"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../components/ui/select"
 
 export default function BatchStateDialog({
-    open,
-    states,
-    onClose,
-    onConfirm,
+                                             open,
+                                             states,
+                                             onClose,
+                                             onConfirm,
 }: {
-    open: boolean;
-    states?: ModuleStateDef[];
-    onClose: () => void;
-    onConfirm: (stateKey: string) => void;
+    open: boolean
+    states?: ModuleStateDef[]
+    onClose: () => void
+    onConfirm: (stateKey: string) => void
 }) {
-    const [stateKey, setStateKey] = useState<string>(states?.[0]?.key || "");
+    const [stateKey, setStateKey] = useState<string>(states?.[0]?.key || "")
 
     const handleConfirm = () => {
-        if (stateKey) onConfirm(stateKey);
-    };
+        if (stateKey) onConfirm(stateKey)
+    }
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle>Change state for selected</DialogTitle>
+        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <DialogContent>
-                <Stack spacing={2} mt={1}>
-                    <FormControl fullWidth>
-                        <InputLabel id="batch-state-select-label">State</InputLabel>
-                        <Select
-                            labelId="batch-state-select-label"
-                            value={stateKey}
-                            label="State"
-                            onChange={(e) => setStateKey(e.target.value)}
-                        >
+                <DialogHeader>
+                    <DialogTitle className="font-bold uppercase">Change state for selected</DialogTitle>
+                    <DialogDescription>Select a state to apply to all selected items</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-4">
+                    <Label htmlFor="batch-state-select">State</Label>
+                    <Select value={stateKey} onValueChange={setStateKey}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select state"/>
+                        </SelectTrigger>
+                        <SelectContent>
                             {states?.map((s) => (
-                                <MenuItem key={s.key} value={s.key}>
+                                <SelectItem key={s.key} value={s.key}>
                                     {s.label || s.key}
-                                </MenuItem>
+                                </SelectItem>
                             ))}
-                        </Select>
-                    </FormControl>
-                </Stack>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleConfirm} disabled={!stateKey}>
+                        Apply
+                    </Button>
+                </DialogFooter>
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleConfirm} disabled={!stateKey} variant="contained">
-                    Apply
-                </Button>
-            </DialogActions>
         </Dialog>
-    );
+    )
 }

@@ -1,125 +1,126 @@
-import { useEffect, useMemo, useState } from "react";
-import { Box, Button, Divider, Stack, Typography } from "@mui/material";
-import type { FieldDef, ModuleDefinition } from "../../api/types";
-import FieldRenderer from "./FieldRenderer";
-import { validateAttributes, type ValidationErrors } from "./validation";
+"use client"
+
+import type React from "react"
+
+import {useEffect, useMemo, useState} from "react"
+import type {FieldDef, ModuleDefinition} from "../../api/types"
+import FieldRenderer from "./FieldRenderer"
+import {validateAttributes, type ValidationErrors} from "./validation"
+import {Button} from "../../../components/ui/button"
+import {Separator} from "../../../components/ui/separator"
 
 export type DynamicFormProps = {
-    moduleDefinition?: ModuleDefinition | null;
-    fields?: FieldDef[];
-    initialValues?: Record<string, any>;
-    disabled?: boolean;
-    submitLabel?: string;
-    cancelLabel?: string;
-    onSubmit: (attributes: Record<string, any>) => void | Promise<void>;
-    onCancel?: () => void;
-};
+    moduleDefinition?: ModuleDefinition | null
+    fields?: FieldDef[]
+    initialValues?: Record<string, any>
+    disabled?: boolean
+    submitLabel?: string
+    cancelLabel?: string
+    onSubmit: (attributes: Record<string, any>) => void | Promise<void>
+    onCancel?: () => void
+}
 
 function groupFields(visibleFields: FieldDef[]) {
-    const groups: { name?: string; fields: FieldDef[] }[] = [];
+    const groups: { name?: string; fields: FieldDef[] }[] = []
     visibleFields.forEach((field) => {
-        const groupName = field.ui?.group;
-        const existing = groups.find((g) => g.name === groupName);
+        const groupName = field.ui?.group
+        const existing = groups.find((g) => g.name === groupName)
         if (existing) {
-            existing.fields.push(field);
+            existing.fields.push(field)
         } else {
-            groups.push({ name: groupName, fields: [field] });
+            groups.push({name: groupName, fields: [field]})
         }
-    });
-    return groups;
+    })
+    return groups
 }
 
 export default function DynamicForm({
-    moduleDefinition,
-    fields,
-    initialValues,
-    disabled,
-    submitLabel = "Save",
-    cancelLabel = "Cancel",
-    onSubmit,
-    onCancel,
+                                        moduleDefinition,
+                                        fields,
+                                        initialValues,
+                                        disabled,
+                                        submitLabel = "Save",
+                                        cancelLabel = "Cancel",
+                                        onSubmit,
+                                        onCancel,
 }: DynamicFormProps) {
     const visibleFields = useMemo(() => {
-        const source = fields || moduleDefinition?.fields || [];
-        return source.filter((f) => !f.ui?.hidden);
-    }, [fields, moduleDefinition]);
+        const source = fields || moduleDefinition?.fields || []
+        return source.filter((f) => !f.ui?.hidden)
+    }, [fields, moduleDefinition])
 
-    const [values, setValues] = useState<Record<string, any>>(initialValues || {});
-    const [errors, setErrors] = useState<ValidationErrors>({});
-    const [submitting, setSubmitting] = useState(false);
+    const [values, setValues] = useState<Record<string, any>>(initialValues || {})
+    const [errors, setErrors] = useState<ValidationErrors>({})
+    const [submitting, setSubmitting] = useState(false)
 
     useEffect(() => {
-        setValues(initialValues || {});
-    }, [initialValues]);
+        setValues(initialValues || {})
+    }, [initialValues])
 
     const handleChange = (key: string, value: any) => {
-        setValues((prev) => ({ ...prev, [key]: value }));
+        setValues((prev) => ({...prev, [key]: value}))
         setErrors((prev) => {
-            if (!prev[key]) return prev;
-            const { [key]: _, ...rest } = prev;
-            return rest;
-        });
-    };
+            if (!prev[key]) return prev
+            const {[key]: _, ...rest} = prev
+            return rest
+        })
+    }
 
     const handleBlur = (field: FieldDef) => {
-        const err = validateAttributes([field], { ...values, [field.key]: values[field.key] })[field.key];
+        const err = validateAttributes([field], {...values, [field.key]: values[field.key]})[field.key]
         setErrors((prev) => {
             if (!err) {
-                const { [field.key]: _, ...rest } = prev;
-                return rest;
+                const {[field.key]: _, ...rest} = prev
+                return rest
             }
-            return { ...prev, [field.key]: err };
-        });
-    };
+            return {...prev, [field.key]: err}
+        })
+    }
 
     const prepareAttributes = (): Record<string, any> => {
-        const result: Record<string, any> = {};
+        const result: Record<string, any> = {}
         visibleFields.forEach((field) => {
-            const raw = values[field.key];
+            const raw = values[field.key]
             if (field.type === "JSON" && typeof raw === "string" && raw.trim()) {
                 try {
-                    result[field.key] = JSON.parse(raw);
-                    return;
+                    result[field.key] = JSON.parse(raw)
+                    return
                 } catch {
-                    result[field.key] = raw; // keep string; validation will flag
-                    return;
+                    result[field.key] = raw
+                    return
                 }
             }
-            result[field.key] = raw;
-        });
-        return result;
-    };
+            result[field.key] = raw
+        })
+        return result
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const prepared = prepareAttributes();
-        const validation = validateAttributes(visibleFields, prepared);
-        setErrors(validation);
-        if (Object.keys(validation).length) return;
+        e.preventDefault()
+        const prepared = prepareAttributes()
+        const validation = validateAttributes(visibleFields, prepared)
+        setErrors(validation)
+        if (Object.keys(validation).length) return
 
-        setSubmitting(true);
+        setSubmitting(true)
         try {
-            await onSubmit(prepared);
+            await onSubmit(prepared)
         } finally {
-            setSubmitting(false);
+            setSubmitting(false)
         }
-    };
+    }
 
-    const groups = useMemo(() => groupFields(visibleFields), [visibleFields]);
+    const groups = useMemo(() => groupFields(visibleFields), [visibleFields])
 
     return (
         <form onSubmit={handleSubmit}>
-            <Stack spacing={3}>
+            <div className="flex flex-col gap-6">
                 {groups.map((group, idx) => (
-                    <Stack key={group.name ?? `group-${idx}`} spacing={2}>
-                        {group.name && (
-                            <Typography variant="subtitle1" fontWeight={700}>
-                                {group.name}
-                            </Typography>
-                        )}
-                        <Stack spacing={2}>
+                    <div key={group.name ?? `group-${idx}`} className="flex flex-col gap-4">
+                        {group.name && <h3 className="text-base font-bold text-foreground">{group.name}</h3>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {group.fields.map((field) => (
-                                <Box key={field.key}>
+                                <div key={field.key}>
                                     <FieldRenderer
                                         field={field}
                                         value={values[field.key]}
@@ -128,24 +129,34 @@ export default function DynamicForm({
                                         onChange={(val) => handleChange(field.key, val)}
                                         onBlur={() => handleBlur(field)}
                                     />
-                                </Box>
+                                </div>
                             ))}
-                        </Stack>
-                        {idx < groups.length - 1 ? <Divider /> : null}
-                    </Stack>
+                        </div>
+                        {idx < groups.length - 1 ? <Separator className="bg-border"/> : null}
+                    </div>
                 ))}
 
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                <div className="flex justify-end gap-3">
                     {onCancel && (
-                        <Button variant="outlined" onClick={onCancel} disabled={submitting}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onCancel}
+                            disabled={submitting}
+                            className="brutal-border brutal-shadow-sm bg-transparent"
+                        >
                             {cancelLabel}
                         </Button>
                     )}
-                    <Button type="submit" variant="contained" disabled={submitting || disabled}>
+                    <Button
+                        type="submit"
+                        disabled={submitting || disabled}
+                        className="bg-primary text-primary-foreground brutal-border brutal-shadow-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
+                    >
                         {submitLabel}
                     </Button>
-                </Stack>
-            </Stack>
+                </div>
+            </div>
         </form>
-    );
+    )
 }
