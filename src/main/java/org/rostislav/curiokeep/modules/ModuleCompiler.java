@@ -2,6 +2,8 @@ package org.rostislav.curiokeep.modules;
 
 import org.rostislav.curiokeep.modules.contract.*;
 import org.rostislav.curiokeep.modules.xml.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -10,21 +12,23 @@ import java.util.stream.Collectors;
 @Component
 public class ModuleCompiler {
 
-    private static boolean bool(Boolean b, boolean def) {
-        return b == null ? def : b;
-    }
+        private static final Logger log = LoggerFactory.getLogger(ModuleCompiler.class);
 
-    private static int safeInt(Integer v, int def) {
-        return v == null ? def : v;
-    }
+        private static boolean bool(Boolean b, boolean def) {
+                return b == null ? def : b;
+        }
 
-    private static List<String> splitCsv(String csv) {
-        if (csv == null || csv.isBlank()) return List.of();
-        return Arrays.stream(csv.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.toList());
-    }
+        private static int safeInt(Integer v, int def) {
+                return v == null ? def : v;
+        }
+
+        private static List<String> splitCsv(String csv) {
+                if (csv == null || csv.isBlank()) return List.of();
+                return Arrays.stream(csv.split(","))
+                                .map(String::trim)
+                                .filter(s -> !s.isBlank())
+                                .collect(Collectors.toList());
+        }
 
     public ModuleContract compile(ModuleXml xml) {
         Objects.requireNonNull(xml, "module xml is null");
@@ -156,6 +160,9 @@ public class ModuleCompiler {
                             ))
                             .toList();
 
+                    var uiHints = compileUi(f.ui());
+                    warnIfCustomIdentifierMissingHelpText(f.key(), identifiers, uiHints);
+
 
                     return new FieldContract(
                             f.key(),
@@ -172,12 +179,35 @@ public class ModuleCompiler {
                             identifiers,
                             enumValues,
                             null,        // constraints (XSD doesn’t support yet)
-                            null,        // ui hints (XSD doesn’t support yet)
+                            uiHints,
                             mappings,
                             Map.of()
                     );
                 })
                 .toList();
+    }
+
+    private UiHints compileUi(UiXml uiXml) {
+        if (uiXml == null) return null;
+
+        return new UiHints(
+                uiXml.widget(),
+                uiXml.placeholder(),
+                uiXml.helpText(),
+                uiXml.group(),
+                uiXml.hidden()
+        );
+    }
+
+    private void warnIfCustomIdentifierMissingHelpText(String fieldKey, List<IdentifierType> identifiers, UiHints uiHints) {
+        if (!identifiers.contains(IdentifierType.CUSTOM)) {
+            return;
+        }
+
+        String helpText = uiHints == null ? null : uiHints.helpText();
+        if (helpText == null || helpText.isBlank()) {
+            log.warn("Field '{}' declares CUSTOM identifier but ui.helpText is missing", fieldKey);
+        }
     }
 
     private List<WorkflowContract> compileWorkflows(List<WorkflowXml> workflowXmls) {

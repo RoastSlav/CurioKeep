@@ -19,7 +19,7 @@ public record FieldXml(
         @JacksonXmlProperty(localName = "identifiers") IdentifiersXml identifiers,
         @JacksonXmlProperty(localName = "enumValues") EnumValuesXml enumValues,
         ConstraintsXml constraints,
-        UiHintsXml ui,
+        UiXml ui,
         @JacksonXmlProperty(localName = "providerMappings") ProviderMappingsXml providerMappings,
 
         String defaultValue
