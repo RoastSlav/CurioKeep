@@ -27,7 +27,7 @@ class CurioKeepApplicationTests {
         @Bean
         @Primary
         ModuleService moduleService() {
-            return new ModuleService(null, null) {
+            return new ModuleService(null, null, null) {
                 @Override
                 public void loadAllModules() {
                     // no-op for tests
