@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type {
   Collection,
@@ -48,6 +48,12 @@ export default function CollectionDetailPage() {
   const [moduleDetails, setModuleDetails] = useState<ModuleDetails | null>(
     null
   );
+  const [moduleItemsCache, setModuleItemsCache] = useState<
+    Record<string, Item[]>
+  >({});
+  const [moduleDetailsCache, setModuleDetailsCache] = useState<
+    Record<string, ModuleDetails>
+  >({});
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +63,8 @@ export default function CollectionDetailPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [invites, setInvites] = useState<CollectionInvite[]>([]);
+  const [invitesLoaded, setInvitesLoaded] = useState(false);
+  const prefetchedModules = useRef<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [batchBusy, setBatchBusy] = useState(false);
   const [search, setSearch] = useState("");
@@ -77,13 +85,22 @@ export default function CollectionDetailPage() {
 
   const {
     members,
+    loaded: membersLoaded,
     loading: membersLoading,
     saving: membersSaving,
     error: membersError,
     refresh: refreshMembers,
     changeRole,
     remove,
-  } = useCollectionMembers(id);
+  } = useCollectionMembers(id, { auto: false });
+
+  useEffect(() => {
+    setInvites([]);
+    setInvitesLoaded(false);
+    setModuleItemsCache({});
+    setModuleDetailsCache({});
+    prefetchedModules.current = new Set();
+  }, [id]);
 
   const loadCollection = useCallback(async () => {
     if (!id) return;
@@ -115,19 +132,20 @@ export default function CollectionDetailPage() {
     }
   }, [enabledModules]);
 
-  const loadInvites = useCallback(async () => {
-    if (!id) return;
-    try {
-      const data = await listCollectionInvites(id);
-      setInvites(data);
-    } catch (err) {
-      // ignore silently
-    }
-  }, [id]);
-
-  useEffect(() => {
-    void loadInvites();
-  }, [loadInvites]);
+  const loadInvites = useCallback(
+    async (force = false) => {
+      if (!id) return;
+      if (invitesLoaded && !force) return;
+      try {
+        const data = await listCollectionInvites(id);
+        setInvites(data);
+        setInvitesLoaded(true);
+      } catch (err) {
+        // ignore silently to keep settings usable
+      }
+    },
+    [id, invitesLoaded]
+  );
 
   const activeModule = useMemo(
     () => modules.find((m) => m.moduleKey === activeModuleKey) || modules[0],
@@ -151,23 +169,53 @@ export default function CollectionDetailPage() {
     const module = modules.find((m) => m.moduleKey === moduleKey);
     if (!module) return;
 
-    setModuleDetails(null);
+    const cachedItems = moduleItemsCache[moduleKey];
+    const cachedDetails = moduleDetailsCache[moduleKey];
+
+    if (!forceRefresh && cachedItems) {
+      setItems(cachedItems);
+      setModuleDetails(cachedDetails ?? null);
+      setModuleError(null);
+      setItemsError(null);
+      setItemsLoading(false);
+      if (cachedDetails) return;
+    }
+
+    const detailsPromise = cachedDetails
+      ? Promise.resolve(cachedDetails)
+      : getModuleDetails(moduleKey);
+
+    const shouldFetchItems = forceRefresh || !cachedItems;
+    const itemsPromise = shouldFetchItems
+      ? listItems(id, module.moduleId, { forceRefresh })
+      : Promise.resolve(null);
+
     setModuleError(null);
-    setItems([]);
-    setItemsLoading(true);
     setItemsError(null);
+    setItemsLoading(shouldFetchItems);
 
     try {
-      const [details, page] = await Promise.all([
-        getModuleDetails(moduleKey),
-        listItems(id, module.moduleId, { forceRefresh }),
-      ]);
-      setModuleDetails(details);
-      setItems(page.content);
-      setItemCounts((prev) => ({
+      const [details, page] = await Promise.all([detailsPromise, itemsPromise]);
+
+      setModuleDetails(details as ModuleDetails);
+      setModuleDetailsCache((prev) => ({
         ...prev,
-        [module.moduleKey]: page.totalElements ?? page.content.length,
+        [module.moduleKey]: details as ModuleDetails,
       }));
+
+      if (page) {
+        const resolvedPage = page as Awaited<ReturnType<typeof listItems>>;
+        setItems(resolvedPage.content);
+        setModuleItemsCache((prev) => ({
+          ...prev,
+          [module.moduleKey]: resolvedPage.content,
+        }));
+        setItemCounts((prev) => ({
+          ...prev,
+          [module.moduleKey]:
+            resolvedPage.totalElements ?? resolvedPage.content.length,
+        }));
+      }
     } catch (err: any) {
       const message = err?.message || "Failed to load module or items";
       setModuleError(message);
@@ -212,21 +260,52 @@ export default function CollectionDetailPage() {
   const handleChangeState = async (item: Item, stateKey: string) => {
     if (!id) return;
     const snapshot = items;
-    setItems((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, stateKey } : i))
-    );
+    setItems((prev) => {
+      const next = prev.map((i) => (i.id === item.id ? { ...i, stateKey } : i));
+      if (activeModuleKey) {
+        setModuleItemsCache((cache) => ({
+          ...cache,
+          [activeModuleKey]: next,
+        }));
+      }
+      return next;
+    });
     try {
       const updated = await changeItemState(id, item.id, stateKey);
-      setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+      setItems((prev) => {
+        const next = prev.map((i) => (i.id === updated.id ? updated : i));
+        if (activeModuleKey) {
+          setModuleItemsCache((cache) => ({
+            ...cache,
+            [activeModuleKey]: next,
+          }));
+        }
+        return next;
+      });
       showToast("State updated", "success");
     } catch (err: any) {
       setItems(snapshot);
+      if (activeModuleKey) {
+        setModuleItemsCache((cache) => ({
+          ...cache,
+          [activeModuleKey]: snapshot,
+        }));
+      }
       showToast(err?.message || "Failed to update state", "error");
     }
   };
 
   const handleItemCreated = (item: Item) => {
-    setItems((prev) => [item, ...prev]);
+    setItems((prev) => {
+      const next = [item, ...prev];
+      if (activeModuleKey) {
+        setModuleItemsCache((cache) => ({
+          ...cache,
+          [activeModuleKey]: next,
+        }));
+      }
+      return next;
+    });
     if (activeModuleKey) {
       setItemCounts((prev) => ({
         ...prev,
@@ -238,7 +317,9 @@ export default function CollectionDetailPage() {
 
   const handleOpenSettings = () => {
     setSettingsOpen(true);
-    void refreshMembers();
+    if (!membersLoaded) {
+      void refreshMembers();
+    }
     void loadInvites();
   };
 
@@ -277,18 +358,43 @@ export default function CollectionDetailPage() {
         continue;
       }
 
-      setItems((prev) =>
-        prev.map((i) => (i.id === itemId ? { ...i, stateKey } : i))
-      );
+      setItems((prev) => {
+        const next = prev.map((i) =>
+          i.id === itemId ? { ...i, stateKey } : i
+        );
+        if (activeModuleKey) {
+          setModuleItemsCache((cache) => ({
+            ...cache,
+            [activeModuleKey]: next,
+          }));
+        }
+        return next;
+      });
       try {
         const updated = await changeItemState(id, itemId, stateKey);
-        setItems((prev) =>
-          prev.map((i) => (i.id === updated.id ? updated : i))
-        );
+        setItems((prev) => {
+          const next = prev.map((i) => (i.id === updated.id ? updated : i));
+          if (activeModuleKey) {
+            setModuleItemsCache((cache) => ({
+              ...cache,
+              [activeModuleKey]: next,
+            }));
+          }
+          return next;
+        });
         successes.push(itemId);
       } catch (err: any) {
         failures.push(itemId);
-        setItems((prev) => prev.map((i) => (i.id === itemId ? original : i)));
+        setItems((prev) => {
+          const next = prev.map((i) => (i.id === itemId ? original : i));
+          if (activeModuleKey) {
+            setModuleItemsCache((cache) => ({
+              ...cache,
+              [activeModuleKey]: next,
+            }));
+          }
+          return next;
+        });
       }
     }
 
@@ -317,7 +423,16 @@ export default function CollectionDetailPage() {
       try {
         await deleteItem(id, itemId);
         deleted.push(itemId);
-        setItems((prev) => prev.filter((i) => i.id !== itemId));
+        setItems((prev) => {
+          const next = prev.filter((i) => i.id !== itemId);
+          if (activeModuleKey) {
+            setModuleItemsCache((cache) => ({
+              ...cache,
+              [activeModuleKey]: next,
+            }));
+          }
+          return next;
+        });
         if (activeModuleKey) {
           setItemCounts((prev) => ({
             ...prev,
@@ -397,6 +512,42 @@ export default function CollectionDetailPage() {
     }),
     [modules, itemCounts]
   );
+
+  useEffect(() => {
+    if (!id || !modules.length) return;
+    let cancelled = false;
+
+    const preload = async () => {
+      for (const mod of modules) {
+        if (prefetchedModules.current.has(mod.moduleKey)) continue;
+        if (moduleItemsCache[mod.moduleKey]) {
+          prefetchedModules.current.add(mod.moduleKey);
+          continue;
+        }
+        try {
+          const page = await listItems(id, mod.moduleId);
+          if (cancelled) return;
+          prefetchedModules.current.add(mod.moduleKey);
+          setModuleItemsCache((prev) => ({
+            ...prev,
+            [mod.moduleKey]: page.content,
+          }));
+          setItemCounts((prev) => ({
+            ...prev,
+            [mod.moduleKey]: page.totalElements ?? page.content.length,
+          }));
+        } catch (err) {
+          // ignore background preload errors
+        }
+      }
+    };
+
+    void preload();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, modules, moduleItemsCache]);
 
   if (loading) return <LoadingState message="Loading collection..." />;
   if (error || !collection || !id)
