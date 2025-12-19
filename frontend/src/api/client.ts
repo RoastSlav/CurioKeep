@@ -9,7 +9,12 @@ type ApiRequestOptions = {
   headers?: HeadersInit;
   body?: any;
   signal?: AbortSignal;
+  dedupe?: boolean;
+  dedupeKey?: string;
 };
+
+// Tracks in-flight GET/HEAD requests to avoid duplicate fetches (e.g., React Strict Mode double-invoke)
+const inflightRequests = new Map<string, Promise<unknown>>();
 
 const authListeners = new Set<AuthEventListener>();
 
@@ -83,18 +88,40 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = normalizeUrl(path);
   const init = buildInit(options);
-  const res = await fetch(url, init);
-  const body = await parseBody(res);
+  const method = (init.method || "GET").toUpperCase();
 
-  if (res.status === 401 || res.status === 403) {
-    emitAuthRequired();
+  const shouldDedupe =
+    options.dedupe !== false && (method === "GET" || method === "HEAD");
+  const dedupeKey = options.dedupeKey || `${method}:${url}`;
+
+  if (shouldDedupe) {
+    const existing = inflightRequests.get(dedupeKey);
+    if (existing) return existing as Promise<T>;
   }
 
-  if (!res.ok) {
-    const message =
-      (body as any)?.message || res.statusText || "Request failed";
-    throw new ApiError(res.status, message, body);
-  }
+  const requestPromise = (async () => {
+    const res = await fetch(url, init);
+    const body = await parseBody(res);
 
-  return body as T;
+    if (res.status === 401 || res.status === 403) {
+      emitAuthRequired();
+    }
+
+    if (!res.ok) {
+      const message =
+        (body as any)?.message || res.statusText || "Request failed";
+      throw new ApiError(res.status, message, body);
+    }
+
+    return body as T;
+  })();
+
+  if (!shouldDedupe) return requestPromise;
+
+  inflightRequests.set(dedupeKey, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    inflightRequests.delete(dedupeKey);
+  }
 }

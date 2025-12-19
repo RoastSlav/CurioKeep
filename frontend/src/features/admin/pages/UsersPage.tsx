@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Loader2,
   RefreshCw,
@@ -17,6 +17,7 @@ import {
   updateUserStatus,
   updateUserAdmin,
   deleteUser,
+  clearUsersCache,
   type AdminUser,
 } from "../../../api/admin/usersApi";
 import {
@@ -64,23 +65,31 @@ export default function UsersPage() {
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [usersData, invitesData] = await Promise.all([
-        listUsers(),
-        listInvites(),
-      ]);
-      setUsers(usersData);
-      setInvites(invitesData);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load data");
-      showToast(err?.message || "Failed to load data", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
+  const isFetchingRef = useRef(false);
+
+  const loadData = useCallback(
+    async (forceRefresh = false) => {
+      if (isFetchingRef.current && !forceRefresh) return;
+      isFetchingRef.current = true;
+      setLoading(true);
+      setError(null);
+      try {
+        const [usersData, invitesData] = await Promise.all([
+          listUsers({ forceRefresh }),
+          listInvites({ forceRefresh }),
+        ]);
+        setUsers(usersData);
+        setInvites(invitesData);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load data");
+        showToast(err?.message || "Failed to load data", "error");
+      } finally {
+        isFetchingRef.current = false;
+        setLoading(false);
+      }
+    },
+    [showToast]
+  );
 
   useEffect(() => {
     void loadData();
@@ -95,6 +104,7 @@ export default function UsersPage() {
     );
     try {
       await updateUserStatus(userId, { status: newStatus });
+      clearUsersCache();
       showToast(`User ${newStatus.toLowerCase()}`, "success");
     } catch (err: any) {
       setUsers(snapshot);
@@ -113,6 +123,7 @@ export default function UsersPage() {
     );
     try {
       await updateUserAdmin(userId, { admin: newAdmin });
+      clearUsersCache();
       showToast(newAdmin ? "Admin granted" : "Admin revoked", "success");
     } catch (err: any) {
       setUsers(snapshot);
@@ -131,6 +142,7 @@ export default function UsersPage() {
     setUsers((prev) => prev.filter((u) => u.id !== userId));
     try {
       await deleteUser(userId);
+      clearUsersCache();
       showToast("User deleted", "success");
     } catch (err: any) {
       setUsers(snapshot);
@@ -150,7 +162,8 @@ export default function UsersPage() {
       const result = await createInvite({ email: newInviteEmail.trim() });
       setInviteToken(result.token);
       setNewInviteEmail("");
-      await loadData();
+      clearUsersCache();
+      await loadData(true);
       showToast("Invite created", "success");
     } catch (err: any) {
       showToast(err?.message || "Failed to create invite", "error");
@@ -165,6 +178,7 @@ export default function UsersPage() {
     setInvites((prev) => prev.filter((i) => i.token !== token));
     try {
       await revokeInvite(token);
+      clearUsersCache();
       showToast("Invite revoked", "success");
     } catch (err: any) {
       setInvites(snapshot);
@@ -290,7 +304,7 @@ export default function UsersPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={loadData}
+              onClick={() => loadData(true)}
               disabled={loading}
               className="brutal-border bg-transparent"
             >

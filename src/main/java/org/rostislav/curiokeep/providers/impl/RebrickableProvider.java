@@ -29,7 +29,6 @@ import java.util.Optional;
 public class RebrickableProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(RebrickableProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
             ProviderCredentialField.secret("apiKey", "Rebrickable API key", "Rebrickable API key")
@@ -76,10 +75,9 @@ public class RebrickableProvider implements MetadataProvider {
         if (id == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri("https://rebrickable.com/api/v3/lego/sets/" + id + "/")
                     .header(HttpHeaders.AUTHORIZATION, "key " + apiKey)
-                    .header("User-Agent", USER_AGENT)
                     .retrieve()
                     .toEntity(String.class);
 

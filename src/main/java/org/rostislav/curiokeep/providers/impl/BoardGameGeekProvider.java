@@ -25,7 +25,6 @@ import java.util.Optional;
 public class BoardGameGeekProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(BoardGameGeekProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
     private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
             ProviderCredentialField.secret("token", "Bearer token", "BoardGameGeek API bearer token")
     );
@@ -78,9 +77,8 @@ public class BoardGameGeekProvider implements MetadataProvider {
         }
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri("https://boardgamegeek.com/xmlapi2/thing?id={id}&stats=1", trimmed)
-                    .header("User-Agent", USER_AGENT)
                     .header("Authorization", "Bearer " + bearerToken)
                     .retrieve()
                     .toEntity(String.class);

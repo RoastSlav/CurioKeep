@@ -25,7 +25,6 @@ import java.util.Optional;
 public class InternetArchiveProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(InternetArchiveProvider.class);
-    private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
 
     private final RestClient http;
     private final ObjectMapper objectMapper;
@@ -51,9 +50,8 @@ public class InternetArchiveProvider implements MetadataProvider {
         if (id == null) return Optional.empty();
 
         try {
-            ResponseEntity<String> response = http.get()
+                ResponseEntity<String> response = http.get()
                     .uri("https://archive.org/metadata/" + id)
-                    .header("User-Agent", USER_AGENT)
                     .retrieve()
                     .toEntity(String.class);
 
