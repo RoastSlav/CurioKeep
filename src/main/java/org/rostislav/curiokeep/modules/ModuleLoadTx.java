@@ -45,7 +45,7 @@ public class ModuleLoadTx {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void loadOneModule(Resource r, String sourceName) throws Exception {
+    public void loadOneModule(Resource r, String sourceName, ModuleSource source) throws Exception {
         String xml = readUtf8(r);
 
         xsdValidator.validate(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
@@ -59,7 +59,7 @@ public class ModuleLoadTx {
 
         validateSemantics(contract, sourceName);
 
-        upsertBuiltinModule(contract, xml, contractJson);
+        upsertModule(contract, xml, contractJson, source);
     }
 
     private void validateSemantics(ModuleContract m, String sourceName) {
@@ -125,7 +125,7 @@ public class ModuleLoadTx {
         }
     }
 
-    private void upsertBuiltinModule(ModuleContract module, String xmlRaw, JsonNode contractJson) {
+    private void upsertModule(ModuleContract module, String xmlRaw, JsonNode contractJson, ModuleSource source) {
         String checksum = sha256Hex(xmlRaw);
 
         UUID existingId = jdbc.query(
@@ -141,7 +141,7 @@ public class ModuleLoadTx {
 
         UUID moduleId;
         try {
-            moduleId = upsertModuleDefinition(module, xmlRaw, checksum, contractJson);
+            moduleId = upsertModuleDefinition(module, xmlRaw, checksum, contractJson, source);
         } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize module contract JSON for module " + module.key(), e);
         }
@@ -151,17 +151,17 @@ public class ModuleLoadTx {
     }
 
 
-    private UUID upsertModuleDefinition(ModuleContract module, String xmlRaw, String checksum, JsonNode contractJson) throws JacksonException {
+    private UUID upsertModuleDefinition(ModuleContract module, String xmlRaw, String checksum, JsonNode contractJson, ModuleSource source) throws JacksonException {
         String sql = """
                 INSERT INTO module_definition (
                     module_key, name, version, source, checksum, xml_raw, definition_json, created_at, updated_at
                 ) VALUES (
-                    :module_key, :name, :version, 'BUILTIN', :checksum, :xml_raw, :definition_json, now(), now()
+                    :module_key, :name, :version, :source, :checksum, :xml_raw, :definition_json, now(), now()
                 )
                 ON CONFLICT (module_key) DO UPDATE SET
                     name = EXCLUDED.name,
                     version = EXCLUDED.version,
-                    source = 'BUILTIN',
+                    source = EXCLUDED.source,
                     checksum = EXCLUDED.checksum,
                     xml_raw = EXCLUDED.xml_raw,
                     definition_json = EXCLUDED.definition_json,
@@ -170,12 +170,13 @@ public class ModuleLoadTx {
                 """;
 
         MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("module_key", module.key())
-                .addValue("name", module.name())
-                .addValue("version", module.version())
-                .addValue("checksum", checksum)
-                .addValue("xml_raw", xmlRaw)
-                .addValue("definition_json", jsonb(objectMapper.writeValueAsString(contractJson)));
+            .addValue("module_key", module.key())
+            .addValue("name", module.name())
+            .addValue("version", module.version())
+            .addValue("source", source.name())
+            .addValue("checksum", checksum)
+            .addValue("xml_raw", xmlRaw)
+            .addValue("definition_json", jsonb(objectMapper.writeValueAsString(contractJson)));
 
         UUID id = jdbc.queryForObject(sql, params, UUID.class);
         if (id == null)

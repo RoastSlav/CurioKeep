@@ -12,6 +12,7 @@ const CollectionsPage = lazy(() => import("../features/collections/pages/Collect
 const CollectionDetailPage = lazy(() => import("../features/collections/pages/CollectionDetailPage"));
 const AcceptCollectionInvitePage = lazy(() => import("../features/collections/pages/AcceptCollectionInvitePage"));
 const ItemDetailPage = lazy(() => import("../features/items/pages/ItemDetailPage"));
+const ModulesPage = lazy(() => import("../features/modules/pages/ModulesPage"));
 import RequireAuth from "../auth/RequireAuth";
 import RequireSetupComplete from "../auth/RequireSetupComplete";
 import { useAuth } from "../auth/useAuth";
@@ -92,7 +93,7 @@ export default function AppRoutes() {
                 { path: "collections/:id", element: <Suspended><CollectionDetailPage /></Suspended> },
                 { path: "collections/:id/items/:itemId", element: <Suspended><ItemDetailPage /></Suspended> },
                 { path: "invites/collection/:token", element: <Suspended><AcceptCollectionInvitePage /></Suspended> },
-                { path: "modules", element: <StubPage title="Modules" note="Modules page placeholder" /> },
+                { path: "modules", element: <Suspended><ModulesPage /></Suspended> },
                 { path: "providers", element: <StubPage title="Providers" note="Providers page placeholder" /> },
                 { path: "profile", element: <StubPage title="Profile" note="Profile editing coming soon" /> },
                 { path: "admin/invites", element: <StubPage title="Admin Invites" note="Admin invites placeholder" /> },

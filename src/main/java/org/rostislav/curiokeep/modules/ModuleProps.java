@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record ModuleProps(
         String classpath,
         String schema,
-        String externalDir
+        String externalDir,
+        String importDir
 ) {
 }

@@ -1,3 +1,3 @@
 package org.rostislav.curiokeep.modules.contract;
 
-public enum ModuleSource {BUILTIN, USER}
+public enum ModuleSource {BUILTIN, IMPORTED, USER}
