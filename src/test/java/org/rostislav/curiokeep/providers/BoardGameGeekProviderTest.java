@@ -9,9 +9,11 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -41,10 +43,15 @@ class BoardGameGeekProviderTest {
                 </items>
                 """;
 
+        String bearerToken = "bgg-test-token";
         server.expect(requestTo("https://boardgamegeek.com/xmlapi2/thing?id=174430&stats=1"))
-                .andRespond(withSuccess(xml, MediaType.APPLICATION_XML));
+            .andExpect(header("Authorization", "Bearer " + bearerToken))
+            .andRespond(withSuccess(xml, MediaType.APPLICATION_XML));
 
-        BoardGameGeekProvider provider = new BoardGameGeekProvider(client, objectMapper);
+        TestProviderCredentialLookup credentials = new TestProviderCredentialLookup()
+            .with("boardgamegeek", Map.of("token", bearerToken));
+
+        BoardGameGeekProvider provider = new BoardGameGeekProvider(client, objectMapper, credentials);
 
         Optional<ProviderResult> result = provider.fetch(ItemIdentifierEntity.IdType.CUSTOM, "174430");
 
