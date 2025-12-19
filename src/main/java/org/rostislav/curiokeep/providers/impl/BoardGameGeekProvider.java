@@ -1,21 +1,17 @@
 package org.rostislav.curiokeep.providers.impl;
 
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
-import org.rostislav.curiokeep.providers.AssetType;
-import org.rostislav.curiokeep.providers.MetadataProvider;
-import org.rostislav.curiokeep.providers.ProviderAsset;
-import org.rostislav.curiokeep.providers.ProviderConfidence;
-import org.rostislav.curiokeep.providers.ProviderResult;
+import org.rostislav.curiokeep.providers.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
@@ -41,7 +37,7 @@ public class BoardGameGeekProvider implements MetadataProvider {
 
     @Override
     public String key() {
-        return "bgg";
+        return "boardgamegeek";
     }
 
     @Override
