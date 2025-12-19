@@ -29,7 +29,8 @@ public class ProviderKnowledgeBase {
                 "https://boardgamegeek.com/wiki/page/BGG_XML_API2",
                 "Board game metadata (title, year, designers, player range, playtime, family), plus user statistics.",
                 "Includes designer/publisher, category, and mechanic tags",
-                "Exposes average rating and complexity"
+                "Exposes average rating and complexity",
+                "Now requires a bearer token to query the XML API"
         ));
         map.put("brickset", profile(
                 "brickset",

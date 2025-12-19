@@ -26,18 +26,28 @@ public class BoardGameGeekProvider implements MetadataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(BoardGameGeekProvider.class);
     private static final String USER_AGENT = "CurioKeep/1.0 (+https://github.com/RoastSlav/CurioKeep)";
+    private static final List<ProviderCredentialField> CREDENTIAL_FIELDS = List.of(
+            ProviderCredentialField.secret("token", "Bearer token", "BoardGameGeek API bearer token")
+    );
 
     private final RestClient http;
     private final ObjectMapper objectMapper;
+    private final ProviderCredentialLookup credentialLookup;
 
-    public BoardGameGeekProvider(RestClient http, ObjectMapper objectMapper) {
+    public BoardGameGeekProvider(RestClient http, ObjectMapper objectMapper, ProviderCredentialLookup credentialLookup) {
         this.http = http;
         this.objectMapper = objectMapper;
+        this.credentialLookup = credentialLookup;
     }
 
     @Override
     public String key() {
         return "boardgamegeek";
+    }
+
+    @Override
+    public List<ProviderCredentialField> credentialFields() {
+        return CREDENTIAL_FIELDS;
     }
 
     @Override
@@ -51,10 +61,27 @@ public class BoardGameGeekProvider implements MetadataProvider {
         String trimmed = idValue.trim();
         if (!trimmed.matches("\\d+")) return Optional.empty();
 
+        Optional<ProviderCredential> stored = credentialLookup.getCredentials(key());
+        if (stored.isEmpty()) {
+            log.debug("boardgamegeek bearer token not configured; skipping lookup id={}", trimmed);
+            return Optional.empty();
+        }
+        String token = stored.get().values().get("token");
+        if (token == null || token.isBlank()) {
+            log.debug("boardgamegeek bearer token empty; skipping lookup id={}", trimmed);
+            return Optional.empty();
+        }
+        String bearerToken = token.trim();
+        if (bearerToken.isEmpty()) {
+            log.debug("boardgamegeek bearer token empty after trim; skipping lookup id={}", trimmed);
+            return Optional.empty();
+        }
+
         try {
             ResponseEntity<String> response = http.get()
                     .uri("https://boardgamegeek.com/xmlapi2/thing?id={id}&stats=1", trimmed)
                     .header("User-Agent", USER_AGENT)
+                    .header("Authorization", "Bearer " + bearerToken)
                     .retrieve()
                     .toEntity(String.class);
 
