@@ -16,6 +16,7 @@ import SelectItemImageStep from "../forms/SelectItemImageStep";
 import type { SelectedImage } from "../forms/SelectItemImageStep";
 import { Alert, AlertDescription } from "../../../../../components/ui/alert";
 import { Progress } from "../../../../../components/ui/progress";
+import QueryPromptStep from "./steps/QueryPromptStep";
 
 export default function WorkflowRunner({
   workflow,
@@ -118,21 +119,35 @@ export default function WorkflowRunner({
     switch (current.type) {
       case "PROMPT": {
         const field = resolveField(current.field);
-        if (!field)
+        if (field) {
           return (
-            <Alert variant="destructive">
-              <AlertDescription>
-                Workflow references missing field {current.field}
-              </AlertDescription>
-            </Alert>
+            <PromptStep
+              field={field}
+              values={attributes}
+              onSubmit={handlePromptSubmit}
+              onCancel={onCancel}
+            />
           );
+        }
+        if (current.query) {
+          return (
+            <QueryPromptStep
+              label={current.label || "Search"}
+              placeholder={current.query}
+              initialValue={attributes.query}
+              onSubmit={(val) =>
+                handlePromptSubmit({ ...attributes, query: val })
+              }
+              onCancel={onCancel}
+            />
+          );
+        }
         return (
-          <PromptStep
-            field={field}
-            values={attributes}
-            onSubmit={handlePromptSubmit}
-            onCancel={onCancel}
-          />
+          <Alert variant="destructive">
+            <AlertDescription>
+              Workflow references missing field {current.field}
+            </AlertDescription>
+          </Alert>
         );
       }
       case "PROMPT_ANY": {

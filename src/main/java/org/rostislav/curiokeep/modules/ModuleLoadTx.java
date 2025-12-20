@@ -100,15 +100,19 @@ public class ModuleLoadTx {
             }
         }
 
-        // workflows must reference existing fields/providers (basic)
+        // workflows must reference existing fields/providers; PROMPT may use query in lieu of field
         java.util.Set<String> fieldKeys = m.fields().stream().map(FieldContract::key).collect(Collectors.toSet());
         for (WorkflowContract wf : m.workflows()) {
             for (WorkflowStep step : wf.steps()) {
-                if (step.field() != null && !fieldKeys.contains(step.field())) {
+                boolean hasField = step.field() != null;
+                boolean hasFields = step.fields() != null && !step.fields().isEmpty();
+                boolean hasQuery = step.query() != null && !step.query().isBlank();
+
+                if (hasField && !fieldKeys.contains(step.field())) {
                     throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
                             wf.key() + "' references unknown field '" + step.field() + "'");
                 }
-                if (step.fields() != null) {
+                if (hasFields) {
                     for (String fk : step.fields()) {
                         if (!fieldKeys.contains(fk)) {
                             throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
@@ -116,6 +120,19 @@ public class ModuleLoadTx {
                         }
                     }
                 }
+
+                if (hasQuery) {
+                    if (step.type() != WorkflowStepType.PROMPT) {
+                        throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
+                                wf.key() + "' uses query on non-PROMPT step");
+                    }
+                } else {
+                    if (step.type() == WorkflowStepType.PROMPT && !hasField && !hasFields) {
+                        throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
+                                wf.key() + "' PROMPT step must reference a field or provide a query");
+                    }
+                }
+
                 if (step.providers() != null) {
                     for (String pk : step.providers()) {
                         if (!providerKeys.contains(pk)) {

@@ -291,6 +291,13 @@
             <step type="SAVE_ITEM"/>
         </workflow>
 
+        <workflow key="quick_add_by_title_comicvine" label="Quick add by title (ComicVine)">
+            <step type="PROMPT" query="Enter title or title + issue" label="Enter title or title + issue"/>
+            <step type="LOOKUP_METADATA" providers="comicvine"/>
+            <step type="APPLY_METADATA"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+
         <workflow key="manual_add" label="Manual add">
             <step type="PROMPT" field="title" label="Series title"/>
             <step type="PROMPT" field="issue_number" label="Issue # (optional)"/>

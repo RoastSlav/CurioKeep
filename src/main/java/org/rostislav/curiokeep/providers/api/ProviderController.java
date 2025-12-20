@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/providers")
@@ -78,7 +79,7 @@ public class ProviderController {
     @Operation(summary = "Lookup metadata from external providers (no saving)")
     public LookupResponse lookup(@RequestBody @Valid ProviderLookupRequest req) {
         ModuleDefinitionEntity module = modules.getById(req.moduleId());
-        List<ItemIdentifierEntity> ids = req.identifiers().stream().map(d -> {
+        List<ItemIdentifierEntity> ids = Optional.ofNullable(req.identifiers()).orElse(List.of()).stream().map(d -> {
             ItemIdentifierEntity e = new ItemIdentifierEntity();
             e.setIdType(d.idType());
             e.setIdValue(d.idValue());
@@ -86,7 +87,19 @@ public class ProviderController {
             return e;
         }).toList();
 
-        return lookup.lookup(module, ids);
+        List<String> providers = Optional.ofNullable(req.providers()).orElse(List.of());
+        String query = Optional.ofNullable(req.query()).map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
+
+        // If no identifiers but a query is provided, use it as a CUSTOM identifier for free-text lookups
+        if ((ids == null || ids.isEmpty()) && query != null) {
+            ItemIdentifierEntity qId = new ItemIdentifierEntity();
+            qId.setIdType(ItemIdentifierEntity.IdType.CUSTOM);
+            qId.setIdValue(query);
+            qId.setItemId(null);
+            ids = List.of(qId);
+        }
+
+        return lookup.lookup(module, ids, providers, query);
     }
 
     private ProviderInfoResponse toInfo(MetadataProvider provider) {

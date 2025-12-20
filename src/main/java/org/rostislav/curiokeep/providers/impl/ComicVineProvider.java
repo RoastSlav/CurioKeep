@@ -56,10 +56,7 @@ public class ComicVineProvider implements MetadataProvider {
 
     @Override
     public boolean supports(ItemIdentifierEntity.IdType idType) {
-        return idType == ItemIdentifierEntity.IdType.ISBN10
-                || idType == ItemIdentifierEntity.IdType.ISBN13
-                || idType == ItemIdentifierEntity.IdType.UPC
-                || idType == ItemIdentifierEntity.IdType.CUSTOM;
+        return idType == ItemIdentifierEntity.IdType.CUSTOM;
     }
 
     @Override
@@ -85,18 +82,14 @@ public class ComicVineProvider implements MetadataProvider {
 
         try {
             throttle();
-            if (idType == ItemIdentifierEntity.IdType.CUSTOM) {
-                String issueId = extractIssueId(normalizedId);
-                if (issueId != null) {
-                    return fetchIssueById(issueId, apiKey, 95, "ComicVine issue id match");
-                }
+
+            // ComicVine is only called with its own IDs or free-text title/issue queries.
+            String issueId = extractIssueId(normalizedId);
+            if (issueId != null) {
+                return fetchIssueById(issueId, apiKey, 95, "ComicVine issue id match");
             }
 
-            if (idType == ItemIdentifierEntity.IdType.UPC || idType == ItemIdentifierEntity.IdType.ISBN10 || idType == ItemIdentifierEntity.IdType.ISBN13) {
-                return searchIssues(apiKey, normalizedId, idType == ItemIdentifierEntity.IdType.UPC ? 85 : 80, "UPC/ISBN search");
-            }
-
-            // fallback: treat custom as title+issue search
+            // Otherwise treat the input as a title query.
             return searchIssues(apiKey, normalizedId, 65, "Title search");
         } catch (Exception e) {
             log.warn("comicvine lookup failed idType={} idValue={} error={}", idType, idValue, e.getMessage());

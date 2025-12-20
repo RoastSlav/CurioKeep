@@ -40,10 +40,15 @@ public class ProviderLookupService {
     }
 
     public LookupResponse lookup(ModuleDefinitionEntity module, List<ItemIdentifierEntity> identifiers) {
+        return lookup(module, identifiers, List.of(), null);
+    }
+
+    public LookupResponse lookup(ModuleDefinitionEntity module, List<ItemIdentifierEntity> identifiers, List<String> providerFilter, String query) {
 
         List<ModuleProviderSpec> providerSpecs = ModuleProviderSpec.fromModule(module, objectMapper)
                 .stream()
                 .filter(ModuleProviderSpec::enabled)
+                .filter(p -> providerFilter == null || providerFilter.isEmpty() || providerFilter.contains(p.key()))
                 .toList();
 
         Map<String, Integer> priorityByProvider = new LinkedHashMap<>();
@@ -54,7 +59,7 @@ public class ProviderLookupService {
         List<ProviderResult> results = new ArrayList<>();
 
         boolean comicvineEnabled = providerSpecs.stream()
-                .anyMatch(p -> "comicvine".equals(p.key()) && p.enabled());
+            .anyMatch(p -> "comicvine".equals(p.key()) && p.enabled());
 
         for (ModuleProviderSpec spec : providerSpecs) {
             registry.get(spec.key()).ifPresent(provider -> {

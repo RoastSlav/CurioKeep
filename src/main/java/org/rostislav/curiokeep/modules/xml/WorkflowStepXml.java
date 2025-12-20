@@ -9,6 +9,7 @@ public record WorkflowStepXml(
         @JacksonXmlProperty(isAttribute = true) String field,
         @JacksonXmlProperty(isAttribute = true) String fields,
         @JacksonXmlProperty(isAttribute = true) String providers,
+        @JacksonXmlProperty(isAttribute = true) String query,
         @JacksonXmlProperty(isAttribute = true) String label
 ) {
 }

@@ -39,6 +39,8 @@ export async function lookupProviders(
   const request = {
     moduleId: payload.moduleId,
     identifiers: normalizeIdentifiers(payload.identifiers),
+    providers: payload.providers,
+    query: payload.query,
   };
 
   const raw = await apiFetch<RawLookupResponse>("/providers/lookup", {
