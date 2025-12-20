@@ -27,6 +27,7 @@ function collectIdentifiers(
       list.push({ type: type as ItemIdentifier["type"], value: String(val) });
     });
   });
+
   return list;
 }
 
@@ -54,11 +55,13 @@ export default function LookupMetadataStep({
     () => collectIdentifiers(moduleDefinition, attributes),
     [moduleDefinition, attributes]
   );
-  const canLookup = identifiers.length > 0;
+  const hasQuery =
+    typeof attributes.query === "string" && attributes.query.trim().length > 0;
+  const canLookup = identifiers.length > 0 || hasQuery;
 
   const runLookup = async () => {
-    if (!identifiers.length) {
-      setError("No identifiers provided yet (e.g., ISBN). Add one to lookup.");
+    if (!identifiers.length && !hasQuery) {
+      setError("Enter a query or provide an identifier to lookup.");
       return;
     }
     setLoading(true);
@@ -68,6 +71,7 @@ export default function LookupMetadataStep({
         moduleId,
         identifiers,
         providers,
+        query: hasQuery ? attributes.query.trim() : undefined,
       });
       setResult(response);
       onComplete(response);
@@ -84,11 +88,17 @@ export default function LookupMetadataStep({
     const idFields = (moduleDefinition.fields || []).filter(
       (f) => f.identifiers?.length
     );
-    let target = idFields.find((f) =>
-      f.identifiers?.includes(trimmed.length === 13 ? "ISBN13" : "ISBN10")
-    );
-    if (!target) target = idFields[0];
-    if (!target) return;
+    const target =
+      idFields.find((f) =>
+        f.identifiers?.includes(trimmed.length === 13 ? "ISBN13" : "ISBN10")
+      ) || idFields[0];
+
+    if (!target) {
+      setError("No identifier field is configured for scanning.");
+      return;
+    }
+
+    setError(null);
     onAttributesChange({ ...attributes, [target.key]: trimmed });
   };
 
@@ -97,7 +107,6 @@ export default function LookupMetadataStep({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold uppercase">Lookup metadata</h3>
       </div>
-
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

@@ -235,6 +235,7 @@ public class ModuleCompiler {
                 s.field(),
                 fields,
                 providers,
+                s.query(),
                 s.label(),
                 Map.of()
         );

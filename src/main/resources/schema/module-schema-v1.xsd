@@ -292,6 +292,8 @@
 
         <!-- PROMPT -->
         <xs:attribute name="field" type="FieldKeyType" use="optional"/>
+        <!-- query is allowed only for PROMPT when no field is bound -->
+        <xs:attribute name="query" type="xs:string" use="optional"/>
         <xs:attribute name="label" type="xs:string" use="optional"/>
 
         <!-- PROMPT_ANY (loose string list; compiler parses it) -->
