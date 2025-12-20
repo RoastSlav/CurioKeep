@@ -172,12 +172,16 @@ public class ItemService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_URL_REQUIRED");
         }
 
-        String fileName = imageService.downloadToLocal(url.trim());
-        if (fileName == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE");
-        }
+        String trimmed = url.trim();
+        String fileName = imageService.downloadToLocal(trimmed);
 
-        applyStoredImage(e, fileName);
+        if (fileName == null) {
+            log.warn("Image download failed, storing external url only: itemId={} collectionId={} url={}", e.getId(), collectionId, trimmed);
+            clearStoredImage(e);
+            replaceProviderImageAttribute(e, trimmed);
+        } else {
+            applyStoredImage(e, fileName);
+        }
         items.save(e);
 
         log.info("Item image set from url: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());

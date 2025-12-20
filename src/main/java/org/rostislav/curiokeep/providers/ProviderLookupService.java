@@ -30,11 +30,13 @@ public class ProviderLookupService {
     private final ProviderRegistry registry;
     private final ProviderFieldMapper mapper;
     private final ObjectMapper objectMapper;
+    private final ProviderChainingService chainingService;
 
     public ProviderLookupService(ProviderRegistry registry, ProviderFieldMapper mapper, ObjectMapper objectMapper) {
         this.registry = registry;
         this.mapper = mapper;
         this.objectMapper = objectMapper;
+        this.chainingService = new ProviderChainingService(objectMapper, registry);
     }
 
     public LookupResponse lookup(ModuleDefinitionEntity module, List<ItemIdentifierEntity> identifiers) {
@@ -51,12 +53,18 @@ public class ProviderLookupService {
 
         List<ProviderResult> results = new ArrayList<>();
 
+        boolean comicvineEnabled = providerSpecs.stream()
+                .anyMatch(p -> "comicvine".equals(p.key()) && p.enabled());
+
         for (ModuleProviderSpec spec : providerSpecs) {
             registry.get(spec.key()).ifPresent(provider -> {
                 for (ItemIdentifierEntity id : identifiers) {
                     if (!provider.supports(id.getIdType())) continue;
                     try {
-                        provider.fetch(id.getIdType(), id.getIdValue()).ifPresent(results::add);
+                        provider.fetch(id.getIdType(), id.getIdValue()).ifPresent(pr -> {
+                            results.add(pr);
+                            chainingService.applyChains(spec, pr, comicvineEnabled, results);
+                        });
                     } catch (Exception ex) {
                         log.warn("Provider {} failed for {}: {}", spec.key(), id.getIdValue(), ex.getMessage());
                     }
@@ -87,10 +95,14 @@ public class ProviderLookupService {
 
         Map<String, Map<String, Object>> mappedCache = new LinkedHashMap<>();
 
-        // Build map of providerKey -> candidate for quick lookup
+        // Build map of providerKey -> best candidate for that provider (highest score / priority)
         Map<String, Candidate> candidateByProvider = new LinkedHashMap<>();
         for (Candidate c : candidates) {
-            candidateByProvider.put(c.result().providerKey(), c);
+            Candidate existing = candidateByProvider.get(c.result().providerKey());
+            if (existing == null || candidateComparator.compare(c, existing) < 0) {
+                // candidateComparator is reversed (higher priority/score first), so < 0 means better
+                candidateByProvider.put(c.result().providerKey(), c);
+            }
         }
 
         // Merge attributes using module-declared provider order: earlier providers fill

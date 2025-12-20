@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="../schema/module-schema-v1.xsd"
+        key="comics"
+        version="1.0.0">
+
+    <name>Comics</name>
+    <description>Catalog physical comic issues and collected editions (TPB/HC/Omnibus) with optional metadata lookup.</description>
+
+    <meta>
+        <authors>
+            <author name="Rostislav Raykov" url="https://github.com/RoastSlav"/>
+        </authors>
+        <license>MIT</license>
+        <repository>https://github.com/RoastSlav/CurioKeep</repository>
+        <tags>
+            <tag>comics</tag>
+            <tag>graphic-novels</tag>
+            <tag>physical</tag>
+        </tags>
+        <minAppVersion>0.0.1</minAppVersion>
+    </meta>
+
+    <states>
+        <state key="OWNED" label="Owned" order="1"/>
+        <state key="WISHLIST" label="Wishlist" order="2"/>
+        <state key="PREVIOUSLY_OWNED" label="Previously owned" order="3"/>
+        <state key="READING" label="Reading" order="4"/>
+        <state key="READ" label="Read" order="5"/>
+        <state key="LENT_OUT" label="Lent out" order="6"/>
+        <state key="LOST" label="Lost" order="7"/>
+        <state key="FOR_SALE" label="For sale" order="8"/>
+    </states>
+
+    <providers>
+        <provider key="metron" enabled="true">
+            <supports>
+                <!-- Metron handles UPC/EAN/ISBN and direct Metron IDs (CUSTOM) -->
+                <identifier type="UPC"/>
+                <identifier type="EAN"/>
+                <identifier type="ISBN10"/>
+                <identifier type="ISBN13"/>
+                <identifier type="CUSTOM"/>
+            </supports>
+            <priority>1</priority>
+        </provider>
+
+        <provider key="comicvine" enabled="true">
+            <supports>
+                <!-- ComicVine should only be used when explicitly asked (their own ID format) -->
+                <identifier type="CUSTOM"/>
+            </supports>
+            <priority>2</priority>
+        </provider>
+    </providers>
+
+    <fields>
+        <!-- Core -->
+        <field key="title" label="Series title" type="TEXT" required="true" searchable="true" sortable="true" order="1">
+            <providerMappings>
+                <map provider="comicvine" path="/title"/>
+                <map provider="metron" path="/title"/>
+            </providerMappings>
+        </field>
+
+        <field key="issue_number" label="Issue #" type="TEXT" searchable="true" filterable="true" sortable="true" order="2">
+            <ui>
+                <placeholder>e.g. 1, 12, 1A, Annual 1</placeholder>
+                <helpText>For collected editions, leave empty and use Volume # instead.</helpText>
+            </ui>
+            <providerMappings>
+                <map provider="comicvine" path="/issue_number"/>
+                <map provider="metron" path="/issue_number"/>
+            </providerMappings>
+        </field>
+
+        <field key="issue_title" label="Issue title" type="TEXT" searchable="true" order="3">
+            <providerMappings>
+                <map provider="comicvine" path="/issue_title"/>
+                <map provider="metron" path="/issue_title"/>
+            </providerMappings>
+        </field>
+
+        <field key="volume_number" label="Volume #" type="NUMBER" filterable="true" sortable="true" order="4">
+            <ui>
+                <placeholder>e.g. 1</placeholder>
+                <helpText>Used for trades/collections like 'Vol. 1'. Optional for single issues.</helpText>
+            </ui>
+            <providerMappings>
+                <map provider="comicvine" path="/volume_number"/>
+                <map provider="metron" path="/volume_number"/>
+            </providerMappings>
+        </field>
+
+        <field key="description" label="Description" type="TEXT" searchable="true" order="5">
+            <providerMappings>
+                <map provider="comicvine" path="/description" transform="TRIM"/>
+                <map provider="metron" path="/description" transform="TRIM"/>
+            </providerMappings>
+        </field>
+
+        <!-- Publishing -->
+        <field key="publisher" label="Publisher" type="TEXT" searchable="true" filterable="true" order="10">
+            <providerMappings>
+                <map provider="comicvine" path="/publisher"/>
+                <map provider="metron" path="/publisher"/>
+            </providerMappings>
+        </field>
+
+        <field key="published_year" label="Published year" type="NUMBER" filterable="true" sortable="true" order="11">
+            <providerMappings>
+                <map provider="comicvine" path="/published_year"/>
+                <map provider="metron" path="/published_year"/>
+            </providerMappings>
+        </field>
+
+        <field key="cover_date" label="Cover date" type="DATE" filterable="true" sortable="true" order="12">
+            <providerMappings>
+                <map provider="comicvine" path="/cover_date"/>
+                <map provider="metron" path="/cover_date"/>
+            </providerMappings>
+        </field>
+
+        <field key="language" label="Language" type="TEXT" filterable="true" order="13">
+            <providerMappings>
+                <map provider="comicvine" path="/language"/>
+                <map provider="metron" path="/language"/>
+            </providerMappings>
+        </field>
+
+        <field key="page_count" label="Pages" type="NUMBER" sortable="true" order="14">
+            <providerMappings>
+                <map provider="comicvine" path="/page_count"/>
+                <map provider="metron" path="/page_count"/>
+            </providerMappings>
+        </field>
+
+        <field key="canonical_url" label="Source URL" type="LINK" order="15">
+            <providerMappings>
+                <map provider="comicvine" path="/canonical_url"/>
+                <map provider="metron" path="/canonical_url"/>
+            </providerMappings>
+        </field>
+
+        <!-- Identifiers -->
+        <field key="upc" label="UPC" type="TEXT" searchable="true" filterable="true" order="20">
+            <identifiers>
+                <identifier type="UPC"/>
+            </identifiers>
+            <ui>
+                <placeholder>12-digit UPC</placeholder>
+                <helpText>Common for modern single issues. Some comics have UPC+addon; store the main UPC.</helpText>
+            </ui>
+            <providerMappings>
+                <map provider="comicvine" path="/upc"/>
+                <map provider="metron" path="/upc"/>
+            </providerMappings>
+        </field>
+
+        <field key="ean" label="EAN-13" type="TEXT" searchable="true" filterable="true" order="21">
+            <identifiers>
+                <identifier type="EAN"/>
+            </identifiers>
+            <ui>
+                <placeholder>13-digit EAN</placeholder>
+            </ui>
+            <providerMappings>
+                <map provider="comicvine" path="/ean"/>
+                <map provider="metron" path="/ean"/>
+            </providerMappings>
+        </field>
+
+        <field key="isbn13" label="ISBN-13" type="TEXT" searchable="true" filterable="true" order="22">
+            <identifiers>
+                <identifier type="ISBN13"/>
+            </identifiers>
+            <ui>
+                <placeholder>13-digit ISBN</placeholder>
+                <helpText>Usually for trades/hardcovers/omnibuses rather than single issues.</helpText>
+            </ui>
+            <providerMappings>
+                <map provider="comicvine" path="/isbn13"/>
+                <map provider="metron" path="/isbn13"/>
+            </providerMappings>
+        </field>
+
+        <field key="isbn10" label="ISBN-10" type="TEXT" searchable="true" filterable="true" order="23">
+            <identifiers>
+                <identifier type="ISBN10"/>
+            </identifiers>
+            <providerMappings>
+                <map provider="comicvine" path="/isbn10"/>
+                <map provider="metron" path="/isbn10"/>
+            </providerMappings>
+        </field>
+
+        <field key="metron_id" label="Metron issue ID" type="TEXT" searchable="true" filterable="true" order="24">
+            <identifiers>
+                <identifier type="CUSTOM"/>
+            </identifiers>
+            <constraints pattern="^\d+$"/>
+            <ui>
+                <placeholder>e.g. 11518</placeholder>
+                <helpText>Metron issue identifier (numeric). Copy from Metron issue detail.</helpText>
+            </ui>
+            <providerMappings>
+                <map provider="metron" path="/metron_issue_id"/>
+            </providerMappings>
+        </field>
+
+        <field key="comicvine_id" label="ComicVine issue ID" type="TEXT" searchable="true" filterable="true" order="25">
+            <identifiers>
+                <identifier type="CUSTOM"/>
+            </identifiers>
+            <constraints pattern="^4000-\\d+$"/>
+            <ui>
+                <placeholder>e.g. 4000-12345</placeholder>
+                <helpText>From the ComicVine issue URL path (format 4000-xxxxx). Used for precise lookup.</helpText>
+            </ui>
+            <providerMappings>
+                <map provider="comicvine" path="/comicvine_id"/>
+            </providerMappings>
+        </field>
+
+        <!-- Creators -->
+        <field key="writers" label="Writers" type="TEXT" searchable="true" filterable="true" order="30">
+            <providerMappings>
+                <map provider="comicvine" path="/writers" transform="JOIN_COMMA"/>
+                <map provider="metron" path="/writers" transform="JOIN_COMMA"/>
+            </providerMappings>
+        </field>
+
+        <field key="artists" label="Artists" type="TEXT" searchable="true" filterable="true" order="31">
+            <providerMappings>
+                <map provider="comicvine" path="/artists" transform="JOIN_COMMA"/>
+                <map provider="metron" path="/artists" transform="JOIN_COMMA"/>
+            </providerMappings>
+        </field>
+
+        <field key="cover_artists" label="Cover artists" type="TEXT" searchable="true" filterable="true" order="32">
+            <providerMappings>
+                <map provider="comicvine" path="/cover_artists" transform="JOIN_COMMA"/>
+                <map provider="metron" path="/cover_artists" transform="JOIN_COMMA"/>
+            </providerMappings>
+        </field>
+
+        <!-- Collecting / physical -->
+        <field key="format" label="Format" type="ENUM" filterable="true" order="40">
+            <enumValues>
+                <value key="SINGLE_ISSUE" label="Single issue"/>
+                <value key="TRADE_PAPERBACK" label="Trade paperback (TPB)"/>
+                <value key="HARDCOVER" label="Hardcover"/>
+                <value key="OMNIBUS" label="Omnibus"/>
+                <value key="GRAPHIC_NOVEL" label="Graphic novel"/>
+            </enumValues>
+        </field>
+
+        <field key="condition" label="Condition" type="ENUM" filterable="true" order="50">
+            <enumValues>
+                <value key="NEW" label="New"/>
+                <value key="LIKE_NEW" label="Like new"/>
+                <value key="VERY_GOOD" label="Very good"/>
+                <value key="GOOD" label="Good"/>
+                <value key="FAIR" label="Fair"/>
+                <value key="POOR" label="Poor"/>
+            </enumValues>
+        </field>
+
+        <field key="notes" label="Notes" type="TEXT" order="90"/>
+    </fields>
+
+    <workflows>
+        <workflow key="quick_add_by_barcode" label="Quick add by barcode / ISBN">
+            <step type="PROMPT_ANY" fields="upc,ean,isbn13,isbn10" label="Scan or type UPC/EAN/ISBN"/>
+            <step type="LOOKUP_METADATA" providers="metron"/>
+            <step type="APPLY_METADATA"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+
+        <workflow key="quick_add_by_comicvine" label="Quick add by ComicVine ID">
+            <step type="PROMPT" field="comicvine_id" label="Enter ComicVine issue ID (4000-xxxxx)"/>
+            <step type="LOOKUP_METADATA" providers="comicvine"/>
+            <step type="APPLY_METADATA"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+
+        <workflow key="quick_add_by_metron" label="Quick add by Metron ID">
+            <step type="PROMPT" field="metron_id" label="Enter Metron issue ID"/>
+            <step type="LOOKUP_METADATA" providers="metron"/>
+            <step type="APPLY_METADATA"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+
+        <workflow key="manual_add" label="Manual add">
+            <step type="PROMPT" field="title" label="Series title"/>
+            <step type="PROMPT" field="issue_number" label="Issue # (optional)"/>
+            <step type="SAVE_ITEM"/>
+        </workflow>
+    </workflows>
+</module>

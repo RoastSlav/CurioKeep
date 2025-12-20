@@ -9,20 +9,30 @@ public record ProviderCredentialField(
         @Schema(description = "Internal name used to store this value") String name,
         @Schema(description = "Label presented to administrators") String label,
         @Schema(description = "Short description of what to enter") String description,
-        @Schema(description = "True when the value is a secret and should be masked") boolean secret
+        @Schema(description = "True when the value is a secret and should be masked") boolean secret,
+        @Schema(description = "True when the field must be provided") boolean required
 ) {
     public ProviderCredentialField {
         Objects.requireNonNull(name, "name is required");
         label = (label == null || label.isBlank()) ? humanize(name) : label;
         description = description == null ? "" : description;
+        // required is passed through; defaults applied by factory methods
     }
 
     public static ProviderCredentialField text(String name, String label, String description) {
-        return new ProviderCredentialField(name, label, description, false);
+        return new ProviderCredentialField(name, label, description, false, true);
+    }
+
+    public static ProviderCredentialField text(String name, String label, String description, boolean required) {
+        return new ProviderCredentialField(name, label, description, false, required);
     }
 
     public static ProviderCredentialField secret(String name, String label, String description) {
-        return new ProviderCredentialField(name, label, description, true);
+        return new ProviderCredentialField(name, label, description, true, true);
+    }
+
+    public static ProviderCredentialField secret(String name, String label, String description, boolean required) {
+        return new ProviderCredentialField(name, label, description, true, required);
     }
 
     private static String humanize(String input) {
