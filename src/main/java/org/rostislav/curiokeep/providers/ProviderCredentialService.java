@@ -93,6 +93,7 @@ public class ProviderCredentialService implements ProviderCredentialLookup {
         return getCredentials(providerKey).map(credential -> {
             Map<String, String> values = credential.values();
             return requiredFields.stream().allMatch(field -> {
+                if (!field.required()) return true;
                 String v = values.get(field.name());
                 return v != null && !v.isBlank();
             });

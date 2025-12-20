@@ -42,6 +42,16 @@ public class ProviderKnowledgeBase {
                 "Lists set number, theme, and subtheme",
                 "Highlights minifigure and inventory information"
         ));
+        map.put("comicvine", profile(
+                "comicvine",
+                "Comic Vine",
+                "Comics issue and volume metadata with rich credits, covers, and release info.",
+                "https://comicvine.gamespot.com",
+                "https://comicvine.gamespot.com/api",
+                "Issue and volume data (titles, issue numbers, publishers, cover dates, creator credits, covers).",
+                "Requires API key; returns cover URLs and descriptions",
+                "Good for detailed creator roles and historical issues"
+        ));
         map.put("coverartarchive", profile(
                 "coverartarchive",
                 "Cover Art Archive",
@@ -101,6 +111,16 @@ public class ProviderKnowledgeBase {
                 "Release/recording metadata (titles, dates, length, artist credits) plus MBIDs for linking resources.",
                 "Use MBIDs to join other services",
                 "Returns multiple release versions and artists"
+        ));
+        map.put("metron", profile(
+                "metron",
+                "Metron",
+                "Community-driven comic issue metadata with structured identifiers and covers.",
+                "https://metron.cloud",
+                "https://metron.cloud/api",
+                "Issue-level data (title, series, issue number, publisher, cover date, identifiers, creators, cover).",
+                "No credentials required; lenient rate limits",
+                "Good fallback for accurate issue numbering"
         ));
         map.put("openlibrary", profile(
                 "openlibrary",

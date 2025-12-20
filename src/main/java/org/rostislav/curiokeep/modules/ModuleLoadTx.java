@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +25,7 @@ import static org.rostislav.curiokeep.modules.ModuleUtil.*;
 
 @Service
 public class ModuleLoadTx {
+    private static final Logger log = LoggerFactory.getLogger(ModuleLoadTx.class);
     private final ModuleXsdValidator xsdValidator;
     private final ModuleXmlParser xmlParser;
     private final ModuleCompiler moduleCompiler;
@@ -184,28 +187,58 @@ public class ModuleLoadTx {
         return id;
     }
 
-    private void replaceModuleStates(UUID moduleId, ModuleContract module) {
-        jdbc.update("DELETE FROM module_state WHERE module_id = :mid",
-                new MapSqlParameterSource("mid", moduleId));
-
+        private void replaceModuleStates(UUID moduleId, ModuleContract module) {
         var states = Optional.ofNullable(module.states()).orElse(List.of());
         if (states.isEmpty()) return;
 
-        String insert = """
-                INSERT INTO module_state (module_id, state_key, label, sort_order)
-                VALUES (:mid, :state_key, :label, :sort_order)
-                """;
+        // Upsert states to avoid violating FK from item.state_key; keep orphaned states if still referenced
+        String upsert = """
+            INSERT INTO module_state (module_id, state_key, label, sort_order)
+            VALUES (:mid, :state_key, :label, :sort_order)
+            ON CONFLICT (module_id, state_key) DO UPDATE SET
+                label = EXCLUDED.label,
+                sort_order = EXCLUDED.sort_order
+            """;
 
         MapSqlParameterSource[] batch = states.stream()
-                .map(s -> new MapSqlParameterSource()
-                        .addValue("mid", moduleId)
-                        .addValue("state_key", s.key())
-                        .addValue("label", s.label())
-                        .addValue("sort_order", s.order()))
-                .toArray(MapSqlParameterSource[]::new);
+            .map(s -> new MapSqlParameterSource()
+                .addValue("mid", moduleId)
+                .addValue("state_key", s.key())
+                .addValue("label", s.label())
+                .addValue("sort_order", s.order()))
+            .toArray(MapSqlParameterSource[]::new);
 
-        jdbc.batchUpdate(insert, batch);
-    }
+        jdbc.batchUpdate(upsert, batch);
+
+        // Attempt to remove states no longer declared when safe (no items referencing). If referenced, keep and warn.
+        List<String> existing = jdbc.queryForList(
+            "SELECT state_key FROM module_state WHERE module_id = :mid",
+            new MapSqlParameterSource("mid", moduleId),
+            String.class
+        );
+
+        List<String> desired = states.stream().map(StateContract::key).toList();
+        for (String stale : existing) {
+            if (desired.contains(stale)) continue;
+            Long refs = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM item WHERE module_id = :mid AND state_key = :state",
+                new MapSqlParameterSource()
+                    .addValue("mid", moduleId)
+                    .addValue("state", stale),
+                Long.class
+            );
+            if (refs != null && refs > 0) {
+            log.warn("Keeping stale state '{}' for module {} because {} item(s) still reference it", stale, moduleId, refs);
+            continue;
+            }
+            jdbc.update(
+                "DELETE FROM module_state WHERE module_id = :mid AND state_key = :state",
+                new MapSqlParameterSource()
+                    .addValue("mid", moduleId)
+                    .addValue("state", stale)
+            );
+        }
+        }
 
     private void replaceModuleFields(UUID moduleId, ModuleContract module) {
         jdbc.update("DELETE FROM module_field WHERE module_id = :mid",

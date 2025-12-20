@@ -139,6 +139,14 @@ public class ProviderStatusService {
     }
 
     private String resolveHealthCheckTarget(String key, ProviderProfile profile) {
+        if (key.equals("comicvine")) {
+            // Avoid hitting the API without credentials; robots.txt is public and stable.
+            return "https://comicvine.gamespot.com/robots.txt";
+        }
+        if (key.equals("metron")) {
+            // Public health endpoint is not documented; robots.txt is a safe liveness probe.
+            return "https://metron.cloud/robots.txt";
+        }
         if (key.equals("internetarchive")) {
             return "https://archive.org/robots.txt";
         }
