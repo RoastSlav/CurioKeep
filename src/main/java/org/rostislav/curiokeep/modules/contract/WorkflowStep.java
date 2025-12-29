@@ -8,6 +8,7 @@ public record WorkflowStep(
         String field,
         List<String> fields,
         List<String> providers,
+        String query,
         String label,
         Map<String, Object> extensions
 ) {

@@ -39,3 +39,11 @@ curiokeep:
     classpath: "classpath*:modules/*.xml"
     schema: "classpath:schema/module-schema-v1.xsd"
     external-dir: ""   # later: /data/modules (mounted in docker)
+    import-dir: ./data/modules-imported
+  assets:
+    dir: ./data/assets
+  providers:
+    credentials:
+      encryption:
+        password: changeme
+        salt: 5f4dcc3b5aa765d6

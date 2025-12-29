@@ -8,8 +8,8 @@ services:
       POSTGRES_PASSWORD: curiokeep
     ports:
       - "5432:5432"
-    volumes:
-      - curiokeep-db:/var/lib/postgresql/data
+#    volumes:
+#      - curiokeep-db:/var/lib/postgresql/data
 
 volumes:
   curiokeep-db:

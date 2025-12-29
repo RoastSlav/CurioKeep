@@ -54,6 +54,15 @@ public record ItemResponse(
                 } catch (Exception ex) {
                         throw new IllegalStateException("Failed to parse item attributes", ex);
                 }
+
+                if (e.getImageName() != null && !e.getImageName().isBlank()) {
+                        if (attrs == null) {
+                                attrs = Map.of("providerImageUrl", "/api/assets/" + e.getImageName());
+                        } else if (!attrs.containsKey("providerImageUrl")) {
+                                attrs = new java.util.HashMap<>(attrs);
+                                attrs.put("providerImageUrl", "/api/assets/" + e.getImageName());
+                        }
+                }
         return new ItemResponse(
                 e.getId(),
                 e.getCollectionId(),

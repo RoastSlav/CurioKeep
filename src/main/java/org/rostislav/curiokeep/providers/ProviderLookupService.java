@@ -30,28 +30,46 @@ public class ProviderLookupService {
     private final ProviderRegistry registry;
     private final ProviderFieldMapper mapper;
     private final ObjectMapper objectMapper;
+    private final ProviderChainingService chainingService;
 
     public ProviderLookupService(ProviderRegistry registry, ProviderFieldMapper mapper, ObjectMapper objectMapper) {
         this.registry = registry;
         this.mapper = mapper;
         this.objectMapper = objectMapper;
+        this.chainingService = new ProviderChainingService(objectMapper, registry);
     }
 
     public LookupResponse lookup(ModuleDefinitionEntity module, List<ItemIdentifierEntity> identifiers) {
+        return lookup(module, identifiers, List.of(), null);
+    }
+
+    public LookupResponse lookup(ModuleDefinitionEntity module, List<ItemIdentifierEntity> identifiers, List<String> providerFilter, String query) {
 
         List<ModuleProviderSpec> providerSpecs = ModuleProviderSpec.fromModule(module, objectMapper)
                 .stream()
                 .filter(ModuleProviderSpec::enabled)
+                .filter(p -> providerFilter == null || providerFilter.isEmpty() || providerFilter.contains(p.key()))
                 .toList();
 
+        Map<String, Integer> priorityByProvider = new LinkedHashMap<>();
+        for (ModuleProviderSpec spec : providerSpecs) {
+            priorityByProvider.put(spec.key(), spec.priority());
+        }
+
         List<ProviderResult> results = new ArrayList<>();
+
+        boolean comicvineEnabled = providerSpecs.stream()
+            .anyMatch(p -> "comicvine".equals(p.key()) && p.enabled());
 
         for (ModuleProviderSpec spec : providerSpecs) {
             registry.get(spec.key()).ifPresent(provider -> {
                 for (ItemIdentifierEntity id : identifiers) {
                     if (!provider.supports(id.getIdType())) continue;
                     try {
-                        provider.fetch(id.getIdType(), id.getIdValue()).ifPresent(results::add);
+                        provider.fetch(id.getIdType(), id.getIdValue()).ifPresent(pr -> {
+                            results.add(pr);
+                            chainingService.applyChains(spec, pr, comicvineEnabled, results);
+                        });
                     } catch (Exception ex) {
                         log.warn("Provider {} failed for {}: {}", spec.key(), id.getIdValue(), ex.getMessage());
                     }
@@ -63,30 +81,78 @@ public class ProviderLookupService {
         Map<String, Object> merged = new LinkedHashMap<>();
         List<ProviderAsset> assets = new ArrayList<>();
 
-        // if you have module.getFields() as a collection of ModuleFieldEntity, use it:
         Iterable<ModuleFieldEntity> fields = module.getFields();
 
-        for (ProviderResult r : results) {
-            JsonNode normNode = safeNormalizedNode(r);
+        record Candidate(ProviderResult result, int priority, int score) {}
 
-            Map<String, Object> mapped = Collections.emptyMap();
-            try {
-                mapped = mapper.mapFields(normNode, fields, r.providerKey());
-            } catch (Exception ex) {
-                log.warn("Field mapping failed for provider {}: {}", r.providerKey(), ex.getMessage());
-            }
+        Comparator<Candidate> candidateComparator = Comparator
+            .comparingInt(Candidate::priority).reversed()
+            .thenComparing(Comparator.comparingInt(Candidate::score).reversed());
 
-            if (mapped != null) {
-                for (var e : mapped.entrySet()) merged.putIfAbsent(e.getKey(), e.getValue());
-            }
+        List<Candidate> candidates = results.stream()
+                .map(r -> new Candidate(
+                        r,
+                        priorityByProvider.getOrDefault(r.providerKey(), Integer.MAX_VALUE),
+                        Optional.ofNullable(r.confidence()).map(c -> Optional.ofNullable(c.score()).orElse(0)).orElse(0)
+                ))
+                .sorted(candidateComparator)
+                .toList();
 
-            if (r.assets() != null) {
-                assets.addAll(r.assets());
+        Map<String, Map<String, Object>> mappedCache = new LinkedHashMap<>();
+
+        // Build map of providerKey -> best candidate for that provider (highest score / priority)
+        Map<String, Candidate> candidateByProvider = new LinkedHashMap<>();
+        for (Candidate c : candidates) {
+            Candidate existing = candidateByProvider.get(c.result().providerKey());
+            if (existing == null || candidateComparator.compare(c, existing) < 0) {
+                // candidateComparator is reversed (higher priority/score first), so < 0 means better
+                candidateByProvider.put(c.result().providerKey(), c);
             }
         }
 
-        ProviderResult best = results.stream()
-                .max(Comparator.comparingInt(x -> x.confidence() == null ? 0 : x.confidence().score()))
+        // Merge attributes using module-declared provider order: earlier providers fill
+        // attributes first; later providers only fill missing values. This respects
+        // the module author's preferred attribute sourcing while best-provider
+        // selection is still based on priority/score.
+        for (ModuleFieldEntity field : fields) {
+            String key = field.getFieldKey();
+            for (ModuleProviderSpec spec : providerSpecs) {
+                Candidate candidate = candidateByProvider.get(spec.key());
+                if (candidate == null) continue;
+                Map<String, Object> mapped = mappedCache.computeIfAbsent(candidate.result().providerKey(), providerKey -> {
+                    JsonNode normNode = safeNormalizedNode(candidate.result());
+                    try {
+                        return mapper.mapFields(normNode, fields, candidate.result().providerKey());
+                    } catch (Exception ex) {
+                        log.warn("Field mapping failed for provider {}: {}", candidate.result().providerKey(), ex.getMessage());
+                        return Collections.emptyMap();
+                    }
+                });
+                if (mapped.containsKey(key)) {
+                    merged.put(key, mapped.get(key));
+                    break;
+                }
+            }
+        }
+
+        // Collect assets in module-declared provider order (so module provider ordering
+        // determines preferred asset ordering) but using the candidate results for each
+        // provider. This ensures assets are ordered as module authors expect while
+        // best provider selection still uses priority/score.
+        for (ModuleProviderSpec spec : providerSpecs) {
+            for (Candidate candidate : candidates) {
+                if (candidate.result().providerKey().equals(spec.key())) {
+                    if (candidate.result().assets() != null) {
+                        assets.addAll(candidate.result().assets());
+                    }
+                }
+            }
+        }
+
+        ProviderResult best = candidates.stream()
+                .sorted(candidateComparator)
+                .map(Candidate::result)
+                .findFirst()
                 .orElse(null);
 
         List<ProviderAsset> uniqueAssets = dedupeAssets(assets);

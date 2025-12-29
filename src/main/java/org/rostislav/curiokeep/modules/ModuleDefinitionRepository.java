@@ -10,8 +10,12 @@ import java.util.UUID;
 public interface ModuleDefinitionRepository extends JpaRepository<ModuleDefinitionEntity, UUID> {
     Optional<ModuleDefinitionEntity> findByModuleKey(String moduleKey);
 
+    Optional<ModuleDefinitionEntity> findByModuleKeyIgnoreCase(String moduleKey);
+
     @EntityGraph(attributePaths = "fields")
     Optional<ModuleDefinitionEntity> findWithFieldsById(UUID id);
 
     boolean existsByModuleKey(String moduleKey);
+
+    boolean existsByModuleKeyIgnoreCase(String moduleKey);
 }
