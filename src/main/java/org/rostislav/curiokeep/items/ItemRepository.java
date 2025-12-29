@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface ItemRepository extends JpaRepository<ItemEntity, UUID> {
     Page<ItemEntity> findAllByCollectionIdAndModuleId(UUID collectionId, UUID moduleId, Pageable pageable);
+
+    boolean existsByModuleId(UUID moduleId);
 }

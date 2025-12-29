@@ -103,4 +103,12 @@ public class UserInviteEntity {
     public void setAcceptedAt(OffsetDateTime acceptedAt) {
         this.acceptedAt = acceptedAt;
     }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 }

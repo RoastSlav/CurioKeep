@@ -60,3 +60,4 @@ frontend/*.sw?
 # Ignore runtime logs and log files in repository root and environment
 /logs/
 *.log
+/data/**

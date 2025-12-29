@@ -61,7 +61,7 @@ class ProviderLookupServiceTest {
     );
 
     ProviderLookupService service = new ProviderLookupService(
-        new ProviderRegistry(List.of(new StubProvider(openLibrary), new StubProvider(google))),
+        new ProviderRegistry(List.of(new StubMetadataProvider(openLibrary), new StubMetadataProvider(google))),
         new ProviderFieldMapper(objectMapper),
         objectMapper
     );
@@ -98,20 +98,4 @@ class ProviderLookupServiceTest {
     return Map.of("provider", provider, "path", path);
     }
 
-    private record StubProvider(ProviderResult result) implements MetadataProvider {
-    @Override
-    public String key() {
-        return result.providerKey();
-    }
-
-    @Override
-    public boolean supports(ItemIdentifierEntity.IdType idType) {
-        return true;
-    }
-
-    @Override
-    public java.util.Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
-        return java.util.Optional.of(result);
-    }
-    }
 }

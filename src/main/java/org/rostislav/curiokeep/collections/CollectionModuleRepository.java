@@ -14,4 +14,6 @@ public interface CollectionModuleRepository extends JpaRepository<CollectionModu
     List<CollectionModuleEntity> findAllByIdCollectionId(UUID collectionId);
 
     void deleteByIdCollectionIdAndIdModuleId(UUID collectionId, UUID moduleId);
+
+    boolean existsByIdModuleId(UUID moduleId);
 }

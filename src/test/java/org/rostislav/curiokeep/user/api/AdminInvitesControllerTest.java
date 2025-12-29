@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.rostislav.curiokeep.security.SetupModeFilter;
 import org.rostislav.curiokeep.user.AppUserRepository;
 import org.rostislav.curiokeep.user.InviteService;
+import org.rostislav.curiokeep.user.UserInviteRepository;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -27,12 +28,15 @@ class AdminInvitesControllerTest {
     @Mock
     AppUserRepository appUserRepository;
 
+    @Mock
+    UserInviteRepository userInviteRepository;
+
     MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         when(appUserRepository.existsByIsAdminTrue()).thenReturn(true);
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminInvitesController(inviteService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminInvitesController(inviteService, userInviteRepository))
                 .addFilters(new SetupModeFilter(appUserRepository))
                 .build();
     }

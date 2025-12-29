@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +25,7 @@ import static org.rostislav.curiokeep.modules.ModuleUtil.*;
 
 @Service
 public class ModuleLoadTx {
+    private static final Logger log = LoggerFactory.getLogger(ModuleLoadTx.class);
     private final ModuleXsdValidator xsdValidator;
     private final ModuleXmlParser xmlParser;
     private final ModuleCompiler moduleCompiler;
@@ -45,7 +48,7 @@ public class ModuleLoadTx {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void loadOneModule(Resource r, String sourceName) throws Exception {
+    public void loadOneModule(Resource r, String sourceName, ModuleSource source) throws Exception {
         String xml = readUtf8(r);
 
         xsdValidator.validate(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
@@ -59,7 +62,7 @@ public class ModuleLoadTx {
 
         validateSemantics(contract, sourceName);
 
-        upsertBuiltinModule(contract, xml, contractJson);
+        upsertModule(contract, xml, contractJson, source);
     }
 
     private void validateSemantics(ModuleContract m, String sourceName) {
@@ -97,15 +100,19 @@ public class ModuleLoadTx {
             }
         }
 
-        // workflows must reference existing fields/providers (basic)
+        // workflows must reference existing fields/providers; PROMPT may use query in lieu of field
         java.util.Set<String> fieldKeys = m.fields().stream().map(FieldContract::key).collect(Collectors.toSet());
         for (WorkflowContract wf : m.workflows()) {
             for (WorkflowStep step : wf.steps()) {
-                if (step.field() != null && !fieldKeys.contains(step.field())) {
+                boolean hasField = step.field() != null;
+                boolean hasFields = step.fields() != null && !step.fields().isEmpty();
+                boolean hasQuery = step.query() != null && !step.query().isBlank();
+
+                if (hasField && !fieldKeys.contains(step.field())) {
                     throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
                             wf.key() + "' references unknown field '" + step.field() + "'");
                 }
-                if (step.fields() != null) {
+                if (hasFields) {
                     for (String fk : step.fields()) {
                         if (!fieldKeys.contains(fk)) {
                             throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
@@ -113,6 +120,19 @@ public class ModuleLoadTx {
                         }
                     }
                 }
+
+                if (hasQuery) {
+                    if (step.type() != WorkflowStepType.PROMPT) {
+                        throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
+                                wf.key() + "' uses query on non-PROMPT step");
+                    }
+                } else {
+                    if (step.type() == WorkflowStepType.PROMPT && !hasField && !hasFields) {
+                        throw new IllegalStateException("[" + sourceName + "] Module '" + moduleKey + "': workflow '" +
+                                wf.key() + "' PROMPT step must reference a field or provide a query");
+                    }
+                }
+
                 if (step.providers() != null) {
                     for (String pk : step.providers()) {
                         if (!providerKeys.contains(pk)) {
@@ -125,7 +145,7 @@ public class ModuleLoadTx {
         }
     }
 
-    private void upsertBuiltinModule(ModuleContract module, String xmlRaw, JsonNode contractJson) {
+    private void upsertModule(ModuleContract module, String xmlRaw, JsonNode contractJson, ModuleSource source) {
         String checksum = sha256Hex(xmlRaw);
 
         UUID existingId = jdbc.query(
@@ -141,7 +161,7 @@ public class ModuleLoadTx {
 
         UUID moduleId;
         try {
-            moduleId = upsertModuleDefinition(module, xmlRaw, checksum, contractJson);
+            moduleId = upsertModuleDefinition(module, xmlRaw, checksum, contractJson, source);
         } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize module contract JSON for module " + module.key(), e);
         }
@@ -151,17 +171,17 @@ public class ModuleLoadTx {
     }
 
 
-    private UUID upsertModuleDefinition(ModuleContract module, String xmlRaw, String checksum, JsonNode contractJson) throws JacksonException {
+    private UUID upsertModuleDefinition(ModuleContract module, String xmlRaw, String checksum, JsonNode contractJson, ModuleSource source) throws JacksonException {
         String sql = """
                 INSERT INTO module_definition (
                     module_key, name, version, source, checksum, xml_raw, definition_json, created_at, updated_at
                 ) VALUES (
-                    :module_key, :name, :version, 'BUILTIN', :checksum, :xml_raw, :definition_json, now(), now()
+                    :module_key, :name, :version, :source, :checksum, :xml_raw, :definition_json, now(), now()
                 )
                 ON CONFLICT (module_key) DO UPDATE SET
                     name = EXCLUDED.name,
                     version = EXCLUDED.version,
-                    source = 'BUILTIN',
+                    source = EXCLUDED.source,
                     checksum = EXCLUDED.checksum,
                     xml_raw = EXCLUDED.xml_raw,
                     definition_json = EXCLUDED.definition_json,
@@ -170,12 +190,13 @@ public class ModuleLoadTx {
                 """;
 
         MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("module_key", module.key())
-                .addValue("name", module.name())
-                .addValue("version", module.version())
-                .addValue("checksum", checksum)
-                .addValue("xml_raw", xmlRaw)
-                .addValue("definition_json", jsonb(objectMapper.writeValueAsString(contractJson)));
+            .addValue("module_key", module.key())
+            .addValue("name", module.name())
+            .addValue("version", module.version())
+            .addValue("source", source.name())
+            .addValue("checksum", checksum)
+            .addValue("xml_raw", xmlRaw)
+            .addValue("definition_json", jsonb(objectMapper.writeValueAsString(contractJson)));
 
         UUID id = jdbc.queryForObject(sql, params, UUID.class);
         if (id == null)
@@ -183,28 +204,58 @@ public class ModuleLoadTx {
         return id;
     }
 
-    private void replaceModuleStates(UUID moduleId, ModuleContract module) {
-        jdbc.update("DELETE FROM module_state WHERE module_id = :mid",
-                new MapSqlParameterSource("mid", moduleId));
-
+        private void replaceModuleStates(UUID moduleId, ModuleContract module) {
         var states = Optional.ofNullable(module.states()).orElse(List.of());
         if (states.isEmpty()) return;
 
-        String insert = """
-                INSERT INTO module_state (module_id, state_key, label, sort_order)
-                VALUES (:mid, :state_key, :label, :sort_order)
-                """;
+        // Upsert states to avoid violating FK from item.state_key; keep orphaned states if still referenced
+        String upsert = """
+            INSERT INTO module_state (module_id, state_key, label, sort_order)
+            VALUES (:mid, :state_key, :label, :sort_order)
+            ON CONFLICT (module_id, state_key) DO UPDATE SET
+                label = EXCLUDED.label,
+                sort_order = EXCLUDED.sort_order
+            """;
 
         MapSqlParameterSource[] batch = states.stream()
-                .map(s -> new MapSqlParameterSource()
-                        .addValue("mid", moduleId)
-                        .addValue("state_key", s.key())
-                        .addValue("label", s.label())
-                        .addValue("sort_order", s.order()))
-                .toArray(MapSqlParameterSource[]::new);
+            .map(s -> new MapSqlParameterSource()
+                .addValue("mid", moduleId)
+                .addValue("state_key", s.key())
+                .addValue("label", s.label())
+                .addValue("sort_order", s.order()))
+            .toArray(MapSqlParameterSource[]::new);
 
-        jdbc.batchUpdate(insert, batch);
-    }
+        jdbc.batchUpdate(upsert, batch);
+
+        // Attempt to remove states no longer declared when safe (no items referencing). If referenced, keep and warn.
+        List<String> existing = jdbc.queryForList(
+            "SELECT state_key FROM module_state WHERE module_id = :mid",
+            new MapSqlParameterSource("mid", moduleId),
+            String.class
+        );
+
+        List<String> desired = states.stream().map(StateContract::key).toList();
+        for (String stale : existing) {
+            if (desired.contains(stale)) continue;
+            Long refs = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM item WHERE module_id = :mid AND state_key = :state",
+                new MapSqlParameterSource()
+                    .addValue("mid", moduleId)
+                    .addValue("state", stale),
+                Long.class
+            );
+            if (refs != null && refs > 0) {
+            log.warn("Keeping stale state '{}' for module {} because {} item(s) still reference it", stale, moduleId, refs);
+            continue;
+            }
+            jdbc.update(
+                "DELETE FROM module_state WHERE module_id = :mid AND state_key = :state",
+                new MapSqlParameterSource()
+                    .addValue("mid", moduleId)
+                    .addValue("state", stale)
+            );
+        }
+        }
 
     private void replaceModuleFields(UUID moduleId, ModuleContract module) {
         jdbc.update("DELETE FROM module_field WHERE module_id = :mid",

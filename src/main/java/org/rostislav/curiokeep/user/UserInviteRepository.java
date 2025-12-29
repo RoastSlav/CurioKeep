@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user;
 
+import org.rostislav.curiokeep.user.entities.AppUserEntity;
 import org.rostislav.curiokeep.user.entities.UserInviteEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,4 +11,6 @@ public interface UserInviteRepository extends JpaRepository<UserInviteEntity, UU
     boolean existsByEmailIgnoreCaseAndStatus(String email, String status);
 
     Optional<UserInviteEntity> findByTokenHashAndStatus(String tokenHash, String status);
+
+    long countByInvitedBy(AppUserEntity invitedBy);
 }

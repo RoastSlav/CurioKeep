@@ -4,13 +4,7 @@
   "title": "CurioKeep Module Contract v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "key",
-    "version",
-    "name",
-    "states",
-    "fields"
-  ],
+  "required": ["key", "version", "name", "states", "fields"],
   "properties": {
     "key": {
       "type": "string",
@@ -112,9 +106,7 @@
     "author": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "properties": {
         "name": {
           "type": "string",
@@ -134,10 +126,7 @@
     "state": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "key",
-        "label"
-      ],
+      "required": ["key", "label"],
       "properties": {
         "key": {
           "type": "string",
@@ -171,9 +160,7 @@
     "provider": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "key"
-      ],
+      "required": ["key"],
       "properties": {
         "key": {
           "type": "string",
@@ -204,23 +191,12 @@
     },
     "identifierType": {
       "type": "string",
-      "enum": [
-        "ISBN10",
-        "ISBN13",
-        "UPC",
-        "EAN",
-        "ASIN",
-        "CUSTOM"
-      ]
+      "enum": ["ISBN10", "ISBN13", "UPC", "EAN", "ASIN", "CUSTOM"]
     },
     "field": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "key",
-        "label",
-        "type"
-      ],
+      "required": ["key", "label", "type"],
       "properties": {
         "key": {
           "type": "string",
@@ -264,14 +240,7 @@
           "default": false
         },
         "defaultValue": {
-          "type": [
-            "string",
-            "number",
-            "boolean",
-            "object",
-            "array",
-            "null"
-          ]
+          "type": ["string", "number", "boolean", "object", "array", "null"]
         },
         "identifiers": {
           "type": "array",
@@ -323,10 +292,7 @@
     "enumValue": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "key",
-        "label"
-      ],
+      "required": ["key", "label"],
       "properties": {
         "key": {
           "type": "string",
@@ -402,10 +368,7 @@
     "providerMapping": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "provider",
-        "path"
-      ],
+      "required": ["provider", "path"],
       "properties": {
         "provider": {
           "type": "string",
@@ -425,11 +388,7 @@
     "workflow": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "key",
-        "label",
-        "steps"
-      ],
+      "required": ["key", "label", "steps"],
       "properties": {
         "key": {
           "type": "string",
@@ -457,9 +416,7 @@
     "workflowStep": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "properties": {
         "type": {
           "$ref": "#/$defs/workflowStepType"
@@ -478,6 +435,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 500
         },
         "label": {
           "type": "string",
