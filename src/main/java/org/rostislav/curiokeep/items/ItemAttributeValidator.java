@@ -40,7 +40,8 @@ final class ItemAttributeValidator {
             JsonNode value = attributes.get(field.key());
             boolean absent = value == null || value.isNull() || (value.isString() && value.asString().isBlank());
             if (absent) {
-                if (field.required()) throw badRequest("MISSING_REQUIRED_FIELD_" + field.key());
+                // A retired field can no longer be required: nothing on screen lets the user fill it in.
+                if (field.required() && field.active() && !field.deprecated()) throw badRequest("MISSING_REQUIRED_FIELD_" + field.key());
                 continue;
             }
             if (!isValid(field, value)) throw badRequest("INVALID_FIELD_" + field.key());

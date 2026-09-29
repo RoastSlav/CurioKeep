@@ -277,6 +277,8 @@
         <xs:attribute name="order" type="xs:int" use="optional"/>
         <xs:attribute name="active" type="xs:boolean" use="optional"/>
         <xs:attribute name="deprecated" type="xs:boolean" use="optional"/>
+        <!-- the field that takes over from a deprecated one; the UI offers to move the value across -->
+        <xs:attribute name="replacedBy" type="FieldKeyType" use="optional"/>
     </xs:complexType>
 
     <!-- ============================

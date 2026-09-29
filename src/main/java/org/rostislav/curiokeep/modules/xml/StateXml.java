@@ -7,6 +7,8 @@ import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 public record StateXml(
         @JacksonXmlProperty(isAttribute = true) String key,
         @JacksonXmlProperty(isAttribute = true) String label,
-        @JacksonXmlProperty(isAttribute = true) Integer order
+        @JacksonXmlProperty(isAttribute = true) Integer order,
+        @JacksonXmlProperty(isAttribute = true) Boolean active,
+        @JacksonXmlProperty(isAttribute = true) Boolean deprecated
 ) {
 }

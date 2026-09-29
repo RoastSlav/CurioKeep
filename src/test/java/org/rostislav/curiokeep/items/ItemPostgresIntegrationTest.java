@@ -83,7 +83,7 @@ class ItemPostgresIntegrationTest {
 
     private static FieldContract field(String key, FieldType type) {
         return new FieldContract(key, key, type, false, false, true, true, 0, true, false,
-                null, List.of(), List.of(), null, null, List.of(), Map.of());
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
     }
 
     @BeforeEach
@@ -409,6 +409,31 @@ class ItemPostgresIntegrationTest {
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }
+    }
+
+    @Test
+    void hasMatchesOnlyFieldsThatReallyHoldAValue() {
+        seed();
+        UUID owner = jdbc.queryForObject("SELECT id FROM app_user WHERE email = 'it@example.test'", UUID.class);
+        UUID has = jdbc.queryForObject("INSERT INTO collection (owner_user_id, name) VALUES (?, 'Has') RETURNING id", UUID.class, owner);
+        OffsetDateTime t = OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        insert(has, "OWNED", "text", "{\"old\":\"x\"}", t.plusSeconds(1));
+        insert(has, "OWNED", "empty string", "{\"old\":\"\"}", t.plusSeconds(2));
+        insert(has, "OWNED", "json null", "{\"old\":null}", t.plusSeconds(3));
+        insert(has, "OWNED", "empty list", "{\"old\":[]}", t.plusSeconds(4));
+        insert(has, "OWNED", "list", "{\"old\":[\"a\"]}", t.plusSeconds(5));
+        insert(has, "OWNED", "zero", "{\"old\":0}", t.plusSeconds(6));
+        insert(has, "OWNED", "false", "{\"old\":false}", t.plusSeconds(7));
+        insert(has, "OWNED", "absent", "{\"other\":1}", t.plusSeconds(8));
+        ModuleContract withOld = new ModuleContract("m", "1.0.0", "M", null, null,
+                List.of(new StateContract("OWNED", "Owned", 1, true, false, Map.of())), List.of(),
+                List.of(new FieldContract("old", "Old", FieldType.TEXT, false, false, false, false, 0, true, true, null, List.of(), List.of(), null, null, List.of(), Map.of(), null)),
+                List.of(), Map.of());
+
+        Page<ItemEntity> page = repository.search(ItemQueryParser.parse(withOld, new Params(has, moduleId, null, null, "createdAt,asc", 0, 100, Map.of("old.has", "true"))));
+
+        assertThat(titles(page)).containsExactly("text", "list", "zero", "false");
+        assertThat(repository.count(ItemQueryParser.parse(withOld, new Params(has, moduleId, null, null, null, 0, 1, Map.of("old.has", "true"))))).isEqualTo(4);
     }
 
     @Test

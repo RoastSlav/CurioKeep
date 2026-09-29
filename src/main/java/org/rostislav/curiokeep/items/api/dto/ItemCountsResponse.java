@@ -17,7 +17,10 @@ public record ItemCountsResponse(
             long total,
 
             @Schema(description = "Items per state key. A state with no items is absent.", example = "{\"OWNED\": 100, \"WISHLIST\": 20}")
-            Map<String, Long> byState
+            Map<String, Long> byState,
+
+            @Schema(description = "For each deprecated field of the module that still has values, how many items hold one.", example = "{\"authors_text\": 42}")
+            Map<String, Long> deprecatedFieldUse
     ) {
     }
 }

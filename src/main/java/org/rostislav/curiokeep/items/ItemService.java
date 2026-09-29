@@ -9,6 +9,7 @@ import org.rostislav.curiokeep.items.api.dto.*;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
+import org.rostislav.curiokeep.modules.contract.FieldContract;
 import org.rostislav.curiokeep.modules.contract.ModuleContract;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.user.CurrentUserService;
@@ -234,8 +235,24 @@ public class ItemService {
         }
         Map<UUID, ItemCountsResponse.ModuleCounts> modulesCounts = new java.util.LinkedHashMap<>();
         byModule.forEach((moduleId, byState) -> modulesCounts.put(moduleId,
-                new ItemCountsResponse.ModuleCounts(byState.values().stream().mapToLong(Long::longValue).sum(), byState)));
+                new ItemCountsResponse.ModuleCounts(byState.values().stream().mapToLong(Long::longValue).sum(), byState,
+                        deprecatedFieldUse(collectionId, moduleId))));
         return new ItemCountsResponse(modulesCounts);
+    }
+
+    /** Counts, per deprecated field of the module, the items that still hold a value there, so the user can go and update them. */
+    private Map<String, Long> deprecatedFieldUse(UUID collectionId, UUID moduleId) {
+        Map<String, Long> use = new java.util.LinkedHashMap<>();
+        modules.getEntityById(moduleId).map(modules::getContract).ifPresent(contract -> contract.fields().stream()
+                .filter(FieldContract::deprecated)
+                .forEach(field -> {
+                    ItemQuery query = new ItemQuery(collectionId, moduleId, null, List.of(), List.of(), List.of(
+                            new ItemQuery.FieldFilter(field.key(), field.type(), ItemQuery.FilterOperator.HAS, List.of("true"))),
+                            ItemQuery.Sort.newestFirst(), 0, 1);
+                    long count = search.count(query);
+                    if (count > 0) use.put(field.key(), count);
+                }));
+        return use;
     }
 
     @Transactional

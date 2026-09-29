@@ -110,6 +110,10 @@ final class ItemSearchSql {
                 String number = bind("n", ItemQueryParser.parseNumber(filter.values().getFirst()).orElseThrow());
                 conditions.add(numberExpression(key) + (filter.operator() == ItemQuery.FilterOperator.GTE ? " >= :" : " <= :") + number);
             }
+            case HAS -> conditions.add("(CASE WHEN jsonb_typeof(" + json(key) + ") IS NULL OR jsonb_typeof(" + json(key) + ") = 'null' THEN FALSE "
+                    + "WHEN jsonb_typeof(" + json(key) + ") = 'string' THEN " + text(key) + " <> '' "
+                    + "WHEN jsonb_typeof(" + json(key) + ") = 'array' THEN jsonb_array_length(" + json(key) + ") > 0 "
+                    + "ELSE TRUE END)");
             case FROM, TO -> {
                 String date = bind("d", filter.values().getFirst());
                 String prefix = "substr(" + text(key) + ", 1, length(CAST(:" + date + " AS text)))";

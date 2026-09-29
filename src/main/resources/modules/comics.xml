@@ -212,7 +212,7 @@
             <identifiers>
                 <identifier type="CUSTOM"/>
             </identifiers>
-            <constraints pattern="^4000-\\d+$"/>
+            <constraints pattern="^4000-\d+$"/>
             <ui>
                 <placeholder>e.g. 4000-12345</placeholder>
                 <helpText>From the ComicVine issue URL path (format 4000-xxxxx). Used for precise lookup.</helpText>

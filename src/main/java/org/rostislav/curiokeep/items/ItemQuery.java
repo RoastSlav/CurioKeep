@@ -29,7 +29,9 @@ record ItemQuery(
         GTE,
         LTE,
         FROM,
-        TO
+        TO,
+        /** The field holds a value: present, not null, not an empty string or list. Works on any declared field. */
+        HAS
     }
 
     /** {@code values} holds one entry for every operator except {@link FilterOperator#IN}. */

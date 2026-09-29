@@ -242,6 +242,10 @@
         "defaultValue": {
           "type": ["string", "number", "boolean", "object", "array", "null"]
         },
+        "replacedBy": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
         "identifiers": {
           "type": "array",
           "items": {

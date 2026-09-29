@@ -44,7 +44,7 @@ class ItemQueryParserTest {
 
     private static FieldContract field(String key, FieldType type, boolean searchable, boolean filterable, boolean sortable, boolean active) {
         return new FieldContract(key, key, type, false, searchable, filterable, sortable, 0, active, false,
-                null, List.of(), List.of(), null, null, List.of(), Map.of());
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
     }
 
     private ItemQuery parse(String search, String state, String sort, int page, int size, Map<String, String> other) {
@@ -154,6 +154,30 @@ class ItemQueryParserTest {
         assertRejected(() -> parse(Map.of("publisher.gte", "1")), "INVALID_FILTER_OPERATOR");
         assertRejected(() -> parse(Map.of("format.from", "2000")), "INVALID_FILTER_OPERATOR");
         assertRejected(() -> parse(Map.of("publisher.matches", "x")), "INVALID_FILTER_OPERATOR");
+    }
+
+    @Test
+    void hasFindsItemsWithAValueInAnyDeclaredFieldEvenOneThatIsNotFilterableOrIsRetired() {
+        List<ItemQuery.FieldFilter> filters = parse(Map.of("notes.has", "true", "old_field.has", "true", "pages.has", "true")).filters();
+
+        assertThat(filters).extracting(ItemQuery.FieldFilter::fieldKey).containsExactlyInAnyOrder("notes", "old_field", "pages");
+        assertThat(filters).allSatisfy(filter -> {
+            assertThat(filter.operator()).isEqualTo(FilterOperator.HAS);
+            assertThat(filter.values()).containsExactly("true");
+        });
+    }
+
+    @Test
+    void hasStillRefusesAFieldTheModuleDoesNotDeclareAndAnyValueButTrue() {
+        assertRejected(() -> parse(Map.of("ghost.has", "true")), "INVALID_FILTER_FIELD");
+        assertRejected(() -> parse(Map.of("notes.has", "false")), "INVALID_FILTER_VALUE");
+        assertRejected(() -> parse(Map.of("notes.has", "")), "INVALID_FILTER_VALUE");
+    }
+
+    @Test
+    void otherOperatorsStillNeedTheFieldToBeActiveAndFilterable() {
+        assertRejected(() -> parse(Map.of("notes.contains", "x")), "INVALID_FILTER_FIELD");
+        assertRejected(() -> parse(Map.of("old_field.contains", "x")), "INVALID_FILTER_FIELD");
     }
 
     @Test

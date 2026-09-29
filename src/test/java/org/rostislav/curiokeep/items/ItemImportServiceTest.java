@@ -87,7 +87,7 @@ class ItemImportServiceTest {
 
     private static FieldContract field(String key, FieldType type, boolean required, Constraints constraints) {
         return new FieldContract(key, key, type, required, false, false, false, 0, true, false,
-                null, List.of(), List.of(), constraints, null, List.of(), Map.of());
+                null, List.of(), List.of(), constraints, null, List.of(), Map.of(), null);
     }
 
     private void givenBooksModule() {

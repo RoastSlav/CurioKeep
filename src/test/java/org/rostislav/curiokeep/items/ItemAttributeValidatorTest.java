@@ -24,7 +24,7 @@ class ItemAttributeValidatorTest {
 
     private static FieldContract field(String key, FieldType type, boolean required, Constraints constraints, List<EnumValue> values) {
         return new FieldContract(key, key, type, required, false, false, false, 0, true, false,
-                null, List.of(), values, constraints, null, List.of(), Map.of());
+                null, List.of(), values, constraints, null, List.of(), Map.of(), null);
     }
 
     private ModuleContract contract(FieldContract... fields) {
@@ -128,6 +128,28 @@ class ItemAttributeValidatorTest {
         assertAccepted(multi, "{\"condition\":[\"NEW\",\"GOOD\"]}");
         assertRejected(multi, "{\"condition\":[\"NEW\",\"BROKEN\"]}", "INVALID_FIELD_condition");
         assertAccepted(open, "{\"condition\":\"whatever\"}");
+    }
+
+    private static FieldContract retired(String key, boolean active, boolean deprecated) {
+        return new FieldContract(key, key, FieldType.TEXT, true, false, false, false, 0, active, deprecated,
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
+    }
+
+    @Test
+    void aDeprecatedOrInactiveFieldIsNoLongerRequired() {
+        ModuleContract c = contract(retired("old", true, true), retired("hidden", false, false), field("title", FieldType.TEXT, true, null, List.of()));
+
+        assertAccepted(c, "{\"title\":\"Dune\"}");
+        assertRejected(c, "{}", "MISSING_REQUIRED_FIELD_title");
+    }
+
+    @Test
+    void aValueInADeprecatedFieldMustStillBeValid() {
+        ModuleContract c = contract(new FieldContract("old_pages", "Old pages", FieldType.NUMBER, false, false, false, false, 0, true, true,
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), "pages"));
+
+        assertAccepted(c, "{\"old_pages\":412}");
+        assertRejected(c, "{\"old_pages\":\"lots\"}", "INVALID_FIELD_old_pages");
     }
 
     @Test

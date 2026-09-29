@@ -62,6 +62,17 @@ class ItemSearchSqlTest {
     }
 
     @Test
+    void hasChecksThatTheValueExistsAndIsNotEmpty() {
+        ItemSearchSql sql = new ItemSearchSql(query(null, List.of(), List.of(), List.of(
+                new FieldFilter("old_authors", FieldType.TEXT, FilterOperator.HAS, List.of("true"))), Sort.newestFirst()));
+
+        assertThat(sql.where()).contains("jsonb_typeof(jsonb_extract_path(i.attributes, :k0)) IS NULL")
+                .contains("= 'null' THEN FALSE").contains("<> ''").contains("jsonb_array_length(");
+        assertThat(sql.where()).doesNotContain("old_authors");
+        assertThat(sql.whereParams()).containsEntry("k0", "old_authors");
+    }
+
+    @Test
     void stateFilterUsesAnInList() {
         ItemSearchSql sql = new ItemSearchSql(query(null, List.of(), List.of("OWNED", "WISHLIST"), List.of(), Sort.newestFirst()));
 

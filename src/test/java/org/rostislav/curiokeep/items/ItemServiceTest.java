@@ -326,6 +326,42 @@ class ItemServiceTest {
     }
 
     @Test
+    void countsReportHowManyItemsStillHoldAValueInADeprecatedField() {
+        when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of(row(MODULE_ID, "OWNED", 7)));
+        when(modules.getEntityById(MODULE_ID)).thenReturn(Optional.of(moduleEntity));
+        FieldContract deprecated = new FieldContract("old_authors", "Old authors", FieldType.TEXT, true, false, false, false, 0, true, true,
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), "authors");
+        FieldContract current = new FieldContract("authors", "Authors", FieldType.TEXT, false, false, false, false, 0, true, false,
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
+        when(modules.getContract(moduleEntity)).thenReturn(new ModuleContract("books", "1.0.0", "Books", null, null, List.of(), List.of(),
+                List.of(deprecated, current), List.of(), Map.of()));
+        when(search.count(any())).thenReturn(4L);
+
+        ItemCountsResponse counts = service.counts(COLLECTION_ID);
+
+        assertThat(counts.modules().get(MODULE_ID).deprecatedFieldUse()).containsOnly(Map.entry("old_authors", 4L));
+        ArgumentCaptor<ItemQuery> asked = ArgumentCaptor.forClass(ItemQuery.class);
+        verify(search).count(asked.capture());
+        assertThat(asked.getValue().filters()).singleElement().satisfies(filter -> {
+            assertThat(filter.fieldKey()).isEqualTo("old_authors");
+            assertThat(filter.operator()).isEqualTo(ItemQuery.FilterOperator.HAS);
+        });
+    }
+
+    @Test
+    void aDeprecatedFieldNobodyUsesAnymoreIsNotReported() {
+        when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of(row(MODULE_ID, "OWNED", 7)));
+        when(modules.getEntityById(MODULE_ID)).thenReturn(Optional.of(moduleEntity));
+        FieldContract deprecated = new FieldContract("old_authors", "Old authors", FieldType.TEXT, false, false, false, false, 0, true, true,
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
+        when(modules.getContract(moduleEntity)).thenReturn(new ModuleContract("books", "1.0.0", "Books", null, null, List.of(), List.of(),
+                List.of(deprecated), List.of(), Map.of()));
+        when(search.count(any())).thenReturn(0L);
+
+        assertThat(service.counts(COLLECTION_ID).modules().get(MODULE_ID).deprecatedFieldUse()).isEmpty();
+    }
+
+    @Test
     void countsAreEmptyForACollectionWithoutItems() {
         when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of());
 
@@ -354,7 +390,7 @@ class ItemServiceTest {
 
     private FieldContract field(String key, FieldType type, boolean required) {
         return new FieldContract(key, key, type, required, false, false, false, 0, true, false,
-                null, List.of(), List.of(), null, null, List.of(), Map.of());
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
     }
 
     private CreateItemRequest request(String stateKey, Map<String, Object> attributes) {

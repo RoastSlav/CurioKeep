@@ -20,7 +20,9 @@ public record FieldContract(
         Constraints constraints,
         UiHints ui,
         List<ProviderMapping> providerMappings,
-        Map<String, Object> extensions
+        Map<String, Object> extensions,
+        /** Key of the field that takes over from this deprecated one, or null. */
+        String replacedBy
 ) {
     public FieldContract {
         identifiers = identifiers == null ? List.of() : List.copyOf(identifiers);

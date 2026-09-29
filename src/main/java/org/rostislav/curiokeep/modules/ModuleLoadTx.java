@@ -85,6 +85,25 @@ public class ModuleLoadTx {
                 "[" + sourceName + "] Module '" + moduleKey + "' has duplicate field keys"
         );
 
+        // a deprecated field can name the field that replaces it, so the UI can offer to move the value across
+        java.util.Map<String, FieldContract> fieldsByKey = m.fields().stream().collect(Collectors.toMap(FieldContract::key, f -> f, (a, b) -> a));
+        for (FieldContract f : m.fields()) {
+            if (f.replacedBy() != null) {
+                String where = "[" + sourceName + "] Module '" + moduleKey + "': field '" + f.key() + "'";
+                if (!f.deprecated()) {
+                    throw new IllegalStateException(where + " sets replacedBy but is not deprecated");
+                }
+                FieldContract target = fieldsByKey.get(f.replacedBy());
+                if (target == null) {
+                    throw new IllegalStateException(where + " is replaced by unknown field '" + f.replacedBy() + "'");
+                }
+                if (target.key().equals(f.key()) || target.deprecated()) {
+                    throw new IllegalStateException(where + " must be replaced by a different field that is not itself deprecated");
+                }
+            }
+            warnAboutOddConstraints(f, sourceName, moduleKey);
+        }
+
         // provider mappings must reference declared providers
         java.util.Set<String> providerKeys = m.providers().stream().map(ProviderContract::key).collect(Collectors.toSet());
         for (FieldContract f : m.fields()) {
@@ -141,6 +160,33 @@ public class ModuleLoadTx {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /** Constraints that cannot work are only warned about: they were silently ignored before, and a module that has them must keep loading. */
+    private void warnAboutOddConstraints(FieldContract f, String sourceName, String moduleKey) {
+        var c = f.constraints();
+        if (c == null) return;
+        String where = "[" + sourceName + "] Module '" + moduleKey + "': field '" + f.key() + "'";
+        boolean text = f.type() == FieldType.TEXT || f.type() == FieldType.LINK;
+        if ((c.pattern() != null || c.minLength() != null || c.maxLength() != null) && !text) {
+            log.warn("{} has a pattern or length constraint but is not a TEXT or LINK field; it is ignored", where);
+        }
+        if ((c.min() != null || c.max() != null) && f.type() != FieldType.NUMBER) {
+            log.warn("{} has a min or max constraint but is not a NUMBER field; it is ignored", where);
+        }
+        if (c.min() != null && c.max() != null && c.min() > c.max()) {
+            log.warn("{} has min greater than max, so no value can satisfy it", where);
+        }
+        if (c.minLength() != null && c.maxLength() != null && c.minLength() > c.maxLength()) {
+            log.warn("{} has minLength greater than maxLength, so no value can satisfy it", where);
+        }
+        if (c.pattern() != null) {
+            try {
+                java.util.regex.Pattern.compile(c.pattern());
+            } catch (java.util.regex.PatternSyntaxException e) {
+                log.warn("{} has a pattern that is not a valid regular expression; it is ignored", where);
             }
         }
     }
@@ -269,12 +315,12 @@ public class ModuleLoadTx {
                     id, module_id, field_key, label, field_type,
                     required, searchable, filterable, sortable,
                     default_value, enum_values, provider_mappings,
-                    sort_order
+                    sort_order, active, deprecated
                 ) VALUES (
                     gen_random_uuid(), :mid, :field_key, :label, :field_type,
                     :required, :searchable, :filterable, :sortable,
                     :default_value, :enum_values, :provider_mappings,
-                    :sort_order
+                    :sort_order, :active, :deprecated
                 )
                 """;
 
@@ -293,7 +339,9 @@ public class ModuleLoadTx {
                                 .addValue("default_value", jsonb(objectMapper.writeValueAsString(f.defaultValue())))
                                 .addValue("enum_values", jsonb(objectMapper.writeValueAsString(f.enumValues())))
                                 .addValue("provider_mappings", jsonb(objectMapper.writeValueAsString(f.providerMappings())))
-                                .addValue("sort_order", f.order());
+                                .addValue("sort_order", f.order())
+                                .addValue("active", f.active())
+                                .addValue("deprecated", f.deprecated());
                     } catch (JacksonException e) {
                         throw new IllegalStateException("Failed to serialize field JSON for module " + module.key() +
                                 ", field " + f.key(), e);

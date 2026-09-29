@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -99,8 +100,8 @@ public class ModuleCompiler {
                         s.key(),
                         s.label(),
                         safeInt(s.order(), 0),
-                        true,   // active (XSD doesn’t have it yet)
-                        false,  // deprecated
+                        bool(s.active(), true),
+                        bool(s.deprecated(), false),
                         Map.of()
                 ))
                 .toList();
@@ -133,6 +134,36 @@ public class ModuleCompiler {
     // ----------------------------
     // Conversions + helpers
     // ----------------------------
+
+    private Constraints compileConstraints(ConstraintsXml c) {
+        if (c == null) return null;
+        String pattern = c.pattern() == null || c.pattern().isBlank() ? null : c.pattern();
+        return new Constraints(
+                c.min() == null ? null : c.min().doubleValue(),
+                c.max() == null ? null : c.max().doubleValue(),
+                c.minLength(), c.maxLength(), pattern, c.multi(), c.uniqueWithinCollection());
+    }
+
+    /** The XML holds the default as text; a NUMBER or BOOLEAN field gets it as that type. One that cannot be read as such is dropped with a warning, so an old module keeps loading. */
+    private Object compileDefault(FieldType type, String text) {
+        if (text == null || text.isBlank()) return null;
+        String trimmed = text.trim();
+        try {
+            switch (type) {
+                case NUMBER:
+                    return new BigDecimal(trimmed);
+                case BOOLEAN:
+                    if ("true".equalsIgnoreCase(trimmed) || "false".equalsIgnoreCase(trimmed)) return Boolean.valueOf(trimmed.toLowerCase(Locale.ROOT));
+                    break;
+                default:
+                    return text;
+            }
+        } catch (NumberFormatException e) {
+            // falls through to the warning below
+        }
+        log.warn("Ignoring default value '{}': it is not a valid {}", trimmed, type);
+        return null;
+    }
 
     private List<FieldContract> compileFields(List<FieldXml> fieldXmls) {
         return Optional.ofNullable(fieldXmls).orElse(List.of()).stream()
@@ -173,15 +204,16 @@ public class ModuleCompiler {
                             bool(f.filterable(), false),
                             bool(f.sortable(), false),
                             safeInt(f.order(), 0),
-                            true,
-                            false,
-                            null,        // defaultValue (XSD doesn’t support yet)
+                            bool(f.active(), true),
+                            bool(f.deprecated(), false),
+                            compileDefault(toFieldType(f.type()), f.defaultValue()),
                             identifiers,
                             enumValues,
-                            null,        // constraints (XSD doesn’t support yet)
+                            compileConstraints(f.constraints()),
                             uiHints,
                             mappings,
-                            Map.of()
+                            Map.of(),
+                            f.replacedBy() == null || f.replacedBy().isBlank() ? null : f.replacedBy().trim()
                     );
                 })
                 .toList();

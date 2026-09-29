@@ -86,7 +86,7 @@ class ItemExportServiceTest {
 
     private static FieldContract field(String key, FieldType type, int order) {
         return new FieldContract(key, key, type, false, false, false, false, order, true, false,
-                null, List.of(), List.of(), null, null, List.of(), Map.of());
+                null, List.of(), List.of(), null, null, List.of(), Map.of(), null);
     }
 
     private ModuleDefinitionEntity module(UUID id, String key) {

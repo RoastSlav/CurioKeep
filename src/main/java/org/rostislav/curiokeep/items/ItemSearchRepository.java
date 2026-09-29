@@ -41,6 +41,15 @@ class ItemSearchRepository {
         return new PageImpl<>(rows, PageRequest.of(query.page(), query.size()), total);
     }
 
+    /** How many items match the filters, without fetching any. */
+    @Transactional(readOnly = true)
+    long count(ItemQuery query) {
+        ItemSearchSql sql = new ItemSearchSql(query);
+        Query count = entityManager.createNativeQuery("SELECT count(*) FROM item i WHERE " + sql.where());
+        bind(count, sql.whereParams());
+        return ((Number) count.getSingleResult()).longValue();
+    }
+
     private static void bind(Query query, Map<String, Object> params) {
         params.forEach(query::setParameter);
     }

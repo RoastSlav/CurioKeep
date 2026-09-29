@@ -14,6 +14,9 @@ public record FieldXml(
         @JacksonXmlProperty(isAttribute = true) Boolean filterable,
         @JacksonXmlProperty(isAttribute = true) Boolean sortable,
         @JacksonXmlProperty(isAttribute = true) Integer order,
+        @JacksonXmlProperty(isAttribute = true) Boolean active,
+        @JacksonXmlProperty(isAttribute = true) Boolean deprecated,
+        @JacksonXmlProperty(isAttribute = true) String replacedBy,
 
         // wrappers (these names MUST match XML wrapper elements)
         @JacksonXmlProperty(localName = "identifiers") IdentifiersXml identifiers,

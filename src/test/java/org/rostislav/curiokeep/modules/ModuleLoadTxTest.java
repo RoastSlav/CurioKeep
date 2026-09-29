@@ -6,6 +6,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
+import org.mockito.ArgumentCaptor;
+import org.rostislav.curiokeep.modules.contract.FieldContract;
+import org.rostislav.curiokeep.modules.contract.ModuleContract;
 import org.rostislav.curiokeep.modules.contract.ModuleSource;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
@@ -129,6 +132,99 @@ class ModuleLoadTxTest {
 
         assertThatThrownBy(() -> load(xml)).isInstanceOf(Exception.class);
         verify(jdbc, never()).batchUpdate(anyString(), ArgumentMatchers.<SqlParameterSource[]>any());
+    }
+
+    private static final String NOTES_FIELD = "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\"/>";
+
+    private SqlParameterSource fieldRow(String key) {
+        ArgumentCaptor<SqlParameterSource[]> batches = ArgumentCaptor.forClass(SqlParameterSource[].class);
+        verify(jdbc, times(2)).batchUpdate(anyString(), batches.capture());
+        SqlParameterSource[] fields = batches.getAllValues().get(1);
+        return java.util.Arrays.stream(fields).filter(row -> key.equals(row.getValue("field_key"))).findFirst().orElseThrow();
+    }
+
+    @Test
+    void aDeprecatedFieldNamingItsReplacementLoadsAndIsStoredAsDeprecated() throws Exception {
+        load(booksXml().replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" deprecated=\"true\" replacedBy=\"edition\"/>"));
+
+        assertThat(fieldRow("notes").getValue("deprecated")).isEqualTo(true);
+        assertThat(fieldRow("notes").getValue("active")).isEqualTo(true);
+        assertThat(fieldRow("title").getValue("deprecated")).isEqualTo(false);
+    }
+
+    @Test
+    void aFieldTheModuleMarksInactiveIsStoredAsInactive() throws Exception {
+        load(booksXml().replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" active=\"false\"/>"));
+
+        assertThat(fieldRow("notes").getValue("active")).isEqualTo(false);
+    }
+
+    @Test
+    void replacedByNeedsTheFieldToBeDeprecated() throws Exception {
+        assertRejected(booksXml().replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" replacedBy=\"edition\"/>"),
+                "sets replacedBy but is not deprecated");
+    }
+
+    @Test
+    void replacedByMustNameAFieldOfTheModule() throws Exception {
+        assertRejected(booksXml().replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" deprecated=\"true\" replacedBy=\"ghost\"/>"),
+                "is replaced by unknown field 'ghost'");
+    }
+
+    @Test
+    void aFieldCannotBeReplacedByItselfOrByAnotherDeprecatedField() throws Exception {
+        assertRejected(booksXml().replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" deprecated=\"true\" replacedBy=\"notes\"/>"),
+                "must be replaced by a different field that is not itself deprecated");
+        assertRejected(booksXml()
+                        .replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" deprecated=\"true\" replacedBy=\"printing\"/>")
+                        .replace("<field key=\"printing\" label=\"Printing\" type=\"TEXT\" order=\"43\"/>", "<field key=\"printing\" label=\"Printing\" type=\"TEXT\" order=\"43\" deprecated=\"true\"/>"),
+                "must be replaced by a different field that is not itself deprecated");
+    }
+
+    @Test
+    void theSchemaRejectsAReplacedByThatIsNotAFieldKey() throws Exception {
+        assertRejectedBySchema(booksXml().replace(NOTES_FIELD, "<field key=\"notes\" label=\"Notes\" type=\"TEXT\" order=\"90\" deprecated=\"true\" replacedBy=\"Not A Key\"/>"),
+                "Value 'Not A Key' is not facet-valid");
+    }
+
+    /** Adds a default to the published_year field; a regex, because the bundled file has Windows line endings. */
+    private String withYearDefault(String defaultValue) throws Exception {
+        return booksXml().replaceFirst("(<field key=\"published_year\"[\\s\\S]*?</providerMappings>)", "$1<defaultValue>" + defaultValue + "</defaultValue>");
+    }
+
+    @Test
+    void aDefaultDeclaredInTheXmlReachesTheCompiledContractAsTheFieldsType() throws Exception {
+        ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(withYearDefault("1999")));
+
+        FieldContract year = contract.fields().stream().filter(f -> f.key().equals("published_year")).findFirst().orElseThrow();
+        assertThat(year.defaultValue()).isEqualTo(new java.math.BigDecimal("1999"));
+    }
+
+    @Test
+    void theBundledComicsPatternsAcceptTheirIdsAndRejectOthers() throws Exception {
+        String xml;
+        try (var in = new ClassPathResource("modules/comics.xml").getInputStream()) {
+            xml = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(xml));
+
+        java.util.regex.Pattern comicVine = java.util.regex.Pattern.compile(contract.fields().stream()
+                .filter(f -> f.key().equals("comicvine_id")).findFirst().orElseThrow().constraints().pattern());
+        java.util.regex.Pattern metron = java.util.regex.Pattern.compile(contract.fields().stream()
+                .filter(f -> f.key().equals("metron_id")).findFirst().orElseThrow().constraints().pattern());
+
+        assertThat(comicVine.matcher("4000-12345").find()).isTrue();
+        assertThat(comicVine.matcher("12345").find()).isFalse();
+        assertThat(comicVine.matcher("4000-abc").find()).isFalse();
+        assertThat(metron.matcher("11518").find()).isTrue();
+        assertThat(metron.matcher("11518x").find()).isFalse();
+    }
+
+    @Test
+    void anUnreadableDefaultIsDroppedInsteadOfBreakingTheModule() throws Exception {
+        ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(withYearDefault("not a number")));
+
+        assertThat(contract.fields().stream().filter(f -> f.key().equals("published_year")).findFirst().orElseThrow().defaultValue()).isNull();
     }
 
     private void assertRejected(String xml, String expectedMessagePart) {

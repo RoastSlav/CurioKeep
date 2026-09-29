@@ -114,8 +114,9 @@ final class ItemQueryParser {
             if (filters.size() >= MAX_FILTERS) throw badRequest("TOO_MANY_FILTERS");
             String fieldKey = entry.getKey().substring(0, dot);
             FilterOperator operator = operator(entry.getKey().substring(dot + 1));
+            // "has" asks whether a value exists, which is how items in a deprecated field are found, so it works on any declared field.
             FieldContract field = contract.fields().stream()
-                    .filter(f -> f.active() && f.filterable() && f.key().equals(fieldKey)).findFirst()
+                    .filter(f -> f.key().equals(fieldKey) && (operator == FilterOperator.HAS || (f.active() && f.filterable()))).findFirst()
                     .orElseThrow(() -> badRequest("INVALID_FILTER_FIELD"));
             filters.add(new FieldFilter(field.key(), field.type(), operator, values(field.type(), operator, entry.getValue())));
         }
@@ -130,6 +131,7 @@ final class ItemQueryParser {
             case "lte" -> FilterOperator.LTE;
             case "from" -> FilterOperator.FROM;
             case "to" -> FilterOperator.TO;
+            case "has" -> FilterOperator.HAS;
             default -> throw badRequest("INVALID_FILTER_OPERATOR");
         };
     }
@@ -141,8 +143,11 @@ final class ItemQueryParser {
             case CONTAINS -> type == FieldType.TEXT || type == FieldType.LINK;
             case GTE, LTE -> type == FieldType.NUMBER;
             case FROM, TO -> type == FieldType.DATE;
+            case HAS -> true;
         };
         if (!applicable) throw badRequest("INVALID_FILTER_OPERATOR");
+
+        if (operator == FilterOperator.HAS && !raw.trim().equals("true")) throw badRequest("INVALID_FILTER_VALUE");
 
         List<String> values = operator == FilterOperator.IN
                 ? Arrays.stream(raw.split(",")).map(String::trim).filter(v -> !v.isEmpty()).toList()
