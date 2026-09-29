@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,12 +29,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class ItemService {
 
     private static final Logger log = LoggerFactory.getLogger(ItemService.class);
+    private static final String ASSET_PATH = "/api/assets/";
 
     private final ItemRepository items;
     private final ItemIdentifierRepository identifiers;
@@ -42,6 +46,7 @@ public class ItemService {
     private final ModuleQueryService modules;
     private final ObjectMapper objectMapper;
     private final ItemImageService imageService;
+    private final TransactionTemplate tx;
 
     public ItemService(
             ItemRepository items,
@@ -50,7 +55,8 @@ public class ItemService {
             CollectionAccessService access,
             ModuleQueryService modules,
             ObjectMapper objectMapper,
-            ItemImageService imageService
+            ItemImageService imageService,
+            TransactionTemplate tx
     ) {
         this.items = items;
         this.identifiers = identifiers;
@@ -59,6 +65,7 @@ public class ItemService {
         this.modules = modules;
         this.objectMapper = objectMapper;
         this.imageService = imageService;
+        this.tx = tx;
     }
 
     @Transactional(readOnly = true)
@@ -69,40 +76,46 @@ public class ItemService {
                 .map(e -> ItemResponse.from(e, objectMapper));
     }
 
-    @Transactional
     public ItemResponse create(UUID collectionId, CreateItemRequest req) {
         AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
 
         ModuleDefinitionEntity def = modules.getEntityById(req.moduleId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "MODULE_NOT_FOUND"));
-
         ModuleContract contract = modules.getContract(def);
+        validateState(contract, req.stateKey());
 
         Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes() == null ? Map.of() : req.attributes());
+        validateAttributes(contract, toJsonNode(attrsMap));
+        // The cover is downloaded before the transaction starts so a slow host cannot hold a database connection.
         ImageProcessResult imageResult = handleImage(attrsMap);
         JsonNode attrs = toJsonNode(attrsMap);
-        validateState(contract, req.stateKey());
-        validateAttributes(contract, attrs);
 
-        ItemEntity e = new ItemEntity();
-        e.setCollectionId(collectionId);
-        e.setModuleId(req.moduleId());
-        e.setStateKey(normalizeState(req.stateKey(), contract));
-        e.setTitle(req.title());
-        e.setAttributes(writeJson(attrs));
-        if (imageResult.fileName() != null) {
-            e.setImageName(imageResult.fileName());
+        ItemEntity saved;
+        try {
+            saved = tx.execute(status -> {
+                ItemEntity e = new ItemEntity();
+                e.setCollectionId(collectionId);
+                e.setModuleId(req.moduleId());
+                e.setStateKey(normalizeState(req.stateKey(), contract));
+                e.setTitle(req.title());
+                e.setAttributes(writeJson(attrs));
+                if (imageResult.fileName() != null) {
+                    e.setImageName(imageResult.fileName());
+                }
+                e.setCreatedBy(u.getId());
+                items.save(e);
+                upsertIdentifiers(e.getId(), req.identifiers());
+                return e;
+            });
+        } catch (RuntimeException ex) {
+            if (imageResult.downloaded()) imageService.delete(imageResult.fileName());
+            throw ex;
         }
-        e.setCreatedBy(u.getId());
-
-        items.save(e);
-
-        upsertIdentifiers(e.getId(), req.identifiers());
 
         log.info("Item created: itemId={} collectionId={} moduleId={} byUserId={}",
-                e.getId(), collectionId, e.getModuleId(), u.getId());
+                saved.getId(), collectionId, saved.getModuleId(), u.getId());
 
-        return ItemResponse.from(e, objectMapper);
+        return ItemResponse.from(saved, objectMapper);
     }
 
     @Transactional(readOnly = true)
@@ -114,79 +127,96 @@ public class ItemService {
         return ItemResponse.from(e, objectMapper);
     }
 
-    @Transactional
     public ItemResponse update(UUID collectionId, UUID itemId, UpdateItemRequest req) {
         AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
 
-        ItemEntity e = items.findById(itemId)
-                .filter(it -> it.getCollectionId().equals(collectionId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND"));
-
-        ModuleDefinitionEntity def = modules.getEntityById(e.getModuleId())
+        ItemEntity current = requireItem(collectionId, itemId);
+        ModuleDefinitionEntity def = modules.getEntityById(current.getModuleId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "MODULE_NOT_FOUND"));
-
         ModuleContract contract = modules.getContract(def);
 
-        JsonNode attrs = null;
-        ImageProcessResult imageResult = new ImageProcessResult(null, false);
+        if (req.stateKey() != null) {
+            validateState(contract, req.stateKey());
+        }
 
+        JsonNode attrs = null;
+        ImageProcessResult imageResult = ImageProcessResult.NONE;
         if (req.attributes() != null) {
             Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes());
+            validateAttributes(contract, toJsonNode(attrsMap));
             imageResult = handleImage(attrsMap);
             attrs = toJsonNode(attrsMap);
         }
 
-        if (req.stateKey() != null) {
-            validateState(contract, req.stateKey());
-            e.setStateKey(normalizeState(req.stateKey(), contract));
+        JsonNode newAttrs = attrs;
+        ImageProcessResult image = imageResult;
+        SavedItem result;
+        try {
+            result = tx.execute(status -> {
+                ItemEntity e = requireItem(collectionId, itemId);
+                String before = e.getImageName();
+                if (req.stateKey() != null) e.setStateKey(normalizeState(req.stateKey(), contract));
+                if (req.title() != null) e.setTitle(req.title());
+                if (newAttrs != null) e.setAttributes(writeJson(newAttrs));
+                if (image.cleared()) {
+                    e.setImageName(null);
+                } else if (image.fileName() != null) {
+                    e.setImageName(image.fileName());
+                }
+                items.save(e);
+                if (req.identifiers() != null) {
+                    replaceIdentifiers(e.getId(), req.identifiers());
+                }
+                return new SavedItem(e, before);
+            });
+        } catch (RuntimeException ex) {
+            if (image.downloaded()) imageService.delete(image.fileName());
+            throw ex;
         }
-        if (req.title() != null) e.setTitle(req.title());
-        if (req.attributes() != null) {
-            validateAttributes(contract, attrs);
-            e.setAttributes(writeJson(attrs));
-        }
+        if (!Objects.equals(result.previousImage(), result.entity().getImageName())) releaseImage(result.previousImage());
 
-        if (imageResult.cleared()) {
-            e.setImageName(null);
-        } else if (imageResult.fileName() != null) {
-            e.setImageName(imageResult.fileName());
-        }
+        log.info("Item updated: itemId={} collectionId={} byUserId={}", itemId, collectionId, u.getId());
 
-        items.save(e);
-
-        if (req.identifiers() != null) {
-            replaceIdentifiers(e.getId(), req.identifiers());
-        }
-
-        log.info("Item updated: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
-
-        return ItemResponse.from(e, objectMapper);
+        return ItemResponse.from(result.entity(), objectMapper);
     }
 
-    @Transactional
     public ItemResponse setImageFromUrl(UUID collectionId, UUID itemId, String url) {
         AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
-        ItemEntity e = requireItem(collectionId, itemId);
+        requireItem(collectionId, itemId);
 
         if (url == null || url.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_URL_REQUIRED");
         }
 
         String trimmed = url.trim();
-        String fileName = imageService.downloadToLocal(trimmed);
-
-        if (fileName == null) {
-            log.warn("Image download failed, storing external url only: itemId={} collectionId={} url={}", e.getId(), collectionId, trimmed);
-            clearStoredImage(e);
-            replaceProviderImageAttribute(e, trimmed);
-        } else {
-            applyStoredImage(e, fileName);
+        Optional<String> fileName = imageService.downloadToLocal(trimmed);
+        if (fileName.isEmpty()) {
+            log.warn("Image download failed, storing external url only: itemId={} collectionId={}", itemId, collectionId);
         }
-        items.save(e);
 
-        log.info("Item image set from url: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
+        SavedItem result;
+        try {
+            result = tx.execute(status -> {
+                ItemEntity e = requireItem(collectionId, itemId);
+                String before = e.getImageName();
+                if (fileName.isPresent()) {
+                    applyStoredImage(e, fileName.get());
+                } else {
+                    clearStoredImage(e);
+                    replaceProviderImageAttribute(e, trimmed);
+                }
+                items.save(e);
+                return new SavedItem(e, before);
+            });
+        } catch (RuntimeException ex) {
+            fileName.ifPresent(imageService::delete);
+            throw ex;
+        }
+        releaseImage(result.previousImage());
 
-        return ItemResponse.from(e, objectMapper);
+        log.info("Item image set from url: itemId={} collectionId={} byUserId={}", itemId, collectionId, u.getId());
+
+        return ItemResponse.from(result.entity(), objectMapper);
     }
 
     @Transactional
@@ -198,19 +228,21 @@ public class ItemService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_FILE_REQUIRED");
         }
 
-        String fileName;
+        Optional<String> fileName;
         try {
-            fileName = imageService.storeUploaded(file.getBytes(), file.getOriginalFilename(), file.getContentType());
+            fileName = imageService.storeUploaded(file.getBytes());
         } catch (IOException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_READ_FAILED", ex);
         }
 
-        if (fileName == null) {
+        if (fileName.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE");
         }
 
-        applyStoredImage(e, fileName);
+        String previousImage = e.getImageName();
+        applyStoredImage(e, fileName.get());
         items.save(e);
+        releaseImage(previousImage);
 
         log.info("Item image uploaded: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
 
@@ -222,8 +254,10 @@ public class ItemService {
         AppUserEntity u = checkUserRole(collectionId, Role.EDITOR);
         ItemEntity e = requireItem(collectionId, itemId);
 
+        String previousImage = e.getImageName();
         clearStoredImage(e);
         items.save(e);
+        releaseImage(previousImage);
 
         log.info("Item image cleared: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
 
@@ -240,6 +274,7 @@ public class ItemService {
 
         identifiers.deleteAll(identifiers.findAllByItemId(e.getId()));
         items.delete(e);
+        releaseImage(e.getImageName());
 
         log.info("Item deleted: itemId={} collectionId={} byUserId={}", e.getId(), collectionId, u.getId());
     }
@@ -269,7 +304,9 @@ public class ItemService {
 
     private void upsertIdentifiers(UUID itemId, List<ItemIdentifierDto> ids) {
         if (ids == null || ids.isEmpty()) return;
-        for (ItemIdentifierDto dto : ids) {
+        Map<ItemIdentifierEntity.IdType, ItemIdentifierDto> onePerType = new java.util.LinkedHashMap<>();
+        ids.forEach(dto -> onePerType.put(dto.idType(), dto));
+        for (ItemIdentifierDto dto : onePerType.values()) {
             ItemIdentifierEntity e = new ItemIdentifierEntity();
             e.setItemId(itemId);
             e.setIdType(dto.idType());
@@ -341,35 +378,52 @@ public class ItemService {
     private ImageProcessResult handleImage(Map<String, Object> attrs) {
         Object urlObj = attrs.get("providerImageUrl");
         if (!(urlObj instanceof String urlRaw)) {
-            return new ImageProcessResult(null, false);
+            return ImageProcessResult.NONE;
         }
 
         String url = urlRaw.trim();
         if (url.isBlank()) {
             attrs.remove("providerImageUrl");
-            return new ImageProcessResult(null, true);
+            return ImageProcessResult.CLEARED;
         }
 
         // Already cached locally
-        if (url.startsWith("/api/assets/")) {
-            String fileName = url.substring("/api/assets/".length());
-            return new ImageProcessResult(fileName, false);
+        if (url.startsWith(ASSET_PATH)) {
+            String fileName = url.substring(ASSET_PATH.length());
+            if (ItemImageService.isStoredName(fileName)) {
+                return new ImageProcessResult(fileName, false, false);
+            }
+            attrs.remove("providerImageUrl");
+            return ImageProcessResult.NONE;
         }
 
-        String fileName = imageService.downloadToLocal(url);
-        if (fileName != null) {
-            attrs.put("providerImageUrl", "/api/assets/" + fileName);
-            return new ImageProcessResult(fileName, false);
+        Optional<String> fileName = imageService.downloadToLocal(url);
+        if (fileName.isPresent()) {
+            attrs.put("providerImageUrl", ASSET_PATH + fileName.get());
+            return new ImageProcessResult(fileName.get(), false, true);
         }
 
-        return new ImageProcessResult(null, false);
+        return ImageProcessResult.NONE;
     }
 
-    private record ImageProcessResult(String fileName, boolean cleared) {}
+    /** {@code downloaded} marks a file this request created, so it can be removed again if saving fails. */
+    private record ImageProcessResult(String fileName, boolean cleared, boolean downloaded) {
+        static final ImageProcessResult NONE = new ImageProcessResult(null, false, false);
+        static final ImageProcessResult CLEARED = new ImageProcessResult(null, true, false);
+    }
+
+    private record SavedItem(ItemEntity entity, String previousImage) {
+    }
+
+    /** Removes a cover file once no item refers to it any more. */
+    private void releaseImage(String fileName) {
+        if (fileName == null || items.existsByImageName(fileName)) return;
+        imageService.delete(fileName);
+    }
 
     private void applyStoredImage(ItemEntity e, String fileName) {
         e.setImageName(fileName);
-        replaceProviderImageAttribute(e, "/api/assets/" + fileName);
+        replaceProviderImageAttribute(e, ASSET_PATH + fileName);
     }
 
     private void clearStoredImage(ItemEntity e) {

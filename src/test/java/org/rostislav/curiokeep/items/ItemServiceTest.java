@@ -10,8 +10,10 @@ import org.rostislav.curiokeep.collections.CollectionAccessService;
 import org.rostislav.curiokeep.collections.api.dto.Role;
 import org.rostislav.curiokeep.items.api.dto.ChangeStateRequest;
 import org.rostislav.curiokeep.items.api.dto.CreateItemRequest;
+import org.rostislav.curiokeep.items.api.dto.ItemIdentifierDto;
 import org.rostislav.curiokeep.items.api.dto.ItemResponse;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
+import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
 import org.rostislav.curiokeep.modules.contract.FieldContract;
 import org.rostislav.curiokeep.modules.contract.FieldType;
@@ -21,6 +23,8 @@ import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.user.CurrentUserService;
 import org.rostislav.curiokeep.user.entities.AppUserEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,7 +69,8 @@ class ItemServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ItemService(items, identifiers, currentUser, access, modules, new ObjectMapper(), imageService);
+        service = new ItemService(items, identifiers, currentUser, access, modules, new ObjectMapper(), imageService,
+                new TransactionTemplate(mock(PlatformTransactionManager.class)));
 
         AppUserEntity user = new AppUserEntity();
         user.setId(USER_ID);
@@ -200,6 +206,87 @@ class ItemServiceTest {
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         ex -> assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
         verify(items, never()).delete(any());
+    }
+
+    @Test
+    void deleteRemovesTheCoverFileWhenNoOtherItemUsesIt() {
+        ItemEntity item = item(COLLECTION_ID);
+        item.setImageName("0123456789abcdef0123456789abcdef.png");
+        when(items.findById(ITEM_ID)).thenReturn(Optional.of(item));
+        when(identifiers.findAllByItemId(ITEM_ID)).thenReturn(List.of());
+        when(items.existsByImageName("0123456789abcdef0123456789abcdef.png")).thenReturn(false);
+
+        service.delete(COLLECTION_ID, ITEM_ID);
+
+        verify(imageService).delete("0123456789abcdef0123456789abcdef.png");
+    }
+
+    @Test
+    void deleteKeepsACoverFileThatAnotherItemStillUses() {
+        ItemEntity item = item(COLLECTION_ID);
+        item.setImageName("0123456789abcdef0123456789abcdef.png");
+        when(items.findById(ITEM_ID)).thenReturn(Optional.of(item));
+        when(identifiers.findAllByItemId(ITEM_ID)).thenReturn(List.of());
+        when(items.existsByImageName("0123456789abcdef0123456789abcdef.png")).thenReturn(true);
+
+        service.delete(COLLECTION_ID, ITEM_ID);
+
+        verify(imageService, never()).delete(any());
+    }
+
+    @Test
+    void createStoresADownloadedCoverLocallyAndPointsTheAttributeAtIt() {
+        givenModule();
+        when(imageService.downloadToLocal("https://example.com/cover.png"))
+                .thenReturn(Optional.of("0123456789abcdef0123456789abcdef.png"));
+
+        service.create(COLLECTION_ID, request("OWNED", Map.of("title", "Dune", "providerImageUrl", "https://example.com/cover.png")));
+
+        ArgumentCaptor<ItemEntity> saved = ArgumentCaptor.forClass(ItemEntity.class);
+        verify(items).save(saved.capture());
+        assertThat(saved.getValue().getImageName()).isEqualTo("0123456789abcdef0123456789abcdef.png");
+        assertThat(saved.getValue().getAttributes()).contains("/api/assets/0123456789abcdef0123456789abcdef.png");
+    }
+
+    @Test
+    void createRemovesTheDownloadedCoverWhenSavingFails() {
+        givenModule();
+        when(imageService.downloadToLocal("https://example.com/cover.png"))
+                .thenReturn(Optional.of("0123456789abcdef0123456789abcdef.png"));
+        when(items.save(any())).thenThrow(new IllegalStateException("database down"));
+
+        assertThatThrownBy(() -> service.create(COLLECTION_ID,
+                request("OWNED", Map.of("title", "Dune", "providerImageUrl", "https://example.com/cover.png"))))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(imageService).delete("0123456789abcdef0123456789abcdef.png");
+    }
+
+    @Test
+    void createIgnoresACoverPathThatIsNotAStoredFileName() {
+        givenModule();
+
+        service.create(COLLECTION_ID, request("OWNED", Map.of("title", "Dune", "providerImageUrl", "/api/assets/../../etc/passwd")));
+
+        ArgumentCaptor<ItemEntity> saved = ArgumentCaptor.forClass(ItemEntity.class);
+        verify(items).save(saved.capture());
+        assertThat(saved.getValue().getImageName()).isNull();
+        assertThat(saved.getValue().getAttributes()).doesNotContain("etc/passwd");
+    }
+
+    @Test
+    void createKeepsOneIdentifierPerTypeAndTheLastValueWins() {
+        givenModule();
+        var ids = List.of(
+                new ItemIdentifierDto(ItemIdentifierEntity.IdType.ISBN13, "111"),
+                new ItemIdentifierDto(ItemIdentifierEntity.IdType.ISBN13, " 222 "),
+                new ItemIdentifierDto(ItemIdentifierEntity.IdType.UPC, "333"));
+
+        service.create(COLLECTION_ID, new CreateItemRequest(MODULE_ID, "OWNED", null, Map.of("title", "Dune"), ids));
+
+        ArgumentCaptor<ItemIdentifierEntity> saved = ArgumentCaptor.forClass(ItemIdentifierEntity.class);
+        verify(identifiers, org.mockito.Mockito.times(2)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(ItemIdentifierEntity::getIdValue).containsExactly("222", "333");
     }
 
     private void givenModule() {
