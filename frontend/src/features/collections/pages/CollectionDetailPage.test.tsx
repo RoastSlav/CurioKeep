@@ -21,6 +21,7 @@ const CONTRACT = {
     fields: [
         field({ key: "title", label: "Title", searchable: true, sortable: true, order: 1 }),
         field({ key: "publisher", label: "Publisher", filterable: true, order: 2 }),
+        field({ key: "old_publisher", label: "Publisher text", deprecated: true, replacedBy: "publisher", order: 9 }),
         field({
             key: "format",
             label: "Format",
@@ -59,9 +60,11 @@ describe("CollectionDetailPage items", () => {
 
     /** The answer for an item list request; tests override it to simulate what the server would return. */
     let listAnswer: (params: URLSearchParams) => { content: unknown[]; totalElements: number; totalPages: number }
+    let countsAnswer: unknown
 
     beforeEach(() => {
         clearAllCached()
+        countsAnswer = { modules: { m1: { total: 60, byState: { OWNED: 50, WISHLIST: 10 }, deprecatedFieldUse: {} } } }
         listAnswer = (params) => {
             const page = Number(params.get("page"))
             return { content: books(page * 25 + 1, 25), totalElements: 60, totalPages: 3 }
@@ -79,7 +82,7 @@ describe("CollectionDetailPage items", () => {
                 case "/api/modules/books":
                     return jsonResponse({ id: "m1", moduleKey: "books", name: "Books", version: "1.0.0", source: "BUILTIN", checksum: "x", contract: CONTRACT, createdAt: "", updatedAt: "" })
                 case "/api/collections/c1/items/counts":
-                    return jsonResponse({ modules: { m1: { total: 60, byState: { OWNED: 50, WISHLIST: 10 } } } })
+                    return jsonResponse(countsAnswer)
                 case "/api/collections/c1/items":
                     return jsonResponse(listAnswer(url.searchParams))
                 default:
@@ -187,6 +190,28 @@ describe("CollectionDetailPage items", () => {
         await userEvent.click(screen.getByRole("button", { name: /switch to ascending/ }))
 
         await waitFor(() => expect(lastListRequest().searchParams.get("sort")).toBe("createdAt,asc"))
+    })
+
+    it("points out items that still use a deprecated field and can show just those", async () => {
+        countsAnswer = { modules: { m1: { total: 60, byState: { OWNED: 50, WISHLIST: 10 }, deprecatedFieldUse: { old_publisher: 7 } } } }
+        renderPage()
+        await titleShown("Book 01")
+
+        expect(await screen.findByText(/7 items/)).toBeInTheDocument()
+        expect(screen.getByText(/replaced by publisher/)).toBeInTheDocument()
+        await userEvent.click(screen.getByRole("button", { name: "Show these items" }))
+
+        await waitFor(() => expect(lastListRequest().searchParams.get("old_publisher.has")).toBe("true"))
+        expect(lastListRequest().searchParams.get("page")).toBe("0")
+        await userEvent.click(await screen.findByRole("button", { name: "Show all items" }))
+        await waitFor(() => expect(lastListRequest().searchParams.has("old_publisher.has")).toBe(false))
+    })
+
+    it("shows no deprecation notice when no item uses a deprecated field", async () => {
+        renderPage()
+        await titleShown("Book 01")
+
+        expect(screen.queryByText(/deprecated/i)).not.toBeInTheDocument()
     })
 
     it("says nothing matched, instead of that the module is empty, when a filter finds nothing", async () => {

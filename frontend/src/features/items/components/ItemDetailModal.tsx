@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import StateDropdown from "./StateDropdown";
 
@@ -221,6 +222,9 @@ export default function ItemDetailModal({
                     >
                       <p className="text-xs font-bold uppercase text-muted-foreground">
                         {field.label || field.key}
+                        {"deprecated" in field && field.deprecated ? (
+                          <Badge variant="outline" className="ml-2 align-middle">Deprecated</Badge>
+                        ) : null}
                       </p>
                       <p className="whitespace-pre-wrap text-sm text-foreground">
                         {formatValue(item.attributes?.[field.key])}

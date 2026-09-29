@@ -6,6 +6,7 @@ import type { Attributes } from "@/features/items/itemTypes";
 import FieldRenderer from "./FieldRenderer"
 import {omitKey} from "@/lib/utils"
 import {validateAttributes, type ValidationErrors} from "./validation"
+import {Badge} from "@/components/ui/badge"
 import {Button} from "@/components/ui/button"
 import {Separator} from "@/components/ui/separator"
 
@@ -18,6 +19,21 @@ export type DynamicFormProps = {
     cancelLabel?: string
     onSubmit: (attributes: Attributes) => void | Promise<void>
     onCancel?: () => void
+}
+
+function hasValue(value: unknown): boolean {
+    if (value === null || value === undefined) return false
+    if (typeof value === "string") return value.trim() !== ""
+    if (Array.isArray(value)) return value.length > 0
+    return true
+}
+
+/** A number typed or suggested as text is saved as a number, which is what the server accepts for a NUMBER field. */
+function coerceForSave(field: FieldContract, value: unknown): unknown {
+    if (field.type === "NUMBER" && typeof value === "string" && value.trim() !== "" && !Number.isNaN(Number(value))) {
+        return Number(value)
+    }
+    return value
 }
 
 function groupFields(visibleFields: FieldContract[]) {
@@ -44,10 +60,16 @@ export default function DynamicForm({
                                         onSubmit,
                                         onCancel,
 }: DynamicFormProps) {
-    const visibleFields = useMemo(() => {
-        const source = fields || moduleDefinition?.fields || []
-        return source.filter((f) => !f.ui?.hidden)
-    }, [fields, moduleDefinition])
+    const allFields = useMemo(() => fields || moduleDefinition?.fields || [], [fields, moduleDefinition])
+
+    // Retired (inactive) fields are not offered. A deprecated field is offered only while this item still has a value in it,
+    // so the user can move that value to the field that replaces it; new items never see it.
+    const currentFields = useMemo(() => allFields.filter((f) => !f.ui?.hidden && f.active !== false && !f.deprecated), [allFields])
+    const deprecatedFields = useMemo(
+        () => allFields.filter((f) => !f.ui?.hidden && f.active !== false && f.deprecated && hasValue(initialValues?.[f.key])),
+        [allFields, initialValues],
+    )
+    const visibleFields = useMemo(() => [...currentFields, ...deprecatedFields], [currentFields, deprecatedFields])
 
     const [values, setValues] = useState<Attributes>(initialValues || {})
     const [errors, setErrors] = useState<ValidationErrors>({})
@@ -75,8 +97,15 @@ export default function DynamicForm({
         })
     }
 
+    const moveToReplacement = (from: string, to: string) => {
+        setValues((prev) => ({...prev, [to]: prev[from], [from]: undefined}))
+        setErrors((prev) => omitKey(omitKey(prev, from), to))
+    }
+
     const prepareAttributes = (): Attributes => {
-        const result: Attributes = {}
+        // Values the form does not show (hidden fields, fields a newer module version removed) are kept as they are. The cover
+        // is managed on its own, so it is not sent back from here.
+        const result: Attributes = omitKey(initialValues || {}, "providerImageUrl")
         visibleFields.forEach((field) => {
             const raw = values[field.key]
             if (field.type === "JSON" && typeof raw === "string" && raw.trim()) {
@@ -88,7 +117,7 @@ export default function DynamicForm({
                     return
                 }
             }
-            result[field.key] = raw
+            result[field.key] = coerceForSave(field, raw)
         })
         return result
     }
@@ -96,7 +125,8 @@ export default function DynamicForm({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const prepared = prepareAttributes()
-        const validation = validateAttributes(visibleFields, prepared)
+        // A deprecated field cannot be required: the module no longer asks for it.
+        const validation = validateAttributes(visibleFields.map((f) => (f.deprecated ? {...f, required: false} : f)), prepared)
         setErrors(validation)
         if (Object.keys(validation).length) return
 
@@ -108,7 +138,7 @@ export default function DynamicForm({
         }
     }
 
-    const groups = useMemo(() => groupFields(visibleFields), [visibleFields])
+    const groups = useMemo(() => groupFields(currentFields), [currentFields])
 
     return (
         <form onSubmit={handleSubmit}>
@@ -133,6 +163,52 @@ export default function DynamicForm({
                         {idx < groups.length - 1 ? <Separator className="bg-border"/> : null}
                     </div>
                 ))}
+
+                {deprecatedFields.length > 0 && (
+                    <section className="flex flex-col gap-4 border-2 border-dashed border-border p-4" aria-labelledby="deprecated-fields-heading">
+                        <div>
+                            <h3 id="deprecated-fields-heading" className="text-base font-bold text-foreground">
+                                Deprecated fields
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                The module no longer uses these. Move each value to the field that replaces it; if you leave it, the value is kept
+                                until a newer version of the module removes the field.
+                            </p>
+                        </div>
+                        {deprecatedFields.map((field) => {
+                            const target = field.replacedBy ? allFields.find((f) => f.key === field.replacedBy) : undefined
+                            const targetFree = target !== undefined && !hasValue(values[target.key])
+                            return (
+                                <div key={field.key} className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline">Deprecated</Badge>
+                                        {target && (
+                                            <span className="text-sm text-muted-foreground">Replaced by {target.label || target.key}</span>
+                                        )}
+                                    </div>
+                                    <FieldRenderer
+                                        field={field}
+                                        value={values[field.key]}
+                                        error={errors[field.key] || undefined}
+                                        disabled={disabled || submitting}
+                                        onChange={(val) => handleChange(field.key, val)}
+                                        onBlur={() => handleBlur(field)}
+                                    />
+                                    {target && (
+                                        <div className="flex items-center gap-3">
+                                            <Button type="button" size="sm" variant="outline" disabled={!targetFree || disabled || submitting} onClick={() => moveToReplacement(field.key, target.key)}>
+                                                Move to {target.label || target.key}
+                                            </Button>
+                                            {!targetFree && hasValue(values[target.key]) && (
+                                                <span className="text-sm text-muted-foreground">{target.label || target.key} already has a value.</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </section>
+                )}
 
                 <div className="flex justify-end gap-3">
                     {onCancel && (

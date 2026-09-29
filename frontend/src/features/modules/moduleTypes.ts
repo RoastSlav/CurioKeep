@@ -59,6 +59,8 @@ export type FieldContract = {
   constraints?: Constraints;
   ui?: UiHints;
   providerMappings: ProviderMapping[];
+  /** Key of the field that takes over from this deprecated one. */
+  replacedBy?: string;
 };
 
 export type StateContract = {

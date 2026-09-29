@@ -75,3 +75,13 @@ describe("filterParams", () => {
         })).toBe(2)
     })
 })
+
+describe("the has filter", () => {
+    it("is sent as <fieldKey>.has=true and always counts as active", () => {
+        const filters: FieldFilters = { old_authors: { kind: "has" } }
+
+        expect(filterParams(filters)).toEqual({ "old_authors.has": "true" })
+        expect(countActiveFilters(filters)).toBe(1)
+        expect(cleanFilters(filters)).toEqual(filters)
+    })
+})

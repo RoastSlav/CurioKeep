@@ -5,6 +5,8 @@ export type FieldFilter =
     | { kind: "contains"; text: string }
     | { kind: "range"; min?: number; max?: number }
     | { kind: "dates"; from?: string; to?: string }
+    /** The field holds a value. Set from the deprecated-fields notice, not from the filter dialog. */
+    | { kind: "has" }
 
 export type FieldFilters = Record<string, FieldFilter>
 
@@ -43,6 +45,8 @@ function isEmpty(filter: FieldFilter): boolean {
             return filter.min === undefined && filter.max === undefined
         case "dates":
             return !filter.from && !filter.to
+        case "has":
+            return false
     }
 }
 
@@ -73,6 +77,9 @@ export function filterParams(filters: FieldFilters): Record<string, string> {
             case "dates":
                 if (filter.from) params[`${key}.from`] = filter.from
                 if (filter.to) params[`${key}.to`] = filter.to
+                break
+            case "has":
+                params[`${key}.has`] = "true"
                 break
         }
     }

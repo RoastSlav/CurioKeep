@@ -21,6 +21,8 @@ export type ItemListQuery = {
 export type ModuleItemCounts = {
   total: number;
   byState: Record<string, number>;
+  /** For each deprecated field that still has values, how many items hold one. */
+  deprecatedFieldUse: Record<string, number>;
 };
 
 export type ItemCounts = {

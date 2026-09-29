@@ -11,6 +11,7 @@ import ModuleSelector from "../components/ModuleSelector";
 import CollectionActionsMenu from "../components/CollectionActionsMenu";
 import { getCollection, listCollectionModules } from "../api/collectionsApi";
 import ItemsList from "../../items/components/ItemsList";
+import { DeprecatedFieldsNotice, type DeprecatedFieldUse } from "../../items/components/DeprecatedFieldsNotice";
 import { ImportItemsDialog } from "../../items/components/ImportItemsDialog";
 import { ItemFiltersDialog } from "../../items/components/ItemFiltersDialog";
 import { ItemsPagination } from "../../items/components/ItemsPagination";
@@ -156,6 +157,15 @@ export default function CollectionDetailPage() {
     () => Object.fromEntries(modules.map((m) => [m.moduleKey, counts[m.moduleId]?.total ?? 0])),
     [modules, counts]
   );
+  const deprecatedUsage = useMemo<DeprecatedFieldUse[]>(
+    () =>
+      Object.entries(moduleCounts?.deprecatedFieldUse ?? {}).flatMap(([key, count]) => {
+        const field = moduleDetails?.contract.fields.find((f) => f.key === key);
+        return field ? [{ field, count }] : [];
+      }),
+    [moduleCounts, moduleDetails]
+  );
+  const showingDeprecated = Object.entries(list.filters).find(([, filter]) => filter.kind === "has")?.[0];
   const filterFields = useMemo(() => filterableFields(moduleDetails?.contract.fields), [moduleDetails]);
   const activeFilterCount = countActiveFilters(list.filters);
   const filtersActive = search !== "" || list.states.length > 0 || activeFilterCount > 0;
@@ -375,6 +385,13 @@ export default function CollectionDetailPage() {
         states={moduleDetails?.contract?.states}
         activeState={list.states[0] ?? null}
         onFilterChange={(stateKey) => list.setStates(stateKey ? [stateKey] : [])}
+      />
+
+      <DeprecatedFieldsNotice
+        usage={deprecatedUsage}
+        showing={showingDeprecated}
+        onShow={(fieldKey) => list.setFilters({ [fieldKey]: { kind: "has" } })}
+        onClear={() => list.setFilters({})}
       />
 
       {!modules.length ? (
