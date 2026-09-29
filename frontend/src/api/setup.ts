@@ -1,6 +1,6 @@
-import { apiFetch } from "./client";
-import { clearCached, getCached, setCached, DEFAULT_CACHE_TTL } from "./cache";
-import type { SetupStatus } from "./types";
+import {apiFetch} from "./client";
+import {clearCached, DEFAULT_CACHE_TTL, getCached, setCached} from "./cache";
+import type {SetupStatus} from "./types";
 
 const SETUP_STATUS_CACHE_KEY = "setup:status";
 
@@ -21,7 +21,10 @@ export async function getSetupStatus({
   }
 
   const status = await apiFetch<SetupStatus>("/setup/status");
-  setCached(SETUP_STATUS_CACHE_KEY, status, ttlMs, true);
+    // Only a finished setup is cached: it never reverts, whereas a cached "required" goes stale as soon as the admin is created.
+    if (!status.setupRequired) {
+        setCached(SETUP_STATUS_CACHE_KEY, status, ttlMs, true);
+    }
   return status;
 }
 

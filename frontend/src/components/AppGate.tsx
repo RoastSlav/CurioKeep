@@ -1,18 +1,11 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import { ApiError, isApiError } from "../api/errors";
-import { getSetupStatus } from "../api/setup";
-import { useAuth } from "../auth/useAuth";
-import { SetupStatusContext, type SetupStatusContextValue } from "./setupStatusContext";
+import type {ReactNode} from "react";
+import {useCallback, useEffect, useMemo, useState,} from "react";
+import {ApiError, isApiError} from "../api/errors";
+import {getSetupStatus} from "../api/setup";
+import {useAuth} from "../auth/useAuth";
+import {SetupStatusContext, type SetupStatusContextValue} from "./setupStatusContext";
 
 export default function AppGate({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
   const { refreshMe } = useAuth();
 
   const [setupRequired, setSetupRequired] = useState<boolean>(false);
@@ -27,12 +20,9 @@ export default function AppGate({ children }: { children: ReactNode }) {
         const status = await getSetupStatus({ forceRefresh });
         setSetupRequired(status.setupRequired);
 
-        if (status.setupRequired) {
-          navigate("/setup", { replace: true });
-          return;
-        }
-
-        await refreshMe();
+          if (!status.setupRequired) {
+              await refreshMe();
+          }
       } catch (err) {
         const apiErr = err as ApiError;
         setError(isApiError(apiErr) ? apiErr.message : "Failed to check setup");
@@ -40,7 +30,7 @@ export default function AppGate({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [navigate, refreshMe]
+      [refreshMe]
   );
 
   useEffect(() => {
