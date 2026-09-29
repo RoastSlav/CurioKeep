@@ -3,6 +3,7 @@ package org.rostislav.curiokeep.modules;
 import org.rostislav.curiokeep.modules.contract.Constraints;
 import org.rostislav.curiokeep.modules.contract.EnumValue;
 import org.rostislav.curiokeep.modules.contract.FieldContract;
+import org.rostislav.curiokeep.modules.contract.FieldType;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.BooleanNode;
@@ -38,6 +39,11 @@ public final class FieldValues {
             case TAGS -> value.isArray() && value.size() <= MAX_TAGS && allStrings(value);
             case JSON -> true;
         };
+    }
+
+    /** Whether the field's value is a single scalar that can be compared, so a module can ask for it to be unique in a collection. */
+    public static boolean canBeUnique(FieldType type) {
+        return type == FieldType.TEXT || type == FieldType.LINK || type == FieldType.NUMBER || type == FieldType.DATE;
     }
 
     /**

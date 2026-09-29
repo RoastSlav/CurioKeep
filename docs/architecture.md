@@ -87,6 +87,10 @@ All filters must match. Every order ends with the creation time and the id, so p
 
 A module can declare migrations (`MOVE`, `COPY`, `MAP`, `DEFAULT`, `DROP` steps, see [modules.md](modules.md)). `GET /api/collections/{id}/items/migration?moduleId=` previews them for the collection's items of that module: it reads every item that is behind, in batches, and returns the counts and a few examples without writing. `POST` on the same path accepts them. Both need the collection ADMIN role. Accepting rewrites items in batches of 200 in creation order, one transaction per batch, sets each item's `module_version` to the module's current version, and leaves items on a newer version alone. It cannot be undone and nothing is recorded but a log line. The steps themselves run in `MigrationEngine`, a pure function of the module contract and an item's attributes.
 
+## Unique fields
+
+A field a module marks `uniqueWithinCollection` is checked when an item is created, updated or imported (`ItemUniqueness`). A single save asks the database whether another item of the module in the collection holds the value (case-insensitive, trimmed); an import loads the existing values of each unique field once and checks the file against them and against itself. There is no database constraint behind it, because the fields differ per module and live in JSONB, so it is a check, not a guarantee under concurrent writes.
+
 ## Exporting and importing items
 
 `GET /api/collections/{id}/export` downloads a collection's items and needs viewer access. It is streamed in batches read in creation order, so a large collection does not have to fit in memory.

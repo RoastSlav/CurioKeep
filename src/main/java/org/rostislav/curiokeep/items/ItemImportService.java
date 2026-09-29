@@ -65,13 +65,14 @@ public class ItemImportService {
     private final ModuleQueryService modules;
     private final CollectionAccessService access;
     private final CurrentUserService currentUser;
+    private final ItemUniqueness uniqueness;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate tx;
     private final Clock clock;
 
     public ItemImportService(ItemRepository items, ItemIdentifierRepository identifiers, CollectionModuleRepository collectionModules,
                              ModuleDefinitionRepository moduleDefinitions, ModuleQueryService modules, CollectionAccessService access,
-                             CurrentUserService currentUser, ObjectMapper objectMapper, TransactionTemplate tx, Clock clock) {
+                             CurrentUserService currentUser, ItemUniqueness uniqueness, ObjectMapper objectMapper, TransactionTemplate tx, Clock clock) {
         this.items = items;
         this.identifiers = identifiers;
         this.collectionModules = collectionModules;
@@ -79,6 +80,7 @@ public class ItemImportService {
         this.modules = modules;
         this.access = access;
         this.currentUser = currentUser;
+        this.uniqueness = uniqueness;
         this.objectMapper = objectMapper;
         this.tx = tx;
         this.clock = clock;
@@ -91,6 +93,7 @@ public class ItemImportService {
         JsonNode entries = itemsOf(parse(content));
         if (entries.size() > MAX_ITEMS) throw badRequest("TOO_MANY_ITEMS");
         Map<String, EnabledModule> enabled = enabledModules(collectionId);
+        ItemUniqueness.Claims claims = uniqueness.claims(collectionId);
 
         List<ImportResult.ItemError> errors = new ArrayList<>();
         int[] failed = {0};
@@ -98,7 +101,7 @@ public class ItemImportService {
         List<Prepared> pending = new ArrayList<>();
         for (int index = 0; index < entries.size(); index++) {
             try {
-                pending.add(prepare(index, entries.get(index), collectionId, userId, enabled));
+                pending.add(prepare(index, entries.get(index), collectionId, userId, enabled, claims));
             } catch (ResponseStatusException invalid) {
                 fail(index, invalid.getReason(), errors, failed);
             }
@@ -135,7 +138,8 @@ public class ItemImportService {
         return byKey;
     }
 
-    private Prepared prepare(int index, JsonNode entry, UUID collectionId, UUID userId, Map<String, EnabledModule> enabled) {
+    private Prepared prepare(int index, JsonNode entry, UUID collectionId, UUID userId, Map<String, EnabledModule> enabled,
+                             ItemUniqueness.Claims claims) {
         if (!entry.isObject()) throw badRequest("INVALID_ITEM");
         String moduleKey = text(entry, "module");
         if (moduleKey == null) throw badRequest("MODULE_REQUIRED");
@@ -147,6 +151,7 @@ public class ItemImportService {
 
         ObjectNode attributes = attributesOf(entry);
         ItemAttributeValidator.validate(module.contract(), attributes);
+        claims.claim(module.id(), module.contract(), attributes);
 
         String title = text(entry, "title");
         if (title == null && attributes.path("title").isString()) title = attributes.path("title").asString();

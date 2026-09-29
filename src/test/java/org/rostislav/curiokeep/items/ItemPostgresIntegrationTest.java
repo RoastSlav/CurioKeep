@@ -82,6 +82,8 @@ class ItemPostgresIntegrationTest {
     @Autowired
     ModuleDefinitionRepository moduleRepository;
     @Autowired
+    ItemUniquenessRepository uniqueValues;
+    @Autowired
     ObjectMapper objectMapper;
     @Autowired
     TransactionTemplate transactions;
@@ -524,6 +526,33 @@ class ItemPostgresIntegrationTest {
                 + "AND (jsonb_exists(attributes, 'legacy') OR jsonb_exists(attributes, 'old_notes'))", Long.class, collection)).isZero();
         assertThat(jdbc.queryForObject("SELECT attributes->>'old_notes' FROM item WHERE collection_id = ? AND title = 'Current'", String.class, collection)).isEqualTo("kept");
         assertThat(service.apply(collection, moduleId).migrated()).isZero();
+    }
+
+    @Test
+    void aValueIsTakenWhenAnotherItemOfTheCollectionHoldsItIgnoringCaseAndSpaces() {
+        seed();
+        UUID hyperion = jdbc.queryForObject("SELECT id FROM item WHERE collection_id = ? AND title = 'Hyperion'", UUID.class, collectionId);
+
+        assertThat(uniqueValues.isTaken(collectionId, moduleId, "publisher", "  bantam ", null)).isTrue();
+        assertThat(uniqueValues.isTaken(collectionId, moduleId, "publisher", "bantam", hyperion)).isFalse();
+        assertThat(uniqueValues.isTaken(collectionId, moduleId, "publisher", "Penguin", null)).isFalse();
+        assertThat(uniqueValues.isTaken(collectionId, moduleId, "missing_field", "bantam", null)).isFalse();
+    }
+
+    @Test
+    void aValueHeldOnlyInAnotherCollectionIsNotTaken() {
+        seed();
+
+        assertThat(uniqueValues.isTaken(otherCollectionId, moduleId, "authors", "Nobody", null)).isFalse();
+        assertThat(uniqueValues.isTaken(collectionId, moduleId, "authors", "Nobody", null)).isTrue();
+    }
+
+    @Test
+    void theStoredValuesOfAnAttributeAreListedForTheCollectionOnly() {
+        seed();
+
+        assertThat(uniqueValues.valuesOf(collectionId, moduleId, "publisher")).containsExactlyInAnyOrder("Ace", "Ace", "Ace", "Bantam");
+        assertThat(uniqueValues.valuesOf(otherCollectionId, moduleId, "publisher")).isEmpty();
     }
 
     @Test

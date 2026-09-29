@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.items;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -47,6 +48,7 @@ public class ItemService {
     private final ObjectMapper objectMapper;
     private final ItemImageService imageService;
     private final ItemSearchRepository search;
+    private final ItemUniqueness uniqueness;
     private final TransactionTemplate tx;
 
     public ItemService(
@@ -58,6 +60,7 @@ public class ItemService {
             ObjectMapper objectMapper,
             ItemImageService imageService,
             ItemSearchRepository search,
+            ItemUniqueness uniqueness,
             TransactionTemplate tx
     ) {
         this.items = items;
@@ -68,6 +71,7 @@ public class ItemService {
         this.objectMapper = objectMapper;
         this.imageService = imageService;
         this.search = search;
+        this.uniqueness = uniqueness;
         this.tx = tx;
     }
 
@@ -93,7 +97,9 @@ public class ItemService {
         ItemStateRules.validate(contract, req.stateKey());
 
         Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes() == null ? Map.of() : req.attributes());
-        ItemAttributeValidator.validate(contract, toJsonNode(attrsMap));
+        JsonNode submitted = toJsonNode(attrsMap);
+        ItemAttributeValidator.validate(contract, submitted);
+        uniqueness.requireUnique(collectionId, req.moduleId(), contract, submitted, null, null);
         // The cover is downloaded before the transaction starts so a slow host cannot hold a database connection.
         ImageProcessResult imageResult = handleImage(attrsMap);
         JsonNode attrs = toJsonNode(attrsMap);
@@ -152,7 +158,9 @@ public class ItemService {
         ImageProcessResult imageResult = ImageProcessResult.NONE;
         if (req.attributes() != null) {
             Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes());
-            ItemAttributeValidator.validate(contract, toJsonNode(attrsMap));
+            JsonNode submitted = toJsonNode(attrsMap);
+            ItemAttributeValidator.validate(contract, submitted);
+            uniqueness.requireUnique(collectionId, current.getModuleId(), contract, submitted, readAttributes(current), current.getId());
             imageResult = handleImage(attrsMap);
             attrs = toJsonNode(attrsMap);
         }
@@ -389,6 +397,15 @@ public class ItemService {
     private void replaceIdentifiers(UUID itemId, List<ItemIdentifierDto> ids) {
         identifiers.deleteAll(identifiers.findAllByItemId(itemId));
         upsertIdentifiers(itemId, ids);
+    }
+
+    /** The attributes as stored, or null when they cannot be read, in which case every submitted value counts as changed. */
+    private JsonNode readAttributes(ItemEntity item) {
+        try {
+            return objectMapper.readTree(item.getAttributes());
+        } catch (JacksonException e) {
+            return null;
+        }
     }
 
     private JsonNode toJsonNode(Map<String, Object> attributes) {

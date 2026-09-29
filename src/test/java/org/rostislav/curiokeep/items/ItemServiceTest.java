@@ -13,6 +13,7 @@ import org.rostislav.curiokeep.items.api.dto.CreateItemRequest;
 import org.rostislav.curiokeep.items.api.dto.ItemCountsResponse;
 import org.rostislav.curiokeep.items.api.dto.ItemIdentifierDto;
 import org.rostislav.curiokeep.items.api.dto.ItemResponse;
+import org.rostislav.curiokeep.items.api.dto.UpdateItemRequest;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
@@ -30,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
@@ -40,6 +42,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -69,6 +73,8 @@ class ItemServiceTest {
     ItemImageService imageService;
     @Mock
     ItemSearchRepository search;
+    @Mock
+    ItemUniqueness uniqueness;
 
     ItemService service;
     ModuleDefinitionEntity moduleEntity;
@@ -76,7 +82,7 @@ class ItemServiceTest {
     @BeforeEach
     void setUp() {
         service = new ItemService(items, identifiers, currentUser, access, modules, new ObjectMapper(), imageService,
-                search, new TransactionTemplate(mock(PlatformTransactionManager.class)));
+                search, uniqueness, new TransactionTemplate(mock(PlatformTransactionManager.class)));
 
         AppUserEntity user = new AppUserEntity();
         user.setId(USER_ID);
@@ -158,6 +164,34 @@ class ItemServiceTest {
         assertThat(saved.getValue().getCreatedBy()).isEqualTo(USER_ID);
         assertThat(saved.getValue().getModuleVersion()).isEqualTo("1.0.0");
         assertThat(saved.getValue().getAttributes()).contains("\"title\":\"Dune\"").contains("\"pages\":412");
+    }
+
+    @Test
+    void createStopsBeforeSavingWhenAUniqueValueIsTaken() {
+        givenModule();
+        doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "DUPLICATE_FIELD_title"))
+                .when(uniqueness).requireUnique(eq(COLLECTION_ID), eq(MODULE_ID), any(), any(), isNull(), isNull());
+
+        assertThatThrownBy(() -> service.create(COLLECTION_ID, request("OWNED", Map.of("title", "Dune"))))
+                .isInstanceOfSatisfying(ResponseStatusException.class, ex -> {
+                    assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(ex.getReason()).isEqualTo("DUPLICATE_FIELD_title");
+                });
+        verify(items, never()).save(any());
+    }
+
+    @Test
+    void updateChecksUniquenessAgainstTheStoredValuesAndExcludesTheItemItself() {
+        givenModule();
+        ItemEntity stored = item(COLLECTION_ID);
+        stored.setAttributes("{\"title\":\"Dune\"}");
+        when(items.findById(ITEM_ID)).thenReturn(Optional.of(stored));
+
+        service.update(COLLECTION_ID, ITEM_ID, new UpdateItemRequest(null, null, Map.of("title", "Dune Messiah"), null));
+
+        ArgumentCaptor<JsonNode> storedAttributes = ArgumentCaptor.forClass(JsonNode.class);
+        verify(uniqueness).requireUnique(eq(COLLECTION_ID), eq(MODULE_ID), any(), any(), storedAttributes.capture(), eq(ITEM_ID));
+        assertThat(storedAttributes.getValue().get("title").asString()).isEqualTo("Dune");
     }
 
     @Test

@@ -71,7 +71,8 @@ public class ItemController {
         return service.counts(collectionId);
     }
 
-    @Operation(summary = "Create item", description = "Creates a new item for a module in the collection. Attributes are validated against the module contract.")
+    @Operation(summary = "Create item", description = "Creates a new item for a module in the collection. Attributes are validated against the module contract; "
+            + "a value in a field the module declares unique that another item of the collection already holds is refused with 409.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Item created",
                     content = @Content(schema = @Schema(implementation = ItemResponse.class))),
@@ -103,7 +104,8 @@ public class ItemController {
         return service.get(collectionId, itemId);
     }
 
-    @Operation(summary = "Update item", description = "Updates item fields. If attributes are present they are validated against the module contract.")
+    @Operation(summary = "Update item", description = "Updates item fields. If attributes are present they are validated against the module contract; "
+            + "a changed value in a field the module declares unique that another item of the collection already holds is refused with 409.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Item updated",
                     content = @Content(schema = @Schema(implementation = ItemResponse.class))),

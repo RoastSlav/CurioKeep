@@ -254,6 +254,9 @@ public class ModuleLoadTx {
         if ((c.min() != null || c.max() != null) && f.type() != FieldType.NUMBER) {
             log.warn("{} has a min or max constraint but is not a NUMBER field; it is ignored", where);
         }
+        if (Boolean.TRUE.equals(c.uniqueWithinCollection()) && !FieldValues.canBeUnique(f.type())) {
+            log.warn("{} asks for uniqueWithinCollection but is not a TEXT, LINK, NUMBER or DATE field; it is ignored", where);
+        }
         if (c.min() != null && c.max() != null && c.min() > c.max()) {
             log.warn("{} has min greater than max, so no value can satisfy it", where);
         }

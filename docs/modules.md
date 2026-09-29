@@ -67,7 +67,9 @@ At run time the API enforces valid state keys, that `required` fields are presen
 | `TAGS` | a list of strings |
 | `JSON` | anything |
 
-Keys the module does not declare are left alone, and the attributes as a whole may not exceed 256 KB. `uniqueWithinCollection` is not enforced yet.
+Keys the module does not declare are left alone, and the attributes as a whole may not exceed 256 KB.
+
+A field with `uniqueWithinCollection="true"` (`TEXT`, `LINK`, `NUMBER` or `DATE`) may hold a given value in only one item of the module per collection. Values are compared ignoring case and surrounding spaces, and an empty value never conflicts. A save that would repeat a value is refused with `409 DUPLICATE_FIELD_<key>`, and an import skips such an item with the same reason. Two saves at the same moment can both pass, and duplicates that already exist are left alone: editing an item that keeps its current value is never blocked by them.
 
 ## Changing a module without losing data
 
@@ -164,7 +166,7 @@ Children, all optional:
 
 - `<identifiers>`: marks the field as holding an identifier (`ISBN10`, `ISBN13`, `UPC`, `EAN`, `ASIN`, `CUSTOM`). Identifier fields are what the add-item lookup sends to providers (the value entered is matched to a provider that supports that identifier type). The values are stored as ordinary attributes; the API can also record separate item identifiers, but the web app does not send them.
 - `<enumValues><value key="HARDCOVER" label="Hardcover"/>…</enumValues>`: choices for an `ENUM` field.
-- `<constraints min max minLength maxLength pattern multi uniqueWithinCollection/>`: `min` and `max` apply to `NUMBER`, `minLength`, `maxLength` and `pattern` (a regular expression, written as it is, so `\d` and not `\\d`) to `TEXT` and `LINK`. Both the web form and the server check them. A constraint that cannot work (a pattern on a number, `min` above `max`, an invalid expression) is ignored and logged as a warning when the module loads. `multi` makes an `ENUM` field multi-select. `uniqueWithinCollection` is not enforced yet.
+- `<constraints min max minLength maxLength pattern multi uniqueWithinCollection/>`: `min` and `max` apply to `NUMBER`, `minLength`, `maxLength` and `pattern` (a regular expression, written as it is, so `\d` and not `\\d`) to `TEXT` and `LINK`. Both the web form and the server check them. `uniqueWithinCollection` is enforced by the server (see the table above). A constraint that cannot work (a pattern on a number, `min` above `max`, an invalid expression) is ignored and logged as a warning when the module loads. `multi` makes an `ENUM` field multi-select. `uniqueWithinCollection` is not enforced yet.
 - `<ui widget group hidden>` with `<placeholder>` and `<helpText>`: presentation hints. Fields with the same `group` are shown together; `hidden` removes a field from the form.
 - `<providerMappings>`: see below.
 - `<defaultValue>`: the value a new item starts with. It is read as the field's type; one that cannot be read as such (text in a `NUMBER` field) is ignored with a warning.

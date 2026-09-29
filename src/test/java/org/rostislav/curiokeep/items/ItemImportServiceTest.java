@@ -72,13 +72,15 @@ class ItemImportServiceTest {
     CollectionAccessService access;
     @Mock
     CurrentUserService currentUser;
+    @Mock
+    ItemUniquenessRepository uniquenessRepository;
 
     final ObjectMapper mapper = new ObjectMapper();
     ItemImportService service;
 
     @BeforeEach
     void setUp() {
-        service = new ItemImportService(items, identifiers, collectionModules, moduleDefinitions, modules, access, currentUser, mapper,
+        service = new ItemImportService(items, identifiers, collectionModules, moduleDefinitions, modules, access, currentUser, new ItemUniqueness(uniquenessRepository), mapper,
                 new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC));
         AppUserEntity user = new AppUserEntity();
         user.setId(USER);
@@ -91,6 +93,10 @@ class ItemImportServiceTest {
     }
 
     private void givenBooksModule() {
+        givenBooksModule(null);
+    }
+
+    private void givenBooksModule(Constraints titleConstraints) {
         ModuleDefinitionEntity def = new ModuleDefinitionEntity();
         def.setId(BOOKS);
         def.setModuleKey("books");
@@ -101,7 +107,7 @@ class ItemImportServiceTest {
         when(modules.getContract(def)).thenReturn(new ModuleContract("books", "1.0.0", "Books", null, null,
                 List.of(new StateContract("OWNED", "Owned", 1, true, false, Map.of()), new StateContract("WISHLIST", "Wishlist", 2, true, false, Map.of())),
                 List.of(),
-                List.of(field("title", FieldType.TEXT, true, null), field("pages", FieldType.NUMBER, false, new Constraints(1.0, 5000.0, null, null, null, null, null))),
+                List.of(field("title", FieldType.TEXT, true, titleConstraints), field("pages", FieldType.NUMBER, false, new Constraints(1.0, 5000.0, null, null, null, null, null))),
                 List.of(), Map.of()));
     }
 
@@ -163,6 +169,37 @@ class ItemImportServiceTest {
             assertThat(item.getModuleId()).isEqualTo(BOOKS);
             assertThat(item.getCreatedBy()).isEqualTo(USER);
         });
+    }
+
+    @Test
+    void skipsItemsWhoseUniqueValueIsAlreadyInTheCollectionOrEarlierInTheFile() {
+        givenBooksModule(new Constraints(null, null, null, null, null, null, true));
+        List<ItemEntity> saved = captureSavedItems();
+        when(uniquenessRepository.valuesOf(COLLECTION, BOOKS, "title")).thenReturn(List.of("Dune"));
+
+        ImportResult result = run(file(
+                entry("{\"title\":\" dune \"}"),
+                entry("{\"title\":\"Emma\"}"),
+                entry("{\"title\":\"EMMA\"}"),
+                entry("{\"title\":\"Persuasion\"}")));
+
+        assertThat(result.imported()).isEqualTo(2);
+        assertThat(result.errors()).extracting(ImportResult.ItemError::index).containsExactly(0, 2);
+        assertThat(result.errors()).extracting(ImportResult.ItemError::reason).containsOnly("DUPLICATE_FIELD_title");
+        assertThat(saved).extracting(ItemEntity::getTitle).containsExactly("Emma", "Persuasion");
+    }
+
+    @Test
+    void anItemThatFailsAnotherCheckDoesNotUseUpItsUniqueValue() {
+        givenBooksModule(new Constraints(null, null, null, null, null, null, true));
+        captureSavedItems();
+
+        ImportResult result = run(file(
+                entry("{\"title\":\"Emma\",\"pages\":\"many\"}"),
+                entry("{\"title\":\"Emma\"}")));
+
+        assertThat(result.imported()).isEqualTo(1);
+        assertThat(result.errors()).extracting(ImportResult.ItemError::reason).containsExactly("INVALID_FIELD_pages");
     }
 
     @Test
