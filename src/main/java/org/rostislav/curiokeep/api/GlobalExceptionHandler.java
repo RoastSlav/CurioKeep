@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String REQUIRED_FIELD = "MISSING_REQUIRED_FIELD_";
+    private static final String INVALID_FIELD = "INVALID_FIELD_";
+    private static final String DUPLICATE_FIELD = "DUPLICATE_FIELD_";
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiError> illegalState(IllegalStateException ex) {
@@ -100,7 +103,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleRse(ResponseStatusException ex) {
         return ResponseEntity.status(ex.getStatusCode())
-                .body(new ApiError(ex.getReason(), ex.getMessage()));
+                .body(new ApiError(ex.getReason(), describe(ex)));
+    }
+
+    /**
+     * The text a person can read. {@code getMessage()} would prefix the status and quote the reason, and the per-field reason
+     * codes of item saves mean nothing to a user, so those are put into words.
+     */
+    private static String describe(ResponseStatusException ex) {
+        String reason = ex.getReason();
+        if (reason == null) return "Request failed";
+        if (reason.startsWith(REQUIRED_FIELD)) return reason.substring(REQUIRED_FIELD.length()) + " is required";
+        if (reason.startsWith(INVALID_FIELD)) return reason.substring(INVALID_FIELD.length()) + " has an invalid value";
+        if (reason.startsWith(DUPLICATE_FIELD)) return "Another item in this collection already has this " + reason.substring(DUPLICATE_FIELD.length());
+        return reason;
     }
 
     private static ResponseEntity<ApiError> clientError(HttpStatus status, String code, String message, Exception ex) {
