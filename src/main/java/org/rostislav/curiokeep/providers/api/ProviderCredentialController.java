@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.providers.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.rostislav.curiokeep.providers.credentials.ProviderCredentialField;
@@ -51,7 +52,7 @@ public class ProviderCredentialController {
     @Operation(summary = "Store credentials for a provider")
     @PostMapping
     public ProviderCredentialStatusResponse update(@PathVariable String key,
-                                                  @RequestBody UpdateProviderCredentialsRequest req) {
+                                                  @Valid @RequestBody UpdateProviderCredentialsRequest req) {
         ProviderDescriptor descriptor = descriptorFor(key);
         List<ProviderCredentialField> fields = descriptor.credentialFields();
         if (fields.isEmpty()) {

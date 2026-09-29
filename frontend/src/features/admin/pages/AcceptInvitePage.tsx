@@ -1,4 +1,5 @@
 import { getErrorMessage } from "@/api/errors";
+import { passwordProblem } from "@/auth/passwordPolicy";
 import type React from "react"
 
 import { useCallback, useEffect, useState } from "react"
@@ -60,8 +61,9 @@ export default function AcceptInvitePage() {
       return
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters")
+    const weakness = passwordProblem(password)
+    if (weakness) {
+      setError(weakness)
       return
     }
 

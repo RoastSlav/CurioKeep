@@ -52,7 +52,7 @@ describe("AppGate", () => {
     })
 
     it("checks the setup status once, not on every navigation", async () => {
-        vi.mocked(getSetupStatus).mockResolvedValue({ setupRequired: false })
+        vi.mocked(getSetupStatus).mockResolvedValue({ setupRequired: false, tokenRequired: false })
         renderGate()
         await screen.findByText("setup complete")
 
@@ -65,7 +65,7 @@ describe("AppGate", () => {
     })
 
     it("leaves the redirect to the routes and skips the session lookup while setup is required", async () => {
-        vi.mocked(getSetupStatus).mockResolvedValue({ setupRequired: true })
+        vi.mocked(getSetupStatus).mockResolvedValue({ setupRequired: true, tokenRequired: false })
         renderGate()
 
         await waitFor(() => expect(screen.getByText("setup required")).toBeInTheDocument())

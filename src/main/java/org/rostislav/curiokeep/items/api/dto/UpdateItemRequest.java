@@ -1,5 +1,7 @@
 package org.rostislav.curiokeep.items.api.dto;
 
+import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
@@ -36,6 +38,6 @@ public record UpdateItemRequest(
                 description = "If provided, replaces identifiers for this item (full replace, not merge).",
                 nullable = true
         )
-        List<ItemIdentifierDto> identifiers
+        @Valid @Size(max = 20) List<ItemIdentifierDto> identifiers
 ) {
 }

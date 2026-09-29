@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.collections.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -59,7 +60,7 @@ public class CollectionMemberController {
     })
     @SecurityRequirement(name = "sessionAuth")
     @PutMapping("/{collectionId}/members/{userId}")
-    public CollectionMemberResponse updateRole(@PathVariable UUID collectionId, @PathVariable UUID userId, @RequestBody UpdateMemberRoleRequest req) {
+    public CollectionMemberResponse updateRole(@PathVariable UUID collectionId, @PathVariable UUID userId, @Valid @RequestBody UpdateMemberRoleRequest req) {
         return memberService.updateRole(collectionId, userId, req);
     }
 
@@ -86,7 +87,7 @@ public class CollectionMemberController {
     })
     @SecurityRequirement(name = "sessionAuth")
     @PostMapping("/{collectionId}/invites")
-    public CreateCollectionInviteResponse createInvite(@PathVariable UUID collectionId, @RequestBody CreateCollectionInviteRequest req) {
+    public CreateCollectionInviteResponse createInvite(@PathVariable UUID collectionId, @Valid @RequestBody CreateCollectionInviteRequest req) {
         return inviteService.createInvite(collectionId, req);
     }
 
@@ -129,7 +130,7 @@ public class CollectionMemberController {
     })
     @SecurityRequirement(name = "sessionAuth")
     @PostMapping("/invites/accept")
-    public CollectionMemberResponse accept(@RequestBody AcceptCollectionInviteRequest req) {
+    public CollectionMemberResponse accept(@Valid @RequestBody AcceptCollectionInviteRequest req) {
         return inviteService.accept(req);
     }
 }

@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 
 export type SetupStatusContextValue = {
   setupRequired: boolean;
+  tokenRequired: boolean;
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;

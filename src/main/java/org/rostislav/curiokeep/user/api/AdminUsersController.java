@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -62,7 +63,7 @@ public class AdminUsersController {
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/{id}/status")
-    public ResponseEntity<OkResponse> updateStatus(@PathVariable UUID id, @RequestBody UpdateUserStatusRequest req) {
+    public ResponseEntity<OkResponse> updateStatus(@PathVariable UUID id, @Valid @RequestBody UpdateUserStatusRequest req) {
         if (req == null || req.status() == null || req.status().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required");
         }
@@ -90,7 +91,7 @@ public class AdminUsersController {
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/{id}/admin")
-    public ResponseEntity<OkResponse> updateAdmin(@PathVariable UUID id, @RequestBody UpdateUserAdminRequest req) {
+    public ResponseEntity<OkResponse> updateAdmin(@PathVariable UUID id, @Valid @RequestBody UpdateUserAdminRequest req) {
         if (req == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body is required");
 
         AppUserEntity target = users.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));

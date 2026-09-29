@@ -1,5 +1,11 @@
 server:
   port: 8080
+  # Trust X-Forwarded-* from private-network proxies only, so the client address and https-ness are right behind a reverse proxy.
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        same-site: lax
 
 spring:
   datasource:
@@ -21,6 +27,12 @@ spring:
   jackson:
     default-property-inclusion: non_empty
 
+  servlet:
+    multipart:
+      # Slightly above the 5 MB cover limit, so an oversize file is answered with 413 rather than cut off.
+      max-file-size: 6MB
+      max-request-size: 6MB
+
 logging:
   level:
     root: INFO
@@ -40,6 +52,9 @@ curiokeep:
     import-dir: ./data/modules-imported
   assets:
     dir: ./data/assets
+  setup:
+    # When set, creating the first admin requires this token. Use it if the server is reachable before you finish setup.
+    token: ${CURIOKEEP_SETUP_TOKEN:}
   providers:
     credentials:
       encryption:

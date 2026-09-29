@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -54,8 +55,18 @@ class InviteControllerTest {
 
         mockMvc.perform(post("/api/invites/accept")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"token\":\"token\",\"password\":\"pw\",\"displayName\":\"User\"}"))
+                        .content("{\"token\":\"token\",\"password\":\"a-long-secret-1\",\"displayName\":\"User\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(true));
+    }
+
+    @Test
+    void acceptRejectsAWeakPasswordBeforeTouchingTheInvite() throws Exception {
+        mockMvc.perform(post("/api/invites/accept")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"token\",\"password\":\"pw\",\"displayName\":\"User\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(inviteService);
     }
 }

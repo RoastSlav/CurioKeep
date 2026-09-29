@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -64,7 +65,7 @@ public class InviteController {
             )
     })
     @PostMapping("/accept")
-    public ResponseEntity<OkResponse> accept(@RequestBody AcceptInviteRequest req) {
+    public ResponseEntity<OkResponse> accept(@Valid @RequestBody AcceptInviteRequest req) {
         inviteService.acceptInvite(req.token(), req.password(), req.displayName());
         return ResponseEntity.ok(new OkResponse(true));
     }

@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.items.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -67,7 +68,7 @@ public class ItemController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping
-    public ItemResponse create(@PathVariable UUID collectionId, @RequestBody CreateItemRequest req) {
+    public ItemResponse create(@PathVariable UUID collectionId, @Valid @RequestBody CreateItemRequest req) {
         return service.create(collectionId, req);
     }
 
@@ -101,7 +102,7 @@ public class ItemController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PutMapping("/{itemId}")
-    public ItemResponse update(@PathVariable UUID collectionId, @PathVariable UUID itemId, @RequestBody UpdateItemRequest req) {
+    public ItemResponse update(@PathVariable UUID collectionId, @PathVariable UUID itemId, @Valid @RequestBody UpdateItemRequest req) {
         return service.update(collectionId, itemId, req);
     }
 
@@ -119,7 +120,7 @@ public class ItemController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/{itemId}/state")
-    public ItemResponse changeState(@PathVariable UUID collectionId, @PathVariable UUID itemId, @RequestBody ChangeStateRequest req) {
+    public ItemResponse changeState(@PathVariable UUID collectionId, @PathVariable UUID itemId, @Valid @RequestBody ChangeStateRequest req) {
         return service.changeState(collectionId, itemId, req);
     }
 
@@ -157,7 +158,7 @@ public class ItemController {
     public ItemResponse setImageFromUrl(
             @PathVariable UUID collectionId,
             @PathVariable UUID itemId,
-            @RequestBody ItemImageUrlRequest req
+            @Valid @RequestBody ItemImageUrlRequest req
     ) {
                 String url = req == null ? null : req.url();
                 return service.setImageFromUrl(collectionId, itemId, url);

@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
 @Configuration
@@ -34,15 +35,20 @@ public class SecurityConfig {
         return new HttpSessionSecurityContextRepository();
     }
 
+    /** The frontend reads this cookie and sends its value back in the X-XSRF-TOKEN header (see api/client.ts). */
+    private static CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.sameSite("Lax"));
+        return repository;
+    }
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, SetupModeFilter setupModeFilter) {
         return http
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(
-                                "/api/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**"
-                        )
+                        .csrfTokenRepository(csrfTokenRepository())
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                        .ignoringRequestMatchers("/v3/api-docs/**", "/swagger-ui/**")
                 )
                 .addFilterBefore(setupModeFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth

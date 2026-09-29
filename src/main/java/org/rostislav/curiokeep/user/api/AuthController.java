@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -10,12 +11,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.rostislav.curiokeep.api.dto.ApiError;
 import org.rostislav.curiokeep.user.AppUserRepository;
+import org.rostislav.curiokeep.user.LoginThrottle;
 import org.rostislav.curiokeep.user.api.dto.LoginRequest;
 import org.rostislav.curiokeep.user.api.dto.MeResponse;
 import org.rostislav.curiokeep.user.api.dto.OkResponse;
 import org.rostislav.curiokeep.user.entities.AppUserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,7 +33,10 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Map;
 
 @Tag(name = "Auth", description = "Session authentication")
@@ -40,12 +46,15 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private final AuthenticationManager authManager;
     private final AppUserRepository users;
+    private final LoginThrottle throttle;
     private final SecurityContextRepository securityContextRepository;
 
-    public AuthController(AuthenticationManager authManager, AppUserRepository users, SecurityContextRepository securityContextRepository) {
+    public AuthController(AuthenticationManager authManager, AppUserRepository users,
+                          SecurityContextRepository securityContextRepository, LoginThrottle throttle) {
         this.securityContextRepository = securityContextRepository;
         this.authManager = authManager;
         this.users = users;
+        this.throttle = throttle;
     }
 
     @Operation(summary = "Login", description = "Creates an authenticated session (JSESSIONID cookie).", security = {})
@@ -56,21 +65,34 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
+        String email = req.email().trim().toLowerCase(Locale.ROOT);
+        String address = request.getRemoteAddr();
+
+        Optional<Duration> wait = throttle.blockedFor(address, email);
+        if (wait.isPresent()) {
+            log.warn("Login throttled for address={}", address);
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header(HttpHeaders.RETRY_AFTER, String.valueOf(Math.max(1, wait.get().toSeconds())))
+                    .body(new ApiError("TOO_MANY_ATTEMPTS", "Too many failed attempts. Try again later."));
+        }
+
         Authentication auth;
         try {
-            auth = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    req.email().trim().toLowerCase(),
-                    req.password()
-                )
-            );
-        } catch (BadCredentialsException e) {
-            log.warn("Login failed: bad credentials for email={}", req.email());
+            auth = authManager.authenticate(new UsernamePasswordAuthenticationToken(email, req.password()));
+        } catch (BadCredentialsException | IllegalArgumentException e) {
+            throttle.recordFailure(address, email);
+            log.warn("Login failed: bad credentials from address={}", address);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError("UNAUTHORIZED", "Invalid email or password"));
         } catch (Exception e) {
-            log.error("Login failed: unexpected error for email={}", req.email(), e);
+            log.error("Login failed: unexpected error from address={}", address, e);
             throw new AuthenticationServiceException("Login failed", e);
+        }
+        throttle.recordSuccess(address, email);
+
+        // A session that existed before login must not survive it, otherwise its id could have been planted beforehand.
+        if (request.getSession(false) != null) {
+            request.changeSessionId();
         }
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
@@ -78,9 +100,7 @@ public class AuthController {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, request, response);
 
-        request.getSession(true);
-
-        users.findByEmailIgnoreCase(req.email().trim().toLowerCase()).ifPresent(u -> {
+        users.findByEmailIgnoreCase(email).ifPresent(u -> {
             u.setLastLoginAt(OffsetDateTime.now());
             users.save(u);
         });

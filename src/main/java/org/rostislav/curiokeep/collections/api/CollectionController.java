@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.collections.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -72,7 +73,7 @@ public class CollectionController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping
-    public CollectionResponse create(@RequestBody CreateCollectionRequest req) {
+    public CollectionResponse create(@Valid @RequestBody CreateCollectionRequest req) {
         return service.create(req);
     }
 
@@ -118,7 +119,7 @@ public class CollectionController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PutMapping("/{id}")
-    public CollectionResponse update(@PathVariable UUID id, @RequestBody UpdateCollectionRequest req) {
+    public CollectionResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateCollectionRequest req) {
         return service.update(id, req);
     }
 

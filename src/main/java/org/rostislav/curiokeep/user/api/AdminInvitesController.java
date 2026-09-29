@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -69,7 +70,7 @@ public class AdminInvitesController {
     })
     @PreAuthorize("hasAuthority('APP_ADMIN')")
     @PostMapping
-    public ResponseEntity<CreateInviteResponse> createInvite(@RequestBody CreateInviteRequest req) {
+    public ResponseEntity<CreateInviteResponse> createInvite(@Valid @RequestBody CreateInviteRequest req) {
         String token = inviteService.createInvite(req.email());
         return ResponseEntity.ok(new CreateInviteResponse(token));
     }

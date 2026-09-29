@@ -9,6 +9,7 @@ export default function AppGate({ children }: { children: ReactNode }) {
   const { refreshMe } = useAuth();
 
   const [setupRequired, setSetupRequired] = useState<boolean>(false);
+  const [tokenRequired, setTokenRequired] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,6 +20,7 @@ export default function AppGate({ children }: { children: ReactNode }) {
       try {
         const status = await getSetupStatus({ forceRefresh });
         setSetupRequired(status.setupRequired);
+        setTokenRequired(status.tokenRequired);
 
           if (!status.setupRequired) {
               await refreshMe();
@@ -40,12 +42,13 @@ export default function AppGate({ children }: { children: ReactNode }) {
   const value = useMemo<SetupStatusContextValue>(
     () => ({
       setupRequired,
+      tokenRequired,
       loading,
       error,
       reload: () => checkSetup(true),
       setSetupRequired,
     }),
-    [setupRequired, loading, error, checkSetup, setSetupRequired]
+    [setupRequired, tokenRequired, loading, error, checkSetup, setSetupRequired]
   );
 
   return (

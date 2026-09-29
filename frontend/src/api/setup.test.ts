@@ -18,7 +18,7 @@ describe("getSetupStatus", () => {
     })
 
     it("asks the server again while setup is still required", async () => {
-        apiFetchMock.mockResolvedValue({ setupRequired: true })
+        apiFetchMock.mockResolvedValue({ setupRequired: true, tokenRequired: false })
 
         await getSetupStatus()
         await getSetupStatus()
@@ -27,21 +27,21 @@ describe("getSetupStatus", () => {
     })
 
     it("serves a completed setup from the cache", async () => {
-        apiFetchMock.mockResolvedValue({ setupRequired: false })
+        apiFetchMock.mockResolvedValue({ setupRequired: false, tokenRequired: false })
 
         await getSetupStatus()
         const second = await getSetupStatus()
 
-        expect(second).toEqual({ setupRequired: false })
+        expect(second).toEqual({ setupRequired: false, tokenRequired: false })
         expect(apiFetchMock).toHaveBeenCalledTimes(1)
     })
 
     it("sees a completed setup right after a required one", async () => {
-        apiFetchMock.mockResolvedValueOnce({ setupRequired: true })
-        apiFetchMock.mockResolvedValueOnce({ setupRequired: false })
+        apiFetchMock.mockResolvedValueOnce({ setupRequired: true, tokenRequired: false })
+        apiFetchMock.mockResolvedValueOnce({ setupRequired: false, tokenRequired: false })
 
         await getSetupStatus()
 
-        await expect(getSetupStatus()).resolves.toEqual({ setupRequired: false })
+        await expect(getSetupStatus()).resolves.toEqual({ setupRequired: false, tokenRequired: false })
     })
 })

@@ -13,6 +13,7 @@ export type LoginRequest = {
 
 export type SetupStatus = {
     setupRequired: boolean;
+    tokenRequired: boolean;
 };
 
 export type Collection = {

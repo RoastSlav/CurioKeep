@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.user.api;
 
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,12 +15,15 @@ import org.rostislav.curiokeep.user.api.dto.SetupStatusResponse;
 import org.rostislav.curiokeep.user.entities.AppUserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 
 
@@ -30,10 +34,14 @@ public class SetupController {
     private static final Logger log = LoggerFactory.getLogger(SetupController.class);
     private final AppUserRepository users;
     private final PasswordEncoder encoder;
+    private final String setupToken;
+    private final Object setupLock = new Object();
 
-    public SetupController(AppUserRepository users, PasswordEncoder encoder) {
+    public SetupController(AppUserRepository users, PasswordEncoder encoder,
+                           @Value("${curiokeep.setup.token:}") String setupToken) {
         this.users = users;
         this.encoder = encoder;
+        this.setupToken = setupToken;
     }
 
     @Operation(summary = "Check if setup is required", description = "Returns true if no admin user exists yet.",
@@ -45,7 +53,7 @@ public class SetupController {
     @GetMapping("/status")
     public SetupStatusResponse status() {
         boolean setupRequired = !users.existsByIsAdminTrue();
-        return new SetupStatusResponse(setupRequired);
+        return new SetupStatusResponse(setupRequired, setupRequired && !setupToken.isBlank());
     }
 
     @Operation(summary = "Create initial admin user",
@@ -60,23 +68,35 @@ public class SetupController {
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     @PostMapping("/admin")
-    public ResponseEntity<?> createAdmin(@RequestBody CreateAdminRequest req) {
-        if (users.existsByIsAdminTrue()) {
-            log.warn("Setup blocked: admin already exists");
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "ADMIN_ALREADY_EXISTS");
+    public ResponseEntity<?> createAdmin(@Valid @RequestBody CreateAdminRequest req) {
+        if (!setupToken.isBlank() && !tokenMatches(req.setupToken())) {
+            log.warn("Setup blocked: wrong or missing setup token");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "SETUP_TOKEN_INVALID");
         }
 
+        // One admin request at a time, so two simultaneous first-run calls cannot both pass the check.
+        synchronized (setupLock) {
+            if (users.existsByIsAdminTrue()) {
+                log.warn("Setup blocked: admin already exists");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "ADMIN_ALREADY_EXISTS");
+            }
 
-        AppUserEntity u = new AppUserEntity();
-        u.setEmail(req.email().trim().toLowerCase());
-        u.setDisplayName(req.displayName().trim());
-        u.setPasswordHash(encoder.encode(req.password()));
-        u.setAdmin(true);
-        u.setStatus("ACTIVE");
-        u.setAuthProvider("LOCAL");
+            AppUserEntity u = new AppUserEntity();
+            u.setEmail(req.email().trim().toLowerCase());
+            u.setDisplayName(req.displayName().trim());
+            u.setPasswordHash(encoder.encode(req.password()));
+            u.setAdmin(true);
+            u.setStatus("ACTIVE");
+            u.setAuthProvider("LOCAL");
 
-        users.save(u);
+            users.save(u);
+        }
 
         return ResponseEntity.ok(Map.of("created", true));
+    }
+
+    private boolean tokenMatches(String supplied) {
+        if (supplied == null) return false;
+        return MessageDigest.isEqual(supplied.getBytes(StandardCharsets.UTF_8), setupToken.getBytes(StandardCharsets.UTF_8));
     }
 }

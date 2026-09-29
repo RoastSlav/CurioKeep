@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.items.api.dto;
 
+import jakarta.validation.constraints.Size;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
@@ -13,6 +14,6 @@ public record ChangeStateRequest(
                 example = "OWNED",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
-        @NotBlank String stateKey
+        @NotBlank @Size(max = 64) String stateKey
 ) {
 }

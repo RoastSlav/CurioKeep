@@ -1,5 +1,7 @@
 package org.rostislav.curiokeep.items.api.dto;
 
+import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
@@ -32,6 +34,6 @@ public record CreateItemRequest(
         @NotNull Map<String, Object> attributes,
 
         @Schema(description = "Optional identifiers (ISBN etc.)")
-        List<ItemIdentifierDto> identifiers
+        @Valid @Size(max = 20) List<ItemIdentifierDto> identifiers
 ) {
 }

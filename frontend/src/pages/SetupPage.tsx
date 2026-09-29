@@ -3,6 +3,7 @@ import {useMemo, useState} from "react"
 import type {FormEvent} from "react"
 import {Navigate, useNavigate} from "react-router-dom"
 import {apiFetch} from "../api/client"
+import {passwordProblem} from "../auth/passwordPolicy"
 import {type ApiError, isApiError} from "../api/errors"
 import { useSetupStatus } from "../components/setupStatusContext"
 import { useToast } from "../components/toastContext"
@@ -16,13 +17,14 @@ import {Alert, AlertDescription} from "@/components/ui/alert"
 
 export default function SetupPage() {
     const navigate = useNavigate()
-    const {setupRequired, loading, error, reload, setSetupRequired} = useSetupStatus()
+    const {setupRequired, tokenRequired, loading, error, reload, setSetupRequired} = useSetupStatus()
     const {showToast} = useToast()
 
     const [email, setEmail] = useState("")
     const [displayName, setDisplayName] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
+    const [setupToken, setSetupToken] = useState("")
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -52,6 +54,11 @@ export default function SetupPage() {
             setSubmitError("Password is required")
             return
         }
+        const weakness = passwordProblem(password)
+        if (weakness) {
+            setSubmitError(weakness)
+            return
+        }
         if (password !== confirmPassword) {
             setSubmitError("Passwords do not match")
             return
@@ -59,13 +66,14 @@ export default function SetupPage() {
 
         setSubmitting(true)
         try {
-            await apiFetch("/setup/admin", {method: "POST", body: {email, password, displayName}})
+            await apiFetch("/setup/admin", {method: "POST", body: {email, password, displayName, setupToken: tokenRequired ? setupToken : undefined}})
             setSetupRequired(false)
             showToast("Admin account created", "success")
             navigate("/login", {replace: true})
         } catch (err) {
             const apiErr = err as ApiError
-            setSubmitError(isApiError(apiErr) ? apiErr.message : "Setup failed")
+            const tokenRejected = isApiError(apiErr) && apiErr.status === 403
+            setSubmitError(tokenRejected ? "The setup token is not correct" : isApiError(apiErr) ? apiErr.message : "Setup failed")
         } finally {
             setSubmitting(false)
         }
@@ -85,6 +93,20 @@ export default function SetupPage() {
                                 <AlertCircle className="h-4 w-4"/>
                                 <AlertDescription>{submitError}</AlertDescription>
                             </Alert>
+                        )}
+                        {tokenRequired && (
+                            <div className="space-y-2">
+                                <Label htmlFor="setupToken">Setup token *</Label>
+                                <Input
+                                    id="setupToken"
+                                    type="password"
+                                    value={setupToken}
+                                    onChange={(e) => setSetupToken(e.target.value)}
+                                    placeholder="From the server configuration"
+                                    required
+                                    autoComplete="off"
+                                />
+                            </div>
                         )}
                         <div className="space-y-2">
                             <Label htmlFor="email">Email *</Label>
