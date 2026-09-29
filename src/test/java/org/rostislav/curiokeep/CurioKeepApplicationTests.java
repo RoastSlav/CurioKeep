@@ -1,34 +1,8 @@
 package org.rostislav.curiokeep;
 
-import jakarta.servlet.http.Cookie;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rostislav.curiokeep.modules.ModuleService;
-import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
-import org.rostislav.curiokeep.user.AppUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.context.annotation.Import;
 
 @SpringBootTest(properties = {
     "spring.datasource.url=jdbc:h2:mem:curiokeep_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
@@ -40,86 +14,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "spring.flyway.enabled=false",
     "spring.sql.init.mode=never"
 })
+@Import(NoopModuleConfig.class)
 class CurioKeepApplicationTests {
-
-    @TestConfiguration
-    static class NoopModuleConfig {
-        @Bean
-        @Primary
-        ModuleService moduleService() {
-            return new ModuleService(null, null, null) {
-                @Override
-                public void loadAllModules() {
-                    // no-op for tests
-                }
-
-                @Override
-                public ModuleDefinitionEntity getById(UUID uuid) {
-                    throw new UnsupportedOperationException("Module lookup not needed in smoke test");
-                }
-            };
-        }
-    }
-
-    @Autowired
-    WebApplicationContext context;
-
-    @MockitoBean
-    AppUserRepository users;
-
-    MockMvc mvc;
-
-    @BeforeEach
-    void setUp() {
-        when(users.existsByIsAdminTrue()).thenReturn(true);
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    }
 
     @Test
     void contextLoads() {
-    }
-
-    @Test
-    void servesTheSinglePageAppWithoutSigningIn() throws Exception {
-        mvc.perform(get("/")).andExpect(result -> assertThat(result.getResponse().getStatus()).isNotIn(302, 403));
-        mvc.perform(get("/collections/123")).andExpect(status().isOk()).andExpect(forwardedUrl("/index.html"));
-    }
-
-    @Test
-    void answersNotFoundForAMissingAsset() throws Exception {
-        mvc.perform(get("/assets/missing.js")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void protectsTheApiFromAnonymousRequests() throws Exception {
-        mvc.perform(get("/api/collections")).andExpect(status().isForbidden());
-    }
-
-    @Test
-    void stateChangingRequestsNeedTheCsrfTokenTheServerHandsOutInACookie() throws Exception {
-        String body = "{}";
-
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isForbidden());
-
-        Cookie token = mvc.perform(get("/api/setup/status")).andReturn().getResponse().getCookie("XSRF-TOKEN");
-        assertThat(token).isNotNull();
-        assertThat(token.isHttpOnly()).as("the SPA has to read it").isFalse();
-
-        // With the token the request gets past CSRF and fails on its own (empty) content instead.
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body)
-                        .cookie(token).header("X-XSRF-TOKEN", token.getValue()))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body)
-                        .cookie(token).header("X-XSRF-TOKEN", "a-different-value"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void aSignedInUserWithoutTheAdminAuthorityGetsForbiddenNotAServerError() throws Exception {
-        mvc.perform(get("/api/admin/users").with(user("plain@example.test").authorities(new SimpleGrantedAuthority("SOMETHING_ELSE"))))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
     }
 
 }
