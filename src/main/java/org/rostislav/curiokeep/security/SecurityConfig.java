@@ -54,7 +54,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/setup/**").permitAll()
                         .requestMatchers("/api/invites/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/**", "/actuator/**").authenticated()
+                        // The bundled SPA (index.html, assets and its client-side routes) has to load before anyone has signed in.
+                        .anyRequest().permitAll()
                 )
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())

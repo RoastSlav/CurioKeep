@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -16,6 +17,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> illegalState(IllegalStateException ex) {
         log.warn("Illegal state exception occurred", ex);
         return ResponseEntity.badRequest().body(new ApiError("BAD_REQUEST", ex.getMessage()));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> noResource() {
+        return ResponseEntity.status(404).body(new ApiError("NOT_FOUND", "Not found"));
     }
 
     @ExceptionHandler(Exception.class)
