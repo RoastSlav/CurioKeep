@@ -190,10 +190,38 @@
           },
           "default": []
         },
+        "chains": {
+          "type": "array",
+          "description": "After this provider returns a result, look up one of its normalized fields as an identifier in another provider of the module.",
+          "items": {
+            "$ref": "#/$defs/providerChain"
+          },
+          "default": []
+        },
         "extensions": {
           "type": "object",
           "additionalProperties": true,
           "default": {}
+        }
+      }
+    },
+    "providerChain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "idType"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Key of the normalized field of this provider's result that holds the identifier.",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "to": {
+          "type": "string",
+          "description": "Key of the module provider that is asked for it.",
+          "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+        },
+        "idType": {
+          "$ref": "#/$defs/identifierType"
         }
       }
     },

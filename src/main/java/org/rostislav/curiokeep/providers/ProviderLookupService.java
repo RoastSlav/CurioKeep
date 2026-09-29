@@ -7,7 +7,6 @@ import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.modules.entities.ModuleFieldEntity;
 import org.springframework.stereotype.Service;
 import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -58,17 +57,19 @@ public class ProviderLookupService {
 
         List<ProviderResult> results = new ArrayList<>();
 
-        boolean comicvineEnabled = providerSpecs.stream()
-            .anyMatch(p -> "comicvine".equals(p.key()) && p.enabled());
+        Map<String, ModuleProviderSpec> activeProviders = new LinkedHashMap<>();
+        providerSpecs.forEach(spec -> activeProviders.put(spec.key(), spec));
+        Set<String> asked = new HashSet<>();
 
         for (ModuleProviderSpec spec : providerSpecs) {
             registry.get(spec.key()).ifPresent(provider -> {
                 for (ItemIdentifierEntity id : identifiers) {
                     if (!provider.supports(id.getIdType())) continue;
+                    asked.add(ProviderChainingService.askedKey(spec.key(), id.getIdType(), id.getIdValue()));
                     try {
                         provider.fetch(id.getIdType(), id.getIdValue()).ifPresent(pr -> {
                             results.add(pr);
-                            chainingService.applyChains(spec, pr, comicvineEnabled, results);
+                            chainingService.follow(spec, pr, activeProviders, asked, results);
                         });
                     } catch (Exception ex) {
                         log.warn("Provider {} failed for {}: {}", spec.key(), id.getIdValue(), ex.getMessage());
@@ -120,7 +121,7 @@ public class ProviderLookupService {
                 Candidate candidate = candidateByProvider.get(spec.key());
                 if (candidate == null) continue;
                 Map<String, Object> mapped = mappedCache.computeIfAbsent(candidate.result().providerKey(), providerKey -> {
-                    JsonNode normNode = safeNormalizedNode(candidate.result());
+                    JsonNode normNode = NormalizedFields.of(objectMapper, candidate.result());
                     try {
                         return mapper.mapFields(normNode, fields, candidate.result().providerKey());
                     } catch (Exception ex) {
@@ -158,25 +159,6 @@ public class ProviderLookupService {
         List<ProviderAsset> uniqueAssets = dedupeAssets(assets);
 
         return new LookupResponse(results, best, merged, uniqueAssets);
-    }
-
-    private JsonNode safeNormalizedNode(ProviderResult r) {
-        Object nf = r.normalizedFields();
-        try {
-            if (nf instanceof Map<?, ?> m) {
-                if (m.size() == 1 && m.containsKey("json") && m.get("json") instanceof String s) {
-                    return objectMapper.readTree(s);
-                }
-                return objectMapper.valueToTree(m);
-            }
-            if (nf instanceof String s) {
-                return objectMapper.readTree(s);
-            }
-            return objectMapper.valueToTree(nf);
-        } catch (JacksonException ex) {
-            log.warn("Failed to parse normalizedFields from provider {}: {}", r.providerKey(), ex.getMessage());
-            return objectMapper.createObjectNode();
-        }
     }
 
     private List<ProviderAsset> dedupeAssets(List<ProviderAsset> assets) {

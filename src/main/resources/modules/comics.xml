@@ -43,6 +43,8 @@
                 <identifier type="CUSTOM"/>
             </supports>
             <priority>1</priority>
+            <!-- Metron cross-references Comic Vine; fetch that record too so its fields can fill gaps -->
+            <chain from="comicvine_id" to="comicvine"/>
         </provider>
 
         <provider key="comicvine" enabled="true">

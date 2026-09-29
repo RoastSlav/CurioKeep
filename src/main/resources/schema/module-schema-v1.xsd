@@ -218,6 +218,16 @@
             </xs:element>
 
             <xs:element name="priority" type="xs:int" minOccurs="0"/>
+
+            <!-- After this provider returns a result, look up one of its normalized fields as an identifier in another provider -->
+            <xs:element name="chain" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="from" type="FieldKeyType" use="required"/>
+                    <xs:attribute name="to" type="ProviderKeyType" use="required"/>
+                    <xs:attribute name="idType" type="IdentifierType" use="optional" default="CUSTOM"/>
+                </xs:complexType>
+            </xs:element>
+
             <xs:element name="extensions" type="extensionsType" minOccurs="0"/>
         </xs:sequence>
 

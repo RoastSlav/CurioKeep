@@ -247,6 +247,59 @@ class ModuleLoadTxTest {
         load(requiring("0.9.0"));
     }
 
+    /** Adds chains after the priority of the given bundled books provider, using a regex because the file has Windows line endings. */
+    private String withChains(String providerKey, String chains) throws Exception {
+        return booksXml().replaceFirst("(<provider key=\"" + providerKey + "\"[\\s\\S]*?</priority>)", "$1" + chains);
+    }
+
+    @Test
+    void aProviderChainCompilesIntoTheContractWithCustomAsTheDefaultIdentifierType() throws Exception {
+        String xml = withChains("openlibrary", "<chain from=\"isbn13\" to=\"googlebooks\" idType=\"ISBN13\"/><chain from=\"gb_id\" to=\"googlebooks\"/>");
+
+        ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(xml));
+
+        assertThat(contract.providers().stream().filter(p -> p.key().equals("openlibrary")).findFirst().orElseThrow().chains())
+                .extracting(c -> c.from() + ">" + c.to() + ":" + c.idType())
+                .containsExactly("isbn13>googlebooks:ISBN13", "gb_id>googlebooks:CUSTOM");
+        load(xml);
+    }
+
+    @Test
+    void aChainMustTargetADeclaredProviderOtherThanItsOwn() throws Exception {
+        assertRejected(withChains("openlibrary", "<chain from=\"isbn13\" to=\"ghost\"/>"), "names a provider the module does not declare");
+        assertRejected(withChains("openlibrary", "<chain from=\"isbn13\" to=\"openlibrary\"/>"), "points back at the same provider");
+    }
+
+    @Test
+    void chainsThatLeadBackToTheirStartAreRejected() throws Exception {
+        String xml = withChains("googlebooks", "<chain from=\"ol_id\" to=\"openlibrary\"/>")
+                .replaceFirst("(<provider key=\"openlibrary\"[\\s\\S]*?</priority>)", "$1<chain from=\"gb_id\" to=\"googlebooks\"/>");
+
+        assertRejected(xml, "lead back to it");
+    }
+
+    @Test
+    void theSchemaRejectsAChainWithAnUnknownIdentifierTypeOrKey() throws Exception {
+        assertRejectedBySchema(withChains("openlibrary", "<chain from=\"isbn13\" to=\"googlebooks\" idType=\"NOPE\"/>"), "NOPE");
+        assertRejectedBySchema(withChains("openlibrary", "<chain from=\"Not A Key\" to=\"googlebooks\"/>"), "Not A Key");
+    }
+
+    @Test
+    void theBundledComicsModuleChainsMetronToComicVine() throws Exception {
+        String xml;
+        try (var in = new ClassPathResource("modules/comics.xml").getInputStream()) {
+            xml = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(xml));
+
+        assertThat(contract.providers().stream().filter(p -> p.key().equals("metron")).findFirst().orElseThrow().chains())
+                .singleElement().satisfies(c -> {
+                    assertThat(c.from()).isEqualTo("comicvine_id");
+                    assertThat(c.to()).isEqualTo("comicvine");
+                });
+    }
+
     private String withMigration(String to, String steps) throws Exception {
         return booksXml().replace("</workflows>", "</workflows><migrations><migration to=\"" + to + "\">" + steps + "</migration></migrations>");
     }

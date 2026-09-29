@@ -50,6 +50,7 @@ For each module file, in this order (`ModuleLoadTx`):
 | Workflow steps refer only to declared fields and providers | semantic check |
 | A `PROMPT` step names a field, or has a `query`; `query` is allowed only on `PROMPT` | semantic check |
 | The application is at least the module's `<minAppVersion>` (a `-SNAPSHOT` suffix on the application version is ignored; nothing is refused when the version is unknown, as when running from an IDE) | semantic check |
+| A `<chain>` names a provider the module declares other than its own, and chains do not lead back to where they started | semantic check |
 | Migration versions are unique, are not newer than the module's `version`, and each step carries exactly the attributes its `op` uses | XSD, semantic check |
 | A migration step's target field is declared and live (not deprecated or inactive); `MAP` is used on `ENUM` or `TAGS` fields, maps to declared values, and lists each source value once; `DEFAULT` holds a value the field accepts; `DROP` names a field that is no longer live | semantic check |
 
@@ -140,6 +141,24 @@ At least one `<state key="OWNED" label="Owned" order="1"/>`. Keys are upper snak
 ```
 
 Declares which providers this module may use. `enabled` defaults to on. `priority` (integer, **higher wins**) picks the "best" result when several providers answer. `supports` tells the UI which identifiers make a workflow possible. This is declarative only; the implementation lives in the backend.
+
+#### Chaining providers
+
+A provider's result often names a record in another service. A `<chain>` tells the lookup to follow that reference:
+
+```xml
+<provider key="metron" enabled="true">
+    <supports> ... </supports>
+    <priority>1</priority>
+    <chain from="comicvine_id" to="comicvine"/>
+</provider>
+```
+
+After `metron` returns a result, the lookup takes that result's normalized field `comicvine_id` and asks `comicvine` for it as a `CUSTOM` identifier. The Comic Vine result is then merged like any other, using its own priority and field mappings. Set `idType` (`ISBN10`, `ISBN13`, `UPC`, `EAN`, `ASIN` or `CUSTOM`, default `CUSTOM`) when the target expects another kind of identifier, for example `<chain from="isbn13" to="googlebooks" idType="ISBN13"/>`. A provider can declare several chains.
+
+To add a chain: check in [providers.md](providers.md#chaining-providers) that the source provider emits the field you want in its normalized fields (the "what each provider hands on" table) and that the target accepts the identifier type and value format (the "what each provider accepts" table), declare the target in the same module, and add the `<chain>` line. Nothing else needs changing. The same page lists the chains that make sense between the bundled providers and the ones to avoid.
+
+A chain is skipped, and the lookup carries on, when the result has no value for `from`, when the target is disabled or not in the request's provider list, when it does not support `idType`, or when it fails. A provider is asked for a given identifier at most once per lookup, and chains are followed at most 3 hops deep. Because the value is passed as it is, the target provider is responsible for reading the format it is given (Comic Vine accepts `12345` and `4000-12345`).
 
 ### `<fields>`
 

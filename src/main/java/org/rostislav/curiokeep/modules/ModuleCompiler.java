@@ -127,7 +127,10 @@ public class ModuleCompiler {
                             enabled,
                             priority,
                             supports,
-                            Map.of()
+                            Map.of(),
+                            Optional.ofNullable(p.chains()).orElse(List.of()).stream()
+                                    .map(c -> new ProviderChain(c.from(), c.to(), c.idType() == null ? IdentifierType.CUSTOM : toIdentifierType(c.idType())))
+                                    .toList()
                     );
                 })
                 .toList();

@@ -9,6 +9,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.rostislav.curiokeep.providers.api.dto.LookupResponse;
@@ -83,6 +84,72 @@ class ProviderLookupServiceTest {
         .containsEntry("subtitle", "Being the First Part of the Lord of the Rings")
         .containsEntry("publisher", "HarperCollins Publishers")
         .containsEntry("isbn13", "9780261103573");
+    }
+
+    @Test
+    void aChainDeclaredByTheModuleBringsInTheRecordAnotherProviderReferences() throws Exception {
+        ModuleDefinitionEntity module = new ModuleDefinitionEntity();
+        module.setDefinitionJson("""
+            {"providers":[
+              {"key":"metron","priority":1,"enabled":true,"chains":[{"from":"comicvine_id","to":"comicvine","idType":"CUSTOM"}]},
+              {"key":"comicvine","priority":2,"enabled":true}]}
+            """);
+        module.setFields(List.of(field("title", mappingMap("metron", "/title"), mappingMap("comicvine", "/title")),
+                field("description", mappingMap("metron", "/description"), mappingMap("comicvine", "/description"))));
+        ItemIdentifierEntity upc = new ItemIdentifierEntity();
+        upc.setIdType(ItemIdentifierEntity.IdType.UPC);
+        upc.setIdValue("75960608");
+
+        List<String> comicVineAsked = new java.util.ArrayList<>();
+        MetadataProvider metron = new MetadataProvider() {
+            public String key() { return "metron"; }
+            public boolean supports(ItemIdentifierEntity.IdType idType) { return idType == ItemIdentifierEntity.IdType.UPC; }
+            public Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
+                return Optional.of(new ProviderResult("metron", Map.of(), Map.of("title", "Hulk", "comicvine_id", "4000-77"), List.of(), new ProviderConfidence(80, "upc")));
+            }
+        };
+        MetadataProvider comicvine = new MetadataProvider() {
+            public String key() { return "comicvine"; }
+            public boolean supports(ItemIdentifierEntity.IdType idType) { return idType == ItemIdentifierEntity.IdType.CUSTOM; }
+            public Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
+                comicVineAsked.add(idValue);
+                return Optional.of(new ProviderResult("comicvine", Map.of(), Map.of("title", "Incredible Hulk", "description", "Smash"), List.of(), new ProviderConfidence(95, "id")));
+            }
+        };
+        ProviderLookupService service = new ProviderLookupService(new ProviderRegistry(List.of(metron, comicvine)), new ProviderFieldMapper(objectMapper), objectMapper);
+
+        LookupResponse response = service.lookup(module, List.of(upc));
+
+        assertThat(comicVineAsked).containsExactly("4000-77");
+        assertThat(response.results()).extracting(ProviderResult::providerKey).containsExactly("metron", "comicvine");
+        assertThat(response.mergedAttributes()).containsEntry("title", "Hulk").containsEntry("description", "Smash");
+    }
+
+    @Test
+    void withoutAChainNothingIsLookedUpInTheOtherProvider() throws Exception {
+        ModuleDefinitionEntity module = new ModuleDefinitionEntity();
+        module.setDefinitionJson("""
+            {"providers":[{"key":"metron","priority":1,"enabled":true},{"key":"comicvine","priority":2,"enabled":true}]}
+            """);
+        module.setFields(List.of());
+        ItemIdentifierEntity upc = new ItemIdentifierEntity();
+        upc.setIdType(ItemIdentifierEntity.IdType.UPC);
+        upc.setIdValue("75960608");
+        List<String> comicVineAsked = new java.util.ArrayList<>();
+        MetadataProvider metron = new StubMetadataProvider(new ProviderResult("metron", Map.of(), Map.of("comicvine_id", "4000-77"), List.of(), null));
+        MetadataProvider comicvine = new MetadataProvider() {
+            public String key() { return "comicvine"; }
+            public boolean supports(ItemIdentifierEntity.IdType idType) { return idType == ItemIdentifierEntity.IdType.CUSTOM; }
+            public Optional<ProviderResult> fetch(ItemIdentifierEntity.IdType idType, String idValue) {
+                comicVineAsked.add(idValue);
+                return Optional.empty();
+            }
+        };
+
+        new ProviderLookupService(new ProviderRegistry(List.of(metron, comicvine)), new ProviderFieldMapper(objectMapper), objectMapper)
+                .lookup(module, List.of(upc));
+
+        assertThat(comicVineAsked).isEmpty();
     }
 
     private ModuleFieldEntity field(String key, Map<String, String>... mappings) throws Exception {

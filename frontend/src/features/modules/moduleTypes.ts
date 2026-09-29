@@ -76,6 +76,13 @@ export type ProviderContract = {
   enabled: boolean;
   priority: number;
   supportsIdentifiers: IdentifierType[];
+  chains?: ProviderChain[];
+};
+
+export type ProviderChain = {
+  from: string;
+  to: string;
+  idType: IdentifierType;
 };
 
 // SELECT_IMAGE is inserted client-side by WorkflowRunner; the backend never sends it.

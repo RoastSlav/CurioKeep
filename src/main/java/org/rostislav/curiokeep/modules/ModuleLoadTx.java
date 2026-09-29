@@ -115,6 +115,8 @@ public class ModuleLoadTx {
 
         validateMigrations(m, fieldsByKey, sourceName);
 
+        validateChains(m, sourceName);
+
         // provider mappings must reference declared providers
         java.util.Set<String> providerKeys = m.providers().stream().map(ProviderContract::key).collect(Collectors.toSet());
         for (FieldContract f : m.fields()) {
@@ -173,6 +175,35 @@ public class ModuleLoadTx {
                 }
             }
         }
+    }
+
+    private void validateChains(ModuleContract m, String sourceName) {
+        java.util.Map<String, List<String>> targets = new java.util.HashMap<>();
+        for (ProviderContract provider : m.providers()) {
+            for (ProviderChain chain : provider.chains()) {
+                String where = "[" + sourceName + "] Module '" + m.key() + "': provider '" + provider.key() + "' chain to '" + chain.to() + "'";
+                if (m.providers().stream().noneMatch(p -> p.key().equals(chain.to()))) {
+                    throw new IllegalStateException(where + " names a provider the module does not declare");
+                }
+                if (chain.to().equals(provider.key())) {
+                    throw new IllegalStateException(where + " points back at the same provider");
+                }
+                targets.computeIfAbsent(provider.key(), k -> new java.util.ArrayList<>()).add(chain.to());
+            }
+        }
+        for (String start : targets.keySet()) {
+            if (reaches(targets, start, start, new java.util.HashSet<>())) {
+                throw new IllegalStateException("[" + sourceName + "] Module '" + m.key() + "': provider chains starting at '" + start + "' lead back to it");
+            }
+        }
+    }
+
+    private static boolean reaches(java.util.Map<String, List<String>> targets, String from, String goal, java.util.Set<String> seen) {
+        for (String next : targets.getOrDefault(from, List.of())) {
+            if (next.equals(goal)) return true;
+            if (seen.add(next) && reaches(targets, next, goal, seen)) return true;
+        }
+        return false;
     }
 
     private void validateMigrations(ModuleContract m, java.util.Map<String, FieldContract> fieldsByKey, String sourceName) {
