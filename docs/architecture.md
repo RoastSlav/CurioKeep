@@ -59,7 +59,7 @@ erDiagram
 
 A **module** describes one kind of collectible and is plain data; a **provider** is code that fetches metadata from an external service. A module's `providerMappings` connect the two: they say which key of a provider's normalized result fills which field. Details are in [modules](modules.md) and [providers](providers.md).
 
-At startup every bundled module (`src/main/resources/modules/*.xml`) and every file in the import directory is validated and stored. If any of them is invalid the application does not start; the error lists every failing module.
+At startup every bundled module (`src/main/resources/modules/*.xml`) and every file in the import directory is validated and stored. If any of them is invalid the application does not start; the error lists every failing module. An imported module that needs a newer application than the running one (`minAppVersion`) is skipped with a warning instead. The application knows its own version from the build information the Maven build writes.
 
 ## Adding an item
 

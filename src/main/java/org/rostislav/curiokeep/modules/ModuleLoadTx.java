@@ -32,19 +32,22 @@ public class ModuleLoadTx {
     private final ModuleContractValidator contractValidator;
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final AppVersion appVersion;
 
     public ModuleLoadTx(ModuleXsdValidator xsdValidator,
                         ModuleXmlParser xmlParser,
                         ModuleCompiler moduleCompiler,
                         ModuleContractValidator contractValidator,
                         NamedParameterJdbcTemplate jdbc,
-                        ObjectMapper objectMapper) {
+                        ObjectMapper objectMapper,
+                        AppVersion appVersion) {
         this.xsdValidator = xsdValidator;
         this.xmlParser = xmlParser;
         this.moduleCompiler = moduleCompiler;
         this.contractValidator = contractValidator;
         this.jdbc = jdbc;
-                this.objectMapper = objectMapper;
+        this.objectMapper = objectMapper;
+        this.appVersion = appVersion;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -67,6 +70,12 @@ public class ModuleLoadTx {
 
     private void validateSemantics(ModuleContract m, String sourceName) {
         String moduleKey = m.key();
+
+        String minAppVersion = m.meta() == null ? null : m.meta().minAppVersion();
+        if (!appVersion.satisfies(minAppVersion)) {
+            throw new ModuleRequiresNewerAppException("[" + sourceName + "] Module '" + moduleKey + "' needs CurioKeep " + minAppVersion
+                    + " or newer, this is " + appVersion.value());
+        }
 
         // OWNED mandatory
         if (m.states().stream().noneMatch(s -> "OWNED".equals(s.key()))) {

@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import org.rostislav.curiokeep.modules.contract.ModuleSource;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.modules.importing.ModuleImportStorage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -14,6 +16,8 @@ import java.util.*;
 
 @Service
 public class ModuleService {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuleService.class);
 
     private final ModuleLoadTx moduleLoadTx;
     private final ModuleDefinitionRepository moduleDefinitionRepository;
@@ -60,6 +64,9 @@ public class ModuleService {
             String sourceName = path.getFileName().toString();
             try {
                 moduleLoadTx.loadOneModule(resource, sourceName, ModuleSource.IMPORTED);
+            } catch (ModuleRequiresNewerAppException ex) {
+                // After downgrading the application, an imported module that needs the newer one is left out instead of stopping startup.
+                log.warn("Imported module skipped: {}", ex.getMessage());
             } catch (RuntimeException ex) {
                 failures.add(new IllegalStateException("Failed loading imported module: " + sourceName, ex));
             }

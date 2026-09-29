@@ -66,7 +66,7 @@ Set `CURIOKEEP_SETUP_TOKEN` before you expose a fresh installation. Until the fi
 
 | Symptom | Likely cause |
 |---|---|
-| The application exits at start with "Module load failed for N module(s)" | A bundled or imported module is invalid. The log lists each failing file and reason. Fix or remove the file in `/app/data/modules-imported`. |
+| The application exits at start with "Module load failed for N module(s)" | A bundled or imported module is invalid. The log lists each failing file and reason. (An imported module that needs a newer CurioKeep is only skipped, with a warning.) Fix or remove the file in `/app/data/modules-imported`. |
 | Flyway reports a checksum mismatch on `V1__init.sql` | The database was created by an early development build whose `V1` differed. Recreate the database, or run Flyway's `repair` against it after checking the schema by hand. |
 | Provider lookups return nothing for a service that needs a key | No credentials stored for it (Providers page, admin only) or the encryption password changed since they were stored. Re-enter the key. |
 | Every page redirects to the setup screen | No admin exists yet (or the database was replaced). Create the admin on the setup page. |

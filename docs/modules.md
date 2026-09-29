@@ -21,7 +21,7 @@ Two modules ship with the app: `books` and `comics` (`src/main/resources/modules
 
 Deleting an imported module (`DELETE /api/admin/modules/{key}`) is refused while it is enabled in any collection or has items. Bundled modules cannot be deleted.
 
-**Any invalid module stops the application from starting.** The error lists every module that failed and why. Import through the UI or API validates first, so a bad file can only get into the import directory by being placed there by hand.
+**Any invalid module stops the application from starting.** The error lists every module that failed and why. Import through the UI or API validates first, so a bad file can only get into the import directory by being placed there by hand. The one exception is an imported module whose `minAppVersion` is newer than the running application (for example after going back to an older release): it is skipped with a warning in the log and the application starts without it.
 
 Changing a module does not rewrite stored items. Item attributes are kept as they were saved, and saving an item in the web form keeps every value the form does not show. A field you remove simply stops being shown and is no longer validated; its values stay in the database and in exports, but users cannot see them in the app any more. See [changing a module without losing data](#changing-a-module-without-losing-data).
 
@@ -49,6 +49,7 @@ For each module file, in this order (`ModuleLoadTx`):
 | Every provider mapping refers to a provider the module declares | semantic check |
 | Workflow steps refer only to declared fields and providers | semantic check |
 | A `PROMPT` step names a field, or has a `query`; `query` is allowed only on `PROMPT` | semantic check |
+| The application is at least the module's `<minAppVersion>` (a `-SNAPSHOT` suffix on the application version is ignored; nothing is refused when the version is unknown, as when running from an IDE) | semantic check |
 | Migration versions are unique, are not newer than the module's `version`, and each step carries exactly the attributes its `op` uses | XSD, semantic check |
 | A migration step's target field is declared and live (not deprecated or inactive); `MAP` is used on `ENUM` or `TAGS` fields, maps to declared values, and lists each source value once; `DEFAULT` holds a value the field accepts; `DROP` names a field that is no longer live | semantic check |
 
@@ -118,7 +119,7 @@ To get validation and completion in your editor, point `xsi:noNamespaceSchemaLoc
 
 ### `<meta>` (optional)
 
-Information about the module itself: `<authors><author name="" email="" url=""/></authors>`, `<license>`, `<homepage>`, `<repository>`, `<icon>`, `<tags><tag>…</tag></tags>`, `<minAppVersion>`. It is shown in the Modules page and used for filtering.
+Information about the module itself: `<authors><author name="" email="" url=""/></authors>`, `<license>`, `<homepage>`, `<repository>`, `<icon>`, `<tags><tag>…</tag></tags>`, `<minAppVersion>`. It is shown in the Modules page and used for filtering. `<minAppVersion>` (`major.minor.patch`) is enforced: a module that needs a newer CurioKeep than the one running is refused with a message saying which version it needs.
 
 ### `<states>`
 

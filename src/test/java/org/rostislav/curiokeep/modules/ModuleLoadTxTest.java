@@ -60,7 +60,8 @@ class ModuleLoadTxTest {
                 new ModuleCompiler(),
                 new ModuleContractValidator(objectMapper),
                 jdbc,
-                objectMapper
+                objectMapper,
+                AppVersion.of("1.4.2-SNAPSHOT")
         );
     }
 
@@ -225,6 +226,25 @@ class ModuleLoadTxTest {
         ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(withYearDefault("not a number")));
 
         assertThat(contract.fields().stream().filter(f -> f.key().equals("published_year")).findFirst().orElseThrow().defaultValue()).isNull();
+    }
+
+    /** The bundled books module declares 0.0.1, so a test picks the requirement by replacing it. */
+    private String requiring(String minimum) throws Exception {
+        return booksXml().replace("<minAppVersion>0.0.1</minAppVersion>", "<minAppVersion>" + minimum + "</minAppVersion>");
+    }
+
+    @Test
+    void aModuleNeedingANewerApplicationIsRefusedWithAClearMessage() throws Exception {
+        assertThatThrownBy(() -> load(requiring("1.5.0")))
+                .isInstanceOf(ModuleRequiresNewerAppException.class)
+                .hasMessageContaining("needs CurioKeep 1.5.0 or newer, this is 1.4.2-SNAPSHOT");
+        verify(jdbc, never()).batchUpdate(anyString(), ArgumentMatchers.<SqlParameterSource[]>any());
+    }
+
+    @Test
+    void aModuleNeedingThisApplicationOrAnOlderOneLoads() throws Exception {
+        load(requiring("1.4.2"));
+        load(requiring("0.9.0"));
     }
 
     private String withMigration(String to, String steps) throws Exception {
