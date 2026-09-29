@@ -45,6 +45,8 @@ services:
       DB_PASS: change-me
       # Encrypts provider API keys stored in the database. Set it before saving any key.
       CURIOKEEP_PROVIDERS_CREDENTIALS_ENCRYPTION_PASSWORD: pick-a-long-random-string
+      # Optional: creating the first admin then needs this token. Useful if the server is reachable before you finish setup.
+      # CURIOKEEP_SETUP_TOKEN: pick-another-long-random-string
     ports:
       - "8080:8080"
     volumes:

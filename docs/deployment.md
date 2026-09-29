@@ -54,6 +54,10 @@ Logs go to the console and to a rolling file (`curiokeep.log` in `LOG_DIR`, comp
 
 Terminate TLS in a reverse proxy and forward to port 8080. Sessions use a cookie, so serve the site over HTTPS whenever it is reachable from the internet.
 
+The proxy must send `X-Forwarded-For` and `X-Forwarded-Proto`. The application honours them only when the request comes from a private-network address (the usual case for a proxy on the same host or Docker network); if your proxy is elsewhere, add its address with `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES`. Without this every request looks like it comes from the proxy, and the [login throttle](architecture.md#security-model) then treats all users as one client.
+
+Set `CURIOKEEP_SETUP_TOKEN` before you expose a fresh installation. Until the first admin exists the setup page is open to whoever reaches it first; with a token they also need the token.
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
@@ -62,6 +66,9 @@ Terminate TLS in a reverse proxy and forward to port 8080. Sessions use a cookie
 | Flyway reports a checksum mismatch on `V1__init.sql` | The database was created by an early development build whose `V1` differed. Recreate the database, or run Flyway's `repair` against it after checking the schema by hand. |
 | Provider lookups return nothing for a service that needs a key | No credentials stored for it (Providers page, admin only) or the encryption password changed since they were stored. Re-enter the key. |
 | Every page redirects to the setup screen | No admin exists yet (or the database was replaced). Create the admin on the setup page. |
+| Login answers "Too many failed attempts" | The throttle blocks an address after repeated failures for 15 minutes (see `Retry-After`). It resets on restart. |
+| Every request is answered with `403` after a proxy or cookie change | The `XSRF-TOKEN` cookie is missing, for example because the proxy strips cookies or the site is opened on a different host name than the one that set it. Reload the page. |
+| A cover image upload is refused | Only PNG, JPEG, GIF, WebP and BMP up to 5 MB are accepted; the file type is read from its content, not its name. |
 
 ## Continuous integration
 

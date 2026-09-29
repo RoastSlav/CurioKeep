@@ -24,7 +24,12 @@ During development, `./mvnw spring-boot:run` starts the database from `compose.y
 | `curiokeep.assets.dir` | `CURIOKEEP_ASSETS_DIR` | `./data/assets` | Where item cover images are stored |
 | `curiokeep.modules.import-dir` | `CURIOKEEP_MODULES_IMPORT_DIR` | `./data/modules-imported` | Where uploaded module XML files are kept; they are loaded again on every start |
 | `curiokeep.modules.schema` | `CURIOKEEP_MODULES_SCHEMA` | `classpath:schema/module-schema-v1.xsd` | XSD that module files are validated against; leave it alone unless you are developing the module format |
+| `curiokeep.setup.token` | `CURIOKEEP_SETUP_TOKEN` | empty | When set, creating the first admin requires this token. Set it if the server can be reached before you finish setup |
+| `server.servlet.session.cookie.secure` | `SERVER_SERVLET_SESSION_COOKIE_SECURE` | `false` | Marks the session cookie `Secure`. Behind an HTTPS reverse proxy that sends `X-Forwarded-Proto` it is already set automatically |
+| `server.forward-headers-strategy` | `SERVER_FORWARD_HEADERS_STRATEGY` | `native` | Reads `X-Forwarded-For` and `X-Forwarded-Proto` from trusted proxies, which the login throttle needs to see real client addresses |
 | `LOG_DIR` | `LOG_DIR` | `./logs` | Directory for the rolling log file `curiokeep.log` |
+
+Cover images are limited to 5 MB; an upload above the 6 MB request limit is answered with `413`.
 
 Relative paths are resolved against the working directory. In the Docker image that is `/app`, so the defaults become `/app/data/assets`, `/app/data/modules-imported` and `/app/logs`. Mount a volume on `/app/data` to keep images and imported modules across container restarts.
 

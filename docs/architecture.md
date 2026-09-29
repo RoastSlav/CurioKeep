@@ -68,9 +68,12 @@ At startup every bundled module (`src/main/resources/modules/*.xml`) and every f
 
 ## Security model
 
-- **Sessions.** Login (`POST /api/auth/login`) creates a server-side session with a `JSESSIONID` cookie. Everything under `/api` requires a session except the setup, invite-validation/accept and login endpoints. Swagger UI and `/v3/api-docs` are reachable without a session.
-- **First run.** Until an admin exists, `SetupModeFilter` answers every API call except `/api/setup/**` with `403 SETUP_REQUIRED`. `POST /api/setup/admin` creates the first admin and only works once.
-- **Accounts** are created through invites. An admin creates a user invite (valid 48 hours); the returned token is given to the person, who chooses a password when accepting. Nothing is emailed.
+- **Sessions.** Login (`POST /api/auth/login`) creates a server-side session with a `JSESSIONID` cookie (`SameSite=Lax`, replaced with a new id on every login). Everything under `/api` requires a session except the setup, invite-validation/accept and login endpoints. The bundled frontend files are public so the login page can load. Swagger UI and `/v3/api-docs` are reachable without a session.
+- **CSRF.** Every state-changing `/api` request must carry the `X-XSRF-TOKEN` header with the value of the `XSRF-TOKEN` cookie, which the server sets on each response; `api/client.ts` does this for the frontend. A request without it is answered with `403`.
+- **Login throttling.** After 5 failed logins for one email from one address, or 20 from one address, further attempts get `429` with a `Retry-After` header until the 15-minute window passes. The counters are in memory and reset on restart. Behind a reverse proxy the address comes from `X-Forwarded-For`, see [deployment](deployment.md#reverse-proxy).
+- **First run.** Until an admin exists, `SetupModeFilter` answers every API call except `/api/setup/**` with `403 SETUP_REQUIRED`. `POST /api/setup/admin` creates the first admin and only works once. If `curiokeep.setup.token` is set, the request must also carry that token, so a server that is reachable before you finish setup cannot be claimed by someone else.
+- **Accounts** are created through invites. An admin creates a user invite (valid 48 hours); the returned token is given to the person, who chooses a password when accepting. Nothing is emailed. New passwords must be at least 10 characters and at most 72 bytes (the limit of the bcrypt hash).
+- **Request validation.** Request records carry Bean Validation constraints and every controller binds them with `@Valid`; a violation is answered with `400 VALIDATION_FAILED` naming the fields.
 - **Collection roles**, highest first: `OWNER`, `ADMIN`, `EDITOR`, `VIEWER`. A role includes everything the roles below it can do.
 
 | Action | Minimum role |
@@ -83,8 +86,10 @@ At startup every bundled module (`src/main/resources/modules/*.xml`) and every f
 An admin cannot change or remove an owner. Collection invites default to 7 days.
 
 - **Provider credentials** are stored encrypted (see [configuration](configuration.md#provider-credentials)) and are write-only through the API: the UI can set, clear and check them, never read them back.
-- **Outbound requests** use one shared HTTP client with a 5 s connection-request timeout and a 10 s read timeout, and identify themselves with a fixed `User-Agent`.
-- **Errors** returned to clients use the `ApiError` shape (`code`, `message`); unexpected errors return a generic message and are logged with a request id (`rid`).
+- **Outbound requests** to metadata providers use one shared HTTP client with a 5 s connection-request timeout and a 10 s read timeout, and identify themselves with a fixed `User-Agent`.
+- **Cover images.** A file is accepted only if its own bytes are PNG, JPEG, GIF, WebP or BMP, whatever content type or name the client gave; it is stored under a generated name with the extension of its real type (SVG and HTML are refused) and served with that type, `nosniff`, a `Content-Security-Policy` that forbids scripts and a private cache header. Uploads are limited to 5 MB.
+- **Downloading a cover from a URL** uses a dedicated client that refuses anything but `http`/`https` on ports 80 and 443 and checks every connection, including redirect hops, when the host name is resolved: loopback, private, link-local and other non-public addresses are refused, so the feature cannot be used to reach the database or other internal services. The body is read with a 5 MB cap.
+- **Errors** returned to clients use the `ApiError` shape (`error`, `message`); client mistakes get a matching `4xx` (`400 VALIDATION_FAILED` or `MALFORMED_REQUEST`, `403`, `404`, `409`, `413`), and unexpected errors return a generic message and are logged with a request id (`rid`).
 
 ## Frontend layout
 
