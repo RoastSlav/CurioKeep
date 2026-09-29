@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { buildListParams, fetchItemCounts, listItems } from "./api"
+import { buildListParams, exportUrl, fetchItemCounts, importItems, listItems } from "./api"
 
 describe("buildListParams", () => {
     it("always names the module and the page", () => {
@@ -78,5 +78,26 @@ describe("item requests", () => {
 
         expect(fetchMock.mock.calls[0][0]).toBe("/api/collections/c1/items/counts")
         expect(counts.modules.m1.total).toBe(5)
+    })
+})
+
+describe("export and import", () => {
+    it("links to the export of a collection, optionally limited to one module", () => {
+        expect(exportUrl("c1", "json")).toBe("/api/collections/c1/export?format=json")
+        expect(exportUrl("c1", "csv", "m1")).toBe("/api/collections/c1/export?format=csv&moduleId=m1")
+    })
+
+    it("uploads a file as form data", async () => {
+        const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ imported: 1, failed: 0, errors: [] }), { headers: { "Content-Type": "application/json" } }))
+        vi.stubGlobal("fetch", fetchMock)
+        try {
+            const result = await importItems("c1", new File(["{}"], "export.json"))
+
+            expect(result.imported).toBe(1)
+            expect(fetchMock.mock.calls[0][0]).toBe("/api/collections/c1/import")
+            expect(fetchMock.mock.calls[0][1]?.body).toBeInstanceOf(FormData)
+        } finally {
+            vi.unstubAllGlobals()
+        }
     })
 })

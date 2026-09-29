@@ -11,10 +11,12 @@ import ModuleSelector from "../components/ModuleSelector";
 import CollectionActionsMenu from "../components/CollectionActionsMenu";
 import { getCollection, listCollectionModules } from "../api/collectionsApi";
 import ItemsList from "../../items/components/ItemsList";
+import { ImportItemsDialog } from "../../items/components/ImportItemsDialog";
 import { ItemFiltersDialog } from "../../items/components/ItemFiltersDialog";
 import { ItemsPagination } from "../../items/components/ItemsPagination";
 import { ItemsToolbar } from "../../items/components/ItemsToolbar";
-import { changeItemState, deleteItem } from "../../items/api";
+import { changeItemState, deleteItem, exportUrl, type ExportFormat } from "../../items/api";
+import { startDownload } from "../../items/download";
 import { countActiveFilters, filterableFields } from "../../items/itemFilters";
 import { sortOptions } from "../../items/itemSort";
 import { useItemCounts } from "../../items/hooks/useItemCounts";
@@ -50,6 +52,7 @@ export default function CollectionDetailPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [invites, setInvites] = useState<CollectionInvite[]>([]);
   const [invitesLoaded, setInvitesLoaded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -207,6 +210,11 @@ export default function CollectionDetailPage() {
     showToast("Item added", "success");
   };
 
+  const handleExport = (format: ExportFormat) => {
+    if (!id) return;
+    startDownload(exportUrl(id, format, format === "csv" ? activeModule?.moduleId : undefined));
+  };
+
   const handleOpenSettings = () => {
     setSettingsOpen(true);
     if (!membersLoaded) {
@@ -338,8 +346,11 @@ export default function CollectionDetailPage() {
         actions={
           <CollectionActionsMenu
             role={collection.role}
+            moduleName={moduleDetails?.name || activeModule?.name || activeModule?.moduleKey}
             onAddItem={canAddItems ? handleAddItem : undefined}
             onOpenSettings={handleOpenSettings}
+            onExport={modules.length ? handleExport : undefined}
+            onImport={canAddItems && modules.length ? () => setImportOpen(true) : undefined}
           />
         }
       />
@@ -420,6 +431,13 @@ export default function CollectionDetailPage() {
           />
         </div>
       )}
+
+      <ImportItemsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        collectionId={id}
+        onImported={refreshItems}
+      />
 
       <ItemFiltersDialog
         open={filtersOpen}

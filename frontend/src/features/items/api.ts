@@ -28,6 +28,33 @@ export type ItemCounts = {
   modules: Record<string, ModuleItemCounts>;
 };
 
+export type ImportItemError = {
+  /** Position of the item in the file's items list, starting at 0. */
+  index: number;
+  reason: string;
+};
+
+export type ImportResult = {
+  imported: number;
+  failed: number;
+  errors: ImportItemError[];
+};
+
+export type ExportFormat = "json" | "csv";
+
+/** The download link for an export. It is opened by the browser, which sends the session cookie itself. */
+export function exportUrl(collectionId: string, format: ExportFormat, moduleId?: string): string {
+  const params = new URLSearchParams({ format });
+  if (moduleId) params.set("moduleId", moduleId);
+  return `/api/collections/${collectionId}/export?${params.toString()}`;
+}
+
+export function importItems(collectionId: string, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return apiFetch<ImportResult>(`/collections/${collectionId}/import`, { method: "POST", body });
+}
+
 export const DEFAULT_PAGE_SIZE = 25;
 export const PAGE_SIZES = [10, DEFAULT_PAGE_SIZE, 50, 100];
 
