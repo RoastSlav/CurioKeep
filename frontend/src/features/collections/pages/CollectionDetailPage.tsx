@@ -13,6 +13,8 @@ import { getCollection, listCollectionModules } from "../api/collectionsApi";
 import ItemsList from "../../items/components/ItemsList";
 import { DeprecatedFieldsNotice, type DeprecatedFieldUse } from "../../items/components/DeprecatedFieldsNotice";
 import { ImportItemsDialog } from "../../items/components/ImportItemsDialog";
+import { MigrationDialog } from "../../items/components/MigrationDialog";
+import { MigrationNotice } from "../../items/components/MigrationNotice";
 import { ItemFiltersDialog } from "../../items/components/ItemFiltersDialog";
 import { ItemsPagination } from "../../items/components/ItemsPagination";
 import { ItemsToolbar } from "../../items/components/ItemsToolbar";
@@ -54,6 +56,7 @@ export default function CollectionDetailPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [migrationOpen, setMigrationOpen] = useState(false);
   const [invites, setInvites] = useState<CollectionInvite[]>([]);
   const [invitesLoaded, setInvitesLoaded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -150,6 +153,8 @@ export default function CollectionDetailPage() {
       ["OWNER", "ADMIN", "EDITOR"].includes(collection.role)
     );
   }, [collection]);
+
+  const canMigrate = !!collection && ["OWNER", "ADMIN"].includes(collection.role);
 
   const defaultStateKey = moduleDetails?.contract?.states?.[0]?.key || "OWNED";
   const moduleCounts = activeModule ? counts[activeModule.moduleId] : undefined;
@@ -394,6 +399,8 @@ export default function CollectionDetailPage() {
         onClear={() => list.setFilters({})}
       />
 
+      {canMigrate && <MigrationNotice pending={moduleCounts?.pendingMigration ?? 0} onReview={() => setMigrationOpen(true)} />}
+
       {!modules.length ? (
         <EmptyState
           title="No modules enabled"
@@ -455,6 +462,16 @@ export default function CollectionDetailPage() {
         collectionId={id}
         onImported={refreshItems}
       />
+
+      {activeModule && (
+        <MigrationDialog
+          open={migrationOpen}
+          onOpenChange={setMigrationOpen}
+          collectionId={id}
+          moduleId={activeModule.moduleId}
+          onMigrated={refreshItems}
+        />
+      )}
 
       <ItemFiltersDialog
         open={filtersOpen}

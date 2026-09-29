@@ -61,10 +61,12 @@ describe("CollectionDetailPage items", () => {
     /** The answer for an item list request; tests override it to simulate what the server would return. */
     let listAnswer: (params: URLSearchParams) => { content: unknown[]; totalElements: number; totalPages: number }
     let countsAnswer: unknown
+    let role: string
 
     beforeEach(() => {
         clearAllCached()
         countsAnswer = { modules: { m1: { total: 60, byState: { OWNED: 50, WISHLIST: 10 }, deprecatedFieldUse: {} } } }
+        role = "OWNER"
         listAnswer = (params) => {
             const page = Number(params.get("page"))
             return { content: books(page * 25 + 1, 25), totalElements: 60, totalPages: 3 }
@@ -74,7 +76,7 @@ describe("CollectionDetailPage items", () => {
             const url = new URL(String(input), "http://localhost")
             switch (url.pathname) {
                 case "/api/collections/c1":
-                    return jsonResponse({ id: "c1", name: "My Books", role: "OWNER" })
+                    return jsonResponse({ id: "c1", name: "My Books", role })
                 case "/api/collections/c1/modules":
                     return jsonResponse([{ moduleKey: "books", name: "Books", version: "1.0.0", moduleId: "m1" }])
                 case "/api/modules":
@@ -85,6 +87,8 @@ describe("CollectionDetailPage items", () => {
                     return jsonResponse(countsAnswer)
                 case "/api/collections/c1/items":
                     return jsonResponse(listAnswer(url.searchParams))
+                case "/api/collections/c1/items/migration":
+                    return jsonResponse({ targetVersion: "2.0.0", behind: 4, changed: 3, versions: [{ version: "1.0.0", items: 4 }], samples: [] })
                 default:
                     return new Response("{}", { status: 404, headers: { "Content-Type": "application/json" } })
             }
@@ -205,6 +209,26 @@ describe("CollectionDetailPage items", () => {
         expect(lastListRequest().searchParams.get("page")).toBe("0")
         await userEvent.click(await screen.findByRole("button", { name: "Show all items" }))
         await waitFor(() => expect(lastListRequest().searchParams.has("old_publisher.has")).toBe(false))
+    })
+
+    it("offers a collection admin the migration when items are behind the module", async () => {
+        countsAnswer = { modules: { m1: { total: 60, byState: { OWNED: 60 }, deprecatedFieldUse: {}, pendingMigration: 4 } } }
+        renderPage()
+        await titleShown("Book 01")
+
+        await userEvent.click(await screen.findByRole("button", { name: "Review changes" }))
+
+        expect(await screen.findByText(/4 items are on an earlier version/)).toBeInTheDocument()
+    })
+
+    it("does not offer the migration to members who cannot accept it", async () => {
+        role = "EDITOR"
+        countsAnswer = { modules: { m1: { total: 60, byState: { OWNED: 60 }, deprecatedFieldUse: {}, pendingMigration: 4 } } }
+        renderPage()
+        await titleShown("Book 01")
+        await screen.findByText("Showing 1–25 of 60")
+
+        expect(screen.queryByRole("button", { name: "Review changes" })).not.toBeInTheDocument()
     })
 
     it("shows no deprecation notice when no item uses a deprecated field", async () => {

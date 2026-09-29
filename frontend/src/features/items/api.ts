@@ -23,6 +23,8 @@ export type ModuleItemCounts = {
   byState: Record<string, number>;
   /** For each deprecated field that still has values, how many items hold one. */
   deprecatedFieldUse: Record<string, number>;
+  /** Items on an earlier module version that the module declares a migration for. */
+  pendingMigration?: number;
 };
 
 export type ItemCounts = {
@@ -42,6 +44,30 @@ export type ImportResult = {
   errors: ImportItemError[];
 };
 
+export type MigrationFieldChange = {
+  field: string;
+  /** Absent when the attribute would be added. */
+  before?: unknown;
+  /** Absent when the attribute would be removed. */
+  after?: unknown;
+};
+
+export type MigrationPreview = {
+  targetVersion: string;
+  /** Items on an earlier module version. */
+  behind: number;
+  /** Of those, how many would have values changed. */
+  changed: number;
+  versions?: { version: string; items: number }[];
+  samples?: { itemId: string; title?: string; changes: MigrationFieldChange[] }[];
+};
+
+export type MigrationResult = {
+  migrated: number;
+  changed: number;
+  skipped?: number;
+};
+
 export type ExportFormat = "json" | "csv";
 
 /** The download link for an export. It is opened by the browser, which sends the session cookie itself. */
@@ -49,6 +75,19 @@ export function exportUrl(collectionId: string, format: ExportFormat, moduleId?:
   const params = new URLSearchParams({ format });
   if (moduleId) params.set("moduleId", moduleId);
   return `/api/collections/${collectionId}/export?${params.toString()}`;
+}
+
+export function previewMigration(collectionId: string, moduleId: string, options?: { signal?: AbortSignal }) {
+  return apiFetch<MigrationPreview>(`/collections/${collectionId}/items/migration?moduleId=${encodeURIComponent(moduleId)}`, {
+    signal: options?.signal,
+    dedupe: false,
+  });
+}
+
+export function applyMigration(collectionId: string, moduleId: string) {
+  return apiFetch<MigrationResult>(`/collections/${collectionId}/items/migration?moduleId=${encodeURIComponent(moduleId)}`, {
+    method: "POST",
+  });
 }
 
 export function importItems(collectionId: string, file: File) {
