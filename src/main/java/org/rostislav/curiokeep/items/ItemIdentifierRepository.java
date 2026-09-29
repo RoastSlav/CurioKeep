@@ -1,5 +1,6 @@
 package org.rostislav.curiokeep.items;
 
+import java.util.Collection;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -9,6 +10,8 @@ import java.util.UUID;
 
 public interface ItemIdentifierRepository extends JpaRepository<ItemIdentifierEntity, UUID> {
     List<ItemIdentifierEntity> findAllByItemId(UUID itemId);
+
+    List<ItemIdentifierEntity> findAllByItemIdIn(Collection<UUID> itemIds);
 
     Optional<ItemIdentifierEntity> findByIdTypeAndIdValue(ItemIdentifierEntity.IdType idType, String idValue);
 }

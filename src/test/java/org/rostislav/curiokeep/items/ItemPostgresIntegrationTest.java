@@ -61,6 +61,10 @@ class ItemPostgresIntegrationTest {
     @Autowired
     ItemRepository items;
     @Autowired
+    ItemExportService exporter;
+    @Autowired
+    ItemImportService importer;
+    @Autowired
     ModuleQueryService modules;
     @Autowired
     ModuleDefinitionRepository moduleRepository;
@@ -308,6 +312,103 @@ class ItemPostgresIntegrationTest {
         assertThat(owned).containsEntry("OWNED", 35L).containsEntry("WISHLIST", 1L).hasSize(2);
         assertThat(items.countByModuleAndState(otherCollectionId)).singleElement()
                 .satisfies(row -> assertThat(row.getCount()).isEqualTo(1L));
+    }
+
+    /** Runs the block as the integration user, which is who the services see as the signed-in user. */
+    private <T> T asItUser(java.util.concurrent.Callable<T> action) throws Exception {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("it@example.test", null, List.of()));
+        try {
+            return action.call();
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    private UUID newCollectionWithBooksModule(String name) {
+        UUID owner = jdbc.queryForObject("SELECT id FROM app_user WHERE email = 'it@example.test'", UUID.class);
+        UUID id = jdbc.queryForObject("INSERT INTO collection (owner_user_id, name) VALUES (?, ?) RETURNING id", UUID.class, owner, name);
+        jdbc.update("INSERT INTO collection_member (collection_id, user_id, role) VALUES (?, ?, 'OWNER')", id, owner);
+        jdbc.update("INSERT INTO collection_module (collection_id, module_id) VALUES (?, ?)", id, moduleId);
+        return id;
+    }
+
+    @Test
+    void exportingAndImportingACollectionLargerThanOneBatchLosesNothing() throws Exception {
+        UUID source = newCollectionWithBooksModule("Export source");
+        // groups of three items share a timestamp, so some ties straddle the 500-item batch boundary
+        jdbc.update("INSERT INTO item (collection_id, module_id, state_key, title, attributes, created_at, updated_at) "
+                + "SELECT ?, ?, CASE WHEN n % 4 = 0 THEN 'WISHLIST' ELSE 'OWNED' END, 'Book ' || n, "
+                + "jsonb_build_object('title', 'Book ' || n, 'published_year', n, 'authors', 'Author ' || (n % 7), "
+                + "'providerImageUrl', '/api/assets/0123456789abcdef0123456789abcdef.png'), "
+                + "timestamptz '2026-01-01 00:00:00+00' + (n / 3) * interval '1 second', timestamptz '2026-01-01 00:00:00+00' + (n / 3) * interval '1 second' "
+                + "FROM generate_series(1, 1200) n", source, moduleId);
+        jdbc.update("INSERT INTO item_identifier (item_id, id_type, id_value) SELECT id, 'ISBN13', 'isbn-' || title "
+                + "FROM item WHERE collection_id = ? AND (attributes ->> 'published_year')::int <= 100", source);
+
+        byte[] exported = asItUser(() -> {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            exporter.open(source, ExportFormat.JSON, null).body().writeTo(out);
+            return out.toByteArray();
+        });
+        tools.jackson.databind.JsonNode root = new tools.jackson.databind.ObjectMapper().readTree(exported);
+        Set<String> titlesInFile = new HashSet<>();
+        root.path("items").forEach(item -> titlesInFile.add(item.path("title").asString()));
+
+        assertThat(root.path("items")).hasSize(1200);
+        assertThat(titlesInFile).as("no item written twice or skipped").hasSize(1200);
+
+        UUID target = newCollectionWithBooksModule("Import target");
+        var result = asItUser(() -> importer.importJson(target, exported));
+
+        assertThat(result.imported()).isEqualTo(1200);
+        assertThat(result.failed()).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ?", Integer.class, target)).isEqualTo(1200);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item i JOIN item_identifier d ON d.item_id = i.id WHERE i.collection_id = ?", Integer.class, target)).isEqualTo(100);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND state_key = 'WISHLIST'", Integer.class, target)).isEqualTo(300);
+        // a cover path from the source server is not carried over
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND jsonb_exists(attributes, 'providerImageUrl')", Integer.class, target)).isZero();
+        // everything else about an item, including when it was added, survives
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM item a JOIN item b ON a.title = b.title AND b.collection_id = ? "
+                        + "WHERE a.collection_id = ? AND a.created_at = b.created_at AND a.state_key = b.state_key "
+                        + "AND (a.attributes - 'providerImageUrl') = b.attributes", Integer.class, target, source)).isEqualTo(1200);
+    }
+
+    @Test
+    void csvExportOfAModuleHasOneRowPerItemAndAHeader() throws Exception {
+        UUID source = newCollectionWithBooksModule("Csv source");
+        insert(source, "OWNED", "=cmd|'/c calc'!A1", "{\"title\":\"=cmd|'/c calc'!A1\",\"published_year\":1999,\"authors\":\"A, B\"}", OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC));
+        insert(source, "OWNED", "Plain", "{\"title\":\"Plain\",\"published_year\":-5}", OffsetDateTime.of(2026, 1, 2, 0, 0, 0, 0, ZoneOffset.UTC));
+
+        String csv = asItUser(() -> {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            exporter.open(source, ExportFormat.CSV, moduleId).body().writeTo(out);
+            return out.toString(java.nio.charset.StandardCharsets.UTF_8);
+        });
+        String[] lines = csv.split("\r\n");
+
+        assertThat(lines).hasSize(3);
+        assertThat(lines[0]).startsWith("\uFEFFstate,title,");
+        assertThat(lines[1]).contains("'=cmd|").doesNotContain(",=cmd");
+        assertThat(lines[1]).contains("\"A, B\"");
+        assertThat(lines[2]).contains(",-5,");
+    }
+
+    @Test
+    void aViewerCanExportButCannotImport() throws Exception {
+        UUID collection = newCollectionWithBooksModule("Viewer test");
+        UUID viewer = jdbc.queryForObject("INSERT INTO app_user (email, display_name) VALUES ('viewer@example.test', 'V') RETURNING id", UUID.class);
+        jdbc.update("INSERT INTO collection_member (collection_id, user_id, role) VALUES (?, ?, 'VIEWER')", collection, viewer);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("viewer@example.test", null, List.of()));
+        try {
+            assertThat(exporter.open(collection, ExportFormat.JSON, null).fileName()).endsWith(".json");
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> importer.importJson(collection, "{}".getBytes()))
+                    .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

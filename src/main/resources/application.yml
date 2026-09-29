@@ -29,9 +29,9 @@ spring:
 
   servlet:
     multipart:
-      # Slightly above the 5 MB cover limit, so an oversize file is answered with 413 rather than cut off.
-      max-file-size: 6MB
-      max-request-size: 6MB
+      # Room for an item import file; covers are limited to 5 MB by the image service itself.
+      max-file-size: 25MB
+      max-request-size: 25MB
 
 logging:
   level:

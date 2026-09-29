@@ -25,7 +25,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -88,7 +87,7 @@ public class ItemService {
         ModuleDefinitionEntity def = modules.getEntityById(req.moduleId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "MODULE_NOT_FOUND"));
         ModuleContract contract = modules.getContract(def);
-        validateState(contract, req.stateKey());
+        ItemStateRules.validate(contract, req.stateKey());
 
         Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes() == null ? Map.of() : req.attributes());
         ItemAttributeValidator.validate(contract, toJsonNode(attrsMap));
@@ -102,7 +101,7 @@ public class ItemService {
                 ItemEntity e = new ItemEntity();
                 e.setCollectionId(collectionId);
                 e.setModuleId(req.moduleId());
-                e.setStateKey(normalizeState(req.stateKey(), contract));
+                e.setStateKey(ItemStateRules.normalize(req.stateKey(), contract));
                 e.setTitle(req.title());
                 e.setAttributes(writeJson(attrs));
                 if (imageResult.fileName() != null) {
@@ -142,7 +141,7 @@ public class ItemService {
         ModuleContract contract = modules.getContract(def);
 
         if (req.stateKey() != null) {
-            validateState(contract, req.stateKey());
+            ItemStateRules.validate(contract, req.stateKey());
         }
 
         JsonNode attrs = null;
@@ -161,7 +160,7 @@ public class ItemService {
             result = tx.execute(status -> {
                 ItemEntity e = requireItem(collectionId, itemId);
                 String before = e.getImageName();
-                if (req.stateKey() != null) e.setStateKey(normalizeState(req.stateKey(), contract));
+                if (req.stateKey() != null) e.setStateKey(ItemStateRules.normalize(req.stateKey(), contract));
                 if (req.title() != null) e.setTitle(req.title());
                 if (newAttrs != null) e.setAttributes(writeJson(newAttrs));
                 if (image.cleared()) {
@@ -247,6 +246,9 @@ public class ItemService {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_FILE_REQUIRED");
         }
+        if (file.getSize() > RemoteImageFetcher.MAX_BYTES) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "IMAGE_TOO_LARGE");
+        }
 
         Optional<String> fileName;
         try {
@@ -312,8 +314,8 @@ public class ItemService {
 
         ModuleContract contract = modules.getContract(def);
 
-        validateState(contract, req.stateKey());
-        e.setStateKey(normalizeState(req.stateKey(), contract));
+        ItemStateRules.validate(contract, req.stateKey());
+        e.setStateKey(ItemStateRules.normalize(req.stateKey(), contract));
         items.save(e);
 
         log.info("Item state changed: itemId={} collectionId={} state={} byUserId={}",
@@ -350,21 +352,6 @@ public class ItemService {
     private void replaceIdentifiers(UUID itemId, List<ItemIdentifierDto> ids) {
         identifiers.deleteAll(identifiers.findAllByItemId(itemId));
         upsertIdentifiers(itemId, ids);
-    }
-
-    private String normalizeState(String stateKey, ModuleContract contract) {
-        if (stateKey == null || stateKey.isBlank()) {
-            return contract.states().isEmpty() ? "OWNED" : contract.states().getFirst().key();
-        }
-        return stateKey.trim().toUpperCase(Locale.ROOT);
-    }
-
-    private void validateState(ModuleContract contract, String stateKeyRaw) {
-        if (stateKeyRaw == null || stateKeyRaw.isBlank()) return;
-        String key = stateKeyRaw.trim().toUpperCase(Locale.ROOT);
-
-        boolean ok = contract.states().stream().anyMatch(s -> s.key().equalsIgnoreCase(key));
-        if (!ok) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_STATE");
     }
 
     private JsonNode toJsonNode(Map<String, Object> attributes) {
