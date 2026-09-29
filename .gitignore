@@ -44,9 +44,12 @@ frontend/pnpm-debug.log*
 frontend/lerna-debug.log*
 
 frontend/node_modules
+# Node/npm installed by frontend-maven-plugin
+frontend/node/
 frontend/dist
 frontend/dist-ssr
 frontend/*.local
+frontend/*.tsbuildinfo
 
 # Editor directories and files
 frontend/.vscode/*
