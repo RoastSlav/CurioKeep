@@ -52,7 +52,19 @@ For each module file, in this order (`ModuleLoadTx`):
 
 Not enforced: a field of type `ENUM` without `enumValues` is accepted (it renders an empty choice list), and `identifiers` on a field are not cross-checked against anything.
 
-At run time the API enforces **only** valid state keys and that `required` fields are present. Type and constraint checks (`min`, `max`, `minLength`, `maxLength`, `pattern`, valid dates and JSON) run in the web form.
+At run time the API enforces valid state keys, that `required` fields are present, and that every declared field holds a value of its type, answering `400 INVALID_FIELD_<key>` otherwise:
+
+| Type | Accepted |
+|---|---|
+| `TEXT`, `LINK` | a string of at most 20,000 characters that satisfies `minLength`, `maxLength` and `pattern` |
+| `NUMBER` | a JSON number within `min` and `max` |
+| `BOOLEAN` | `true` or `false` |
+| `DATE` | a string `YYYY`, `YYYY-MM` or `YYYY-MM-DD` |
+| `ENUM` | one of the declared values (a list of them when `multi` is set); anything when none are declared |
+| `TAGS` | a list of strings |
+| `JSON` | anything |
+
+Keys the module does not declare are left alone, and the attributes as a whole may not exceed 256 KB. `uniqueWithinCollection` is not enforced yet.
 
 ## The XML format
 
@@ -121,7 +133,7 @@ Declares which providers this module may use. `enabled` defaults to on. `priorit
 |---|---|
 | `key`, `label`, `type` | required. Key: `[a-z][a-z0-9_]{1,63}`. Type: `TEXT`, `NUMBER`, `DATE`, `BOOLEAN`, `ENUM`, `TAGS`, `LINK` or `JSON`. |
 | `required` | enforced when an item is saved |
-| `searchable`, `filterable`, `sortable` | make the field available in the items search, filter panel and sort menu |
+| `searchable`, `filterable`, `sortable` | `searchable` fields are searched, together with the title, by the items search; `filterable` fields get a filter in the filter dialog; `sortable` fields appear in the sort menu. The server enforces this: filtering or sorting on a field without the flag is refused with `400` |
 | `order` | position in forms and lists |
 | `active`, `deprecated` | optional flags |
 

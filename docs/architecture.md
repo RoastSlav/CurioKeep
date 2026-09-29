@@ -66,6 +66,22 @@ At startup every bundled module (`src/main/resources/modules/*.xml`) and every f
 2. It runs one of the module's **workflows** (for example "Quick add by ISBN"): prompt for an identifier, `POST /api/providers/lookup`, let the user choose which suggested values to apply and which cover to use, then `POST /api/collections/{id}/items`.
 3. The backend checks the caller's role, validates the state and the required fields against the contract, downloads the chosen cover into the assets directory and stores the item.
 
+## Listing items
+
+`GET /api/collections/{id}/items?moduleId=…` returns one page of a module's items. The database does the work, so a collection of any size pages, searches and sorts correctly; the collection page shows the total and a pager rather than a fixed first page.
+
+| Parameter | Meaning |
+|---|---|
+| `page`, `size` | zero-based page and page size, at most 100 (default 25) |
+| `search` | case-insensitive text matched against the title and the module's `searchable` fields; `%` and `_` are literal |
+| `state` | comma separated state keys |
+| `sort` | `createdAt`, `updatedAt`, `title` or a `sortable` field key, optionally followed by `,asc` or `,desc`. The default is newest first |
+| `<fieldKey>.<operator>` | a filter on a `filterable` field: `in` (enum, text, tags, boolean, link), `contains` (text, link), `gte` and `lte` (number), `from` and `to` (date, as `YYYY`, `YYYY-MM` or `YYYY-MM-DD`) |
+
+All filters must match. Every order ends with the creation time and the id, so pages never overlap or skip an item, even when many share a timestamp. Field keys and operators are checked against the module contract and every value is a bound SQL parameter. Values of the wrong type in old data are ignored by number and date filters instead of failing the query.
+
+`GET /api/collections/{id}/items/counts` returns the item totals per module and per state, which the module badges and the state filter chips show.
+
 ## Security model
 
 - **Sessions.** Login (`POST /api/auth/login`) creates a server-side session with a `JSESSIONID` cookie (`SameSite=Lax`, replaced with a new id on every login). Everything under `/api` requires a session except the setup, invite-validation/accept and login endpoints. The bundled frontend files are public so the login page can load. Swagger UI and `/v3/api-docs` are reachable without a session.
@@ -108,5 +124,5 @@ Components never call `fetch` directly; they use the per-feature API modules bui
 
 ## Testing
 
-- **Backend**: JUnit 5 and Mockito. Controllers are tested with standalone MockMvc, services with mocked repositories, providers against `MockRestServiceServer`, and the module loader against the real XSD, compiler and JSON schema with only the database mocked. The single `@SpringBootTest` is a start-up smoke test on H2 with Flyway disabled, so **migrations and PostgreSQL-specific SQL are not covered by the automated tests**.
-- **Frontend**: Vitest with Testing Library, run with `npm test`.
+- **Backend**: JUnit 5 and Mockito. Controllers are tested with standalone MockMvc, services with mocked repositories, providers against `MockRestServiceServer`, and the module loader against the real XSD, compiler and JSON schema with only the database mocked. The `@SpringBootTest` classes on H2 (Flyway disabled) cover the start-up and the security filter chain; `ItemPostgresIntegrationTest` starts a real PostgreSQL with Testcontainers, runs the Flyway migrations and exercises the item queries against it. That test needs Docker and is skipped when it is not available.
+- **Frontend**: Vitest with Testing Library, run with `npm test`. The collection page is tested end to end against a stubbed API.
