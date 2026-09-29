@@ -23,7 +23,7 @@ Deleting an imported module (`DELETE /api/admin/modules/{key}`) is refused while
 
 **Any invalid module stops the application from starting.** The error lists every module that failed and why. Import through the UI or API validates first, so a bad file can only get into the import directory by being placed there by hand.
 
-Changing a module does not rewrite stored items. Item attributes are kept as they were saved; a field you remove simply stops being shown.
+Changing a module does not rewrite stored items. Item attributes are kept as they were saved, and saving an item in the web form keeps every value the form does not show. A field you remove simply stops being shown and is no longer validated; its values stay in the database and in exports, but users cannot see them in the app any more. See [changing a module without losing data](#changing-a-module-without-losing-data).
 
 ## How a module is loaded
 
@@ -65,6 +65,17 @@ At run time the API enforces valid state keys, that `required` fields are presen
 | `JSON` | anything |
 
 Keys the module does not declare are left alone, and the attributes as a whole may not exceed 256 KB. `uniqueWithinCollection` is not enforced yet.
+
+## Changing a module without losing data
+
+A module is updated by replacing its file (same `key`, a new `version`). Existing items are not touched, so the way you retire a field decides whether users keep their data. The app does not lose data on its own; what happens to a removed field's values is between the module author and the people using the module.
+
+1. **Never change `key`s that are already in use.** A different key is a different field.
+2. **Deprecate before you remove.** To rename or replace a field, keep the old one, mark it `deprecated="true"` and add the new one. Name the successor with `replacedBy="new_key"` when a value can simply move across. Release that version.
+3. **What users see.** A deprecated field is not offered for new items and is not required. On an item that still holds a value in it, the edit form shows the field in a "Deprecated fields" section with a **Move to …** button when `replacedBy` is set. The collection page shows how many items still use each deprecated field and can list exactly those items (`<fieldKey>.has=true`). The values stay put until the user moves or clears them.
+4. **Remove it in a later version.** Once users have had time to move their values, drop the field. Values that were not moved stay in the database and in JSON exports, but the app no longer shows or validates them, and they are lost to the user in practice.
+
+A deprecated `required` field never blocks saving. States can be deprecated in the same way (`deprecated="true"` on `<state>`): a deprecated state is not offered in the state menus, and items already in it keep it.
 
 ## The XML format
 
@@ -135,16 +146,18 @@ Declares which providers this module may use. `enabled` defaults to on. `priorit
 | `required` | enforced when an item is saved |
 | `searchable`, `filterable`, `sortable` | `searchable` fields are searched, together with the title, by the items search; `filterable` fields get a filter in the filter dialog; `sortable` fields appear in the sort menu. The server enforces this: filtering or sorting on a field without the flag is refused with `400` |
 | `order` | position in forms and lists |
-| `active`, `deprecated` | optional flags |
+| `active` | default `true`. A field with `active="false"` is not offered in forms and is no longer required |
+| `deprecated` | default `false`. See [changing a module without losing data](#changing-a-module-without-losing-data) |
+| `replacedBy` | on a deprecated field: the key of the field that takes over from it. The UI offers to move the value across. The target must be another field of the module that is not itself deprecated |
 
 Children, all optional:
 
 - `<identifiers>`: marks the field as holding an identifier (`ISBN10`, `ISBN13`, `UPC`, `EAN`, `ASIN`, `CUSTOM`). Identifier fields are what the add-item lookup sends to providers (the value entered is matched to a provider that supports that identifier type). The values are stored as ordinary attributes; the API can also record separate item identifiers, but the web app does not send them.
 - `<enumValues><value key="HARDCOVER" label="Hardcover"/>…</enumValues>`: choices for an `ENUM` field.
-- `<constraints min max minLength maxLength pattern multi uniqueWithinCollection/>`: checked by the web form. `multi` makes an `ENUM` field multi-select.
+- `<constraints min max minLength maxLength pattern multi uniqueWithinCollection/>`: `min` and `max` apply to `NUMBER`, `minLength`, `maxLength` and `pattern` (a regular expression, written as it is, so `\d` and not `\\d`) to `TEXT` and `LINK`. Both the web form and the server check them. A constraint that cannot work (a pattern on a number, `min` above `max`, an invalid expression) is ignored and logged as a warning when the module loads. `multi` makes an `ENUM` field multi-select. `uniqueWithinCollection` is not enforced yet.
 - `<ui widget group hidden>` with `<placeholder>` and `<helpText>`: presentation hints. Fields with the same `group` are shown together; `hidden` removes a field from the form.
 - `<providerMappings>`: see below.
-- `<defaultValue>`.
+- `<defaultValue>`: the value a new item starts with. It is read as the field's type; one that cannot be read as such (text in a `NUMBER` field) is ignored with a warning.
 
 **Storage.** Item values live in the `item.attributes` JSONB column, keyed by field key.
 

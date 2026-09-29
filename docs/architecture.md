@@ -76,11 +76,11 @@ At startup every bundled module (`src/main/resources/modules/*.xml`) and every f
 | `search` | case-insensitive text matched against the title and the module's `searchable` fields; `%` and `_` are literal |
 | `state` | comma separated state keys |
 | `sort` | `createdAt`, `updatedAt`, `title` or a `sortable` field key, optionally followed by `,asc` or `,desc`. The default is newest first |
-| `<fieldKey>.<operator>` | a filter on a `filterable` field: `in` (enum, text, tags, boolean, link), `contains` (text, link), `gte` and `lte` (number), `from` and `to` (date, as `YYYY`, `YYYY-MM` or `YYYY-MM-DD`) |
+| `<fieldKey>.<operator>` | a filter on a `filterable` field: `in` (enum, text, tags, boolean, link), `contains` (text, link), `gte` and `lte` (number), `from` and `to` (date, as `YYYY`, `YYYY-MM` or `YYYY-MM-DD`). `has=true` works on any declared field, filterable or not, and matches items whose value in it is present and not empty |
 
 All filters must match. Every order ends with the creation time and the id, so pages never overlap or skip an item, even when many share a timestamp. Field keys and operators are checked against the module contract and every value is a bound SQL parameter. Values of the wrong type in old data are ignored by number and date filters instead of failing the query.
 
-`GET /api/collections/{id}/items/counts` returns the item totals per module and per state, which the module badges and the state filter chips show.
+`GET /api/collections/{id}/items/counts` returns the item totals per module and per state, which the module badges and the state filter chips show, and for each deprecated field of a module how many items still hold a value in it (`deprecatedFieldUse`).
 
 ## Exporting and importing items
 
