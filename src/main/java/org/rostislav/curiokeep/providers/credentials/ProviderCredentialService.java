@@ -3,7 +3,7 @@ package org.rostislav.curiokeep.providers.credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.encrypt.Encryptors;
+import org.springframework.security.crypto.encrypt.AesGcmBytesEncryptor;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
@@ -42,19 +42,12 @@ public class ProviderCredentialService implements ProviderCredentialLookup {
             // Changing it later makes already-stored provider credentials undecryptable, so it is only warned about.
             log.warn("Provider credentials are encrypted with the default password; set curiokeep.providers.credentials.encryption.password before storing real API keys");
         }
-        TextEncryptor enc;
-        try {
-            if (salt != null && salt.matches("(?i)[0-9a-f]+") && (salt.length() % 2 == 0)) {
-                enc = Encryptors.text(password, salt);
-            } else {
-                log.warn("Invalid hex salt for provider credential encryption; using no-op encryptor");
-                enc = Encryptors.noOpText();
-            }
-        } catch (Exception e) {
-            log.warn("Failed to initialize encryptor, falling back to no-op: {}", e.getMessage());
-            enc = Encryptors.noOpText();
+        // Fails at start-up rather than falling back to storing API keys unencrypted.
+        if (!salt.matches("(?i)[0-9a-f]{16,}") || salt.length() % 2 != 0) {
+            throw new IllegalStateException(
+                    "curiokeep.providers.credentials.encryption.salt must be an even-length hex string of at least 16 characters");
         }
-        this.encryptor = enc;
+        this.encryptor = new HexTextEncryptor(AesGcmBytesEncryptor.withPassword(password, salt).build());
     }
 
     private void loadExistingCredentials() {

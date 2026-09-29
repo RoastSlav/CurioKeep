@@ -32,7 +32,7 @@ Logging levels are set under `logging.level` in `application.yml`; the applicati
 
 ## Provider credentials
 
-Some [providers](providers.md) need an API key or account. Keys are entered in the web UI (Providers page, admin only) and stored in the database, encrypted with a password and salt from configuration:
+Some [providers](providers.md) need an API key or account. Keys are entered in the web UI (Providers page, admin only) and stored in the database, encrypted (AES-256-GCM) with a password and salt from configuration:
 
 | Property | Environment variable | Default |
 |---|---|---|
@@ -40,7 +40,7 @@ Some [providers](providers.md) need an API key or account. Keys are entered in t
 | `curiokeep.providers.credentials.encryption.salt` | `CURIOKEEP_PROVIDERS_CREDENTIALS_ENCRYPTION_SALT` | `5f4dcc3b5aa765d6` |
 
 - **Set your own password before you save any key.** The default is public, so it protects nothing. The application logs a warning at start-up while the default password is in use.
-- **The salt must be an even-length hexadecimal string.** With anything else the application falls back to storing credentials unencrypted and logs a warning.
+- **The salt must be an even-length hexadecimal string of at least 16 characters.** With anything else the application refuses to start.
 - **Changing the password or salt later makes already-stored keys unreadable.** Re-enter them in the UI afterwards.
 
 ## Reverse proxy and HTTPS
