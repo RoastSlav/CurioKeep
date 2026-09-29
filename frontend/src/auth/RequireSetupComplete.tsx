@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
-import { useSetupStatus } from "../components/AppGate";
+import { useSetupStatus } from "../components/setupStatusContext";
 import type { ReactElement } from "react";
 
 export default function RequireSetupComplete({ children }: { children: ReactElement }) {

@@ -1,5 +1,4 @@
-"use client";
-
+import { getErrorMessage } from "@/api/errors";
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,11 +7,11 @@ import EmptyState from "../../../components/EmptyState";
 import ErrorState from "../../../components/ErrorState";
 import LoadingState from "../../../components/LoadingState";
 import ConfirmDialog from "../../../components/ConfirmDialog";
-import { useToast } from "../../../components/Toasts";
+import { useToast } from "../../../components/toastContext";
 import CollectionCard from "../components/CollectionCard";
 import CreateCollectionDialog from "../components/CreateCollectionDialog";
 import EditCollectionDialog from "../components/EditCollectionDialog";
-import { Button } from "../../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   clearCollectionsCache,
   createCollection,
@@ -20,7 +19,7 @@ import {
   listCollections,
   updateCollection,
   type UpdateCollectionRequest,
-} from "../api";
+} from "../api/collectionsApi";
 
 export default function CollectionsPage() {
   const navigate = useNavigate();
@@ -44,8 +43,8 @@ export default function CollectionsPage() {
     try {
       const data = await listCollections({ forceRefresh });
       setCollections(data);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load collections");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to load collections"));
     } finally {
       isFetchingRef.current = false;
       setLoading(false);
@@ -66,8 +65,8 @@ export default function CollectionsPage() {
       setCreateOpen(false);
       showToast("Collection created", "success");
       navigate(`/collections/${created.id}`);
-    } catch (err: any) {
-      showToast(err?.message || "Failed to create collection", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to create collection"), "error");
       throw err;
     }
   };
@@ -82,8 +81,8 @@ export default function CollectionsPage() {
       clearCollectionsCache();
       setEditTarget(null);
       showToast("Collection updated", "success");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to update collection", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to update collection"), "error");
       throw err;
     }
   };
@@ -96,8 +95,8 @@ export default function CollectionsPage() {
       setCollections((prev) => prev.filter((c) => c.id !== target.id));
       clearCollectionsCache();
       showToast("Collection deleted", "success");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to delete collection", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to delete collection"), "error");
     } finally {
       setConfirmDelete(null);
     }

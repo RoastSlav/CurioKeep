@@ -1,6 +1,4 @@
-"use client"
-
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { isApiError } from "../../../api/errors"
 import type { ScanModulesResponse } from "../api/modulesApi"
 import { scanModulesFolder } from "../api/modulesApi"
@@ -11,12 +9,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../../../components/ui/dialog"
-import { Button } from "../../../../components/ui/button"
-import { Alert, AlertDescription } from "../../../../components/ui/alert"
-import { Badge } from "../../../../components/ui/badge"
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, CheckCircle2, FolderSearch, XCircle } from "lucide-react"
-import { Skeleton } from "../../../../components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type Props = {
   open: boolean
@@ -39,11 +37,10 @@ export default function ScanModulesDialog({ open, onClose, onModulesScanned }: P
     }
   }, [open])
 
+  const onModulesScannedRef = useRef(onModulesScanned)
   useEffect(() => {
-    if (open && !scanResult && !loading && !error) {
-      handleScan()
-    }
-  }, [open])
+    onModulesScannedRef.current = onModulesScanned
+  })
 
   const handleScan = useCallback(async () => {
     setLoading(true)
@@ -53,7 +50,7 @@ export default function ScanModulesDialog({ open, onClose, onModulesScanned }: P
       const result = await scanModulesFolder()
       setScanResult(result)
       if (result.imported.length > 0) {
-        onModulesScanned()
+        onModulesScannedRef.current()
       }
     } catch (err) {
       const message = isApiError(err) ? err.message : "Failed to scan modules folder"
@@ -61,7 +58,13 @@ export default function ScanModulesDialog({ open, onClose, onModulesScanned }: P
     } finally {
       setLoading(false)
     }
-  }, [onModulesScanned])
+  }, [])
+
+  useEffect(() => {
+    if (open) {
+      void handleScan()
+    }
+  }, [open, handleScan])
 
   const handleClose = useCallback(() => {
     if (scanResult && scanResult.imported.length > 0) {

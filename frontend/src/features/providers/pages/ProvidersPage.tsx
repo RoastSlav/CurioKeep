@@ -1,12 +1,11 @@
-"use client";
-
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Search, ExternalLink, Check, AlertCircle, Info } from "lucide-react";
-import { Input } from "../../../../components/ui/input";
-import { Button } from "../../../../components/ui/button";
-import { Badge } from "../../../../components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import ErrorState from "../../../components/ErrorState";
-import { useToast } from "../../../components/Toasts";
+import { getErrorMessage } from "@/api/errors";
+import { useToast } from "../../../components/toastContext";
 import {
   listProviders,
   testProviderConnection,
@@ -42,24 +41,15 @@ export default function ProvidersPage() {
       const normalizedData = Array.isArray(data)
         ? data.map((p) => ({
             ...p,
-            supportsIdentifiers: Array.isArray((p as any).supportsIdentifiers)
-              ? (p as any).supportsIdentifiers
-              : [],
-            supportedIdTypes: Array.isArray((p as any).supportedIdTypes)
-              ? (p as any).supportedIdTypes
-              : [],
-            credentialFields: Array.isArray((p as any).credentialFields)
-              ? (p as any).credentialFields
-              : [],
-            highlights: Array.isArray((p as any).highlights)
-              ? (p as any).highlights
-              : [],
+            supportedIdTypes: Array.isArray(p.supportedIdTypes) ? p.supportedIdTypes : [],
+            credentialFields: Array.isArray(p.credentialFields) ? p.credentialFields : [],
+            highlights: Array.isArray(p.highlights) ? p.highlights : [],
           }))
         : [];
       setProviders(normalizedData);
-    } catch (err: any) {
-      console.error("[v0] Failed to load providers:", err);
-      setError(err.message || "Failed to load providers");
+    } catch (err) {
+      console.error("Failed to load providers:", err);
+      setError(getErrorMessage(err, "Failed to load providers"));
       setProviders([]);
     } finally {
       isFetchingRef.current = false;
@@ -75,10 +65,8 @@ export default function ProvidersPage() {
     try {
       setTestingProvider(providerKey);
       setCheckResults((prev) => ({ ...prev, [providerKey]: null }));
-      console.log("[v0] Testing provider connection:", providerKey);
 
       const result = await testProviderConnection(providerKey);
-      console.log("[v0] Provider test result:", result);
 
       if (result.rateLimited) {
         showToast(
@@ -110,9 +98,9 @@ export default function ProvidersPage() {
           setCheckResults((prev) => ({ ...prev, [providerKey]: null }));
         }, 3000);
       }
-    } catch (err: any) {
-      console.error("[v0] Provider test error:", err);
-      showToast(err.message || "Failed to test provider connection", "error");
+    } catch (err) {
+      console.error("Provider test error:", err);
+      showToast(getErrorMessage(err, "Failed to test provider connection"), "error");
       setCheckResults((prev) => ({ ...prev, [providerKey]: "failed" }));
       setTimeout(() => {
         setCheckResults((prev) => ({ ...prev, [providerKey]: null }));
@@ -138,7 +126,7 @@ export default function ProvidersPage() {
 
   const filteredAndSortedProviders = useMemo(() => {
     if (!Array.isArray(providers)) {
-      console.error("[v0] Providers is not an array:", providers);
+      console.error("Providers is not an array:", providers);
       return [];
     }
 

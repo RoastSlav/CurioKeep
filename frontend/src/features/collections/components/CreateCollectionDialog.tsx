@@ -1,9 +1,7 @@
-"use client"
-
 import type React from "react"
 
 import {useEffect, useState} from "react"
-import type {CreateCollectionRequest} from "../../../api/types"
+import type { CreateCollectionRequest } from "../../../api/types";
 import {
     Dialog,
     DialogContent,
@@ -11,11 +9,11 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "../../../../components/ui/dialog"
-import {Button} from "../../../../components/ui/button"
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
-import {Textarea} from "../../../../components/ui/textarea"
+} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Textarea} from "@/components/ui/textarea"
 
 export default function CreateCollectionDialog({
                                                    open,

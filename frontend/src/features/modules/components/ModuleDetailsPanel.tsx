@@ -1,5 +1,3 @@
-"use client"
-
 import type {ReactNode} from "react"
 import {useState} from "react"
 import ErrorState from "../../../components/ErrorState"
@@ -7,9 +5,9 @@ import type {ModuleDetails, ModuleSummary} from "../api/modulesApi"
 import DeleteModuleDialog from "./DeleteModuleDialog"
 import ModuleInfoCards from "./ModuleInfoCards"
 import {useAuth} from "../../../auth/useAuth"
-import {Skeleton} from "../../../../components/ui/skeleton"
-import {Button} from "../../../../components/ui/button"
-import {Badge} from "../../../../components/ui/badge"
+import {Skeleton} from "@/components/ui/skeleton"
+import {Button} from "@/components/ui/button"
+import {Badge} from "@/components/ui/badge"
 
 type Props = {
     module?: ModuleDetails
@@ -41,18 +39,10 @@ export default function ModuleDetailsPanel({
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const canDelete = Boolean(user?.isAdmin && module?.source === "IMPORTED")
 
-    console.log("[v0] ModuleDetailsPanel render:", {
-        hasModule: !!module,
-        hasSummary: !!summary,
-        loading,
-        error,
-        moduleKey: module?.moduleKey || summary?.moduleKey,
-    })
 
     const showSkeleton = loading && !module
 
     if (showSkeleton) {
-        console.log("[v0] Showing skeleton")
         return (
             <div className="brutal-border brutal-shadow-sm bg-card p-6 min-h-[280px]">
                 <div className="flex flex-col gap-4">
@@ -248,11 +238,11 @@ export default function ModuleDetailsPanel({
                                                         <p className="text-sm text-muted-foreground">{step.label}</p>}
                                                     {step.field &&
                                                         <p className="text-xs text-muted-foreground font-mono">Field: {step.field}</p>}
-                                                    {step.fields.length > 0 && (
-                                                        <p className="text-xs text-muted-foreground">Fields: {step.fields.join(", ")}</p>
+                                                    {(step.fields?.length ?? 0) > 0 && (
+                                                        <p className="text-xs text-muted-foreground">Fields: {step.fields?.join(", ")}</p>
                                                     )}
-                                                    {step.providers.length > 0 && (
-                                                        <p className="text-xs text-muted-foreground">Providers: {step.providers.join(", ")}</p>
+                                                    {(step.providers?.length ?? 0) > 0 && (
+                                                        <p className="text-xs text-muted-foreground">Providers: {step.providers?.join(", ")}</p>
                                                     )}
                                                 </div>
                                             </div>

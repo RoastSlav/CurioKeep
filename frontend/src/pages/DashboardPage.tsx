@@ -1,19 +1,18 @@
-"use client";
-
+import { getErrorMessage } from "@/api/errors";
 import { Plus, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   clearCollectionsCache,
   createCollection,
   listCollections,
-} from "../features/collections/api";
+} from "../features/collections/api/collectionsApi";
 import type { Collection } from "../api/types";
-import CollectionCard from "../components/CollectionCard";
+import CollectionSummaryCard from "../components/CollectionSummaryCard";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
-import { useToast } from "../components/Toasts";
+import { useToast } from "../components/toastContext";
 import StatCard from "../components/StatCard";
-import { Button } from "../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -21,12 +20,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../components/ui/dialog";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
-import { Textarea } from "../../components/ui/textarea";
-import { Card, CardContent } from "../../components/ui/card";
-import { Skeleton } from "../../components/ui/skeleton";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const { showToast } = useToast();
@@ -55,8 +54,8 @@ export default function DashboardPage() {
     try {
       const data = await listCollections({ forceRefresh });
       setCollections(data);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load collections");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to load collections"));
     } finally {
       isFetchingRef.current = false;
       setLoading(false);
@@ -102,8 +101,8 @@ export default function DashboardPage() {
       clearCollectionsCache();
       setCreateOpen(false);
       showToast("Collection created", "success");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to create collection", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to create collection"), "error");
     } finally {
       setCreating(false);
     }
@@ -219,7 +218,7 @@ export default function DashboardPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {collections.map((collection) => (
-              <CollectionCard key={collection.id} collection={collection} />
+              <CollectionSummaryCard key={collection.id} collection={collection} />
             ))}
           </div>
         </div>

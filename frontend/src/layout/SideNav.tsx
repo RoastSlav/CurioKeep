@@ -1,17 +1,14 @@
-"use client";
-
 import {
   LayoutDashboard,
   Folder,
   PuzzleIcon,
   Network,
-  Mail,
   Users,
   BookOpen,
 } from "lucide-react";
 import { useLocation, Link as RouterLink } from "react-router-dom";
 import type { ReactElement } from "react";
-import { cn } from "../../lib/utils";
+import { cn } from "@/lib/utils";
 
 const SHOW_DOCS_LINK = false;
 

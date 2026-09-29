@@ -1,11 +1,13 @@
+import { getErrorMessage } from "@/api/errors";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import LoadingState from "../../../components/LoadingState";
 import ErrorState from "../../../components/ErrorState";
-import { getCollection, listCollectionModules } from "../../collections/api";
+import { getCollection, listCollectionModules } from "../../collections/api/collectionsApi";
 import { getItem } from "../api";
-import { getModuleDetails } from "../../modules/api";
-import type { Collection, ModuleDefinition } from "../../../api/types";
+import { getModuleDetails } from "../../modules/api/modulesApi";
+import type { Collection } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import ItemDetailModal from "../components/ItemDetailModal";
 
 export default function ItemDetailPage() {
@@ -14,7 +16,7 @@ export default function ItemDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [collection, setCollection] = useState<Collection | null>(null);
-    const [moduleDefinition, setModuleDefinition] = useState<ModuleDefinition | null>(null);
+    const [moduleDefinition, setModuleDefinition] = useState<ModuleContract | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -33,8 +35,8 @@ export default function ItemDetailPage() {
                     const moduleDetails = await getModuleDetails(moduleRef.moduleKey);
                     setModuleDefinition(moduleDetails.contract);
                 }
-            } catch (err: any) {
-                setError(err?.message || "Failed to load item");
+            } catch (err) {
+                setError(getErrorMessage(err, "Failed to load item"));
             } finally {
                 setLoading(false);
             }

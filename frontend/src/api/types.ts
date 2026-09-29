@@ -1,5 +1,3 @@
-import type { ModuleDefinition } from "../features/modules/moduleTypes";
-
 export type User = {
     id: string;
     email: string;
@@ -55,15 +53,6 @@ export type CreateCollectionInviteRequest = {
     expiresInDays?: number | null;
 };
 
-export type ModuleSummary = {
-    id: string;
-    moduleKey: string;
-    name?: string;
-    version?: string;
-    source?: "BUILTIN" | "USER" | string;
-    updatedAt?: string;
-};
-
 export type CollectionModule = {
     moduleKey: string;
     name?: string;
@@ -93,31 +82,6 @@ export type PagedResult<T> = {
     number: number;
     size: number;
 };
-
-export type ModuleDetails = {
-    id: string;
-    moduleKey: string;
-    name: string;
-    version: string;
-    source?: string;
-    checksum?: string;
-    contract: ModuleDefinition;
-    createdAt?: string;
-    updatedAt?: string;
-};
-
-export type {
-    ModuleDefinition,
-    ModuleStateDef,
-    FieldDef,
-    FieldFlags,
-    FieldConstraints,
-    FieldUI,
-    ModuleProviderDef,
-    WorkflowDef,
-    WorkflowStep,
-    WorkflowStepType,
-} from "../features/modules/moduleTypes";
 
 export type { Item, ItemIdentifier, IdentifierType } from "../features/items/itemTypes";
 

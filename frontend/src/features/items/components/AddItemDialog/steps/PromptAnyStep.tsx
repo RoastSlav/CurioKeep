@@ -1,7 +1,8 @@
+import type { Attributes } from "@/features/items/itemTypes";
 import { useState } from "react";
-import type { FieldDef } from "../../../../../api/types";
+import type { FieldContract } from "@/features/modules/moduleTypes";
 import DynamicForm from "../../../../forms/DynamicForm";
-import { Alert, AlertDescription } from "../../../../../../components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function PromptAnyStep({
   fields,
@@ -10,15 +11,15 @@ export default function PromptAnyStep({
   onSubmit,
   onCancel,
 }: {
-  fields: FieldDef[];
-  values: Record<string, any>;
+  fields: FieldContract[];
+  values: Attributes;
   label?: string;
-  onSubmit: (values: Record<string, any>) => void | Promise<void>;
+  onSubmit: (values: Attributes) => void | Promise<void>;
   onCancel?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (attrs: Record<string, any>) => {
+  const handleSubmit = async (attrs: Attributes) => {
     const hasValue = fields.some((f) => {
       const val = attrs[f.key];
       if (val === null || val === undefined) return false;

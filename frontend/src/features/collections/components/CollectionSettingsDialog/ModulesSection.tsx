@@ -1,13 +1,12 @@
-"use client"
-
 import {useMemo, useState} from "react"
 import {Loader2, RefreshCw} from "lucide-react"
-import type {CollectionModule, ModuleSummary} from "../../../../api/types"
+import type { CollectionModule } from "../../../../api/types";
+import type { ModuleSummary } from "../../../modules/api/modulesApi";
 import DisableModuleConfirmDialog from "./DisableModuleConfirmDialog"
-import {Button} from "../../../../../components/ui/button"
-import {Switch} from "../../../../../components/ui/switch"
-import {Badge} from "../../../../../components/ui/badge"
-import {Alert, AlertDescription} from "../../../../../components/ui/alert"
+import {Button} from "@/components/ui/button"
+import {Switch} from "@/components/ui/switch"
+import {Badge} from "@/components/ui/badge"
+import {Alert, AlertDescription} from "@/components/ui/alert"
 
 type Props = {
     availableModules: ModuleSummary[]

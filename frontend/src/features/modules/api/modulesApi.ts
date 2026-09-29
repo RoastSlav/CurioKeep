@@ -1,4 +1,5 @@
 import { apiFetch } from "../../../api/client";
+import type { ModuleContract } from "../moduleTypes";
 import {
   clearByPrefix,
   clearCached,
@@ -7,7 +8,7 @@ import {
   DEFAULT_CACHE_TTL,
 } from "../../../api/cache";
 
-export type ModuleSource = "BUILTIN" | "IMPORTED" | "USER";
+export type ModuleSource = "BUILTIN" | "IMPORTED";
 
 export type ModuleSummary = {
   id: string;
@@ -29,119 +30,6 @@ export type ModuleDetails = {
   createdAt: string;
   updatedAt: string;
 };
-
-export type ModuleContract = {
-  key: string;
-  version: string;
-  name: string;
-  description?: string;
-  meta?: ModuleMeta;
-  states: StateContract[];
-  providers: ProviderContract[];
-  fields: FieldContract[];
-  workflows: WorkflowContract[];
-  extensions: Record<string, unknown>;
-};
-
-export type ModuleMeta = {
-  authors: Author[];
-  license?: string;
-  homepage?: string;
-  repository?: string;
-  icon?: string;
-  tags: string[];
-  minAppVersion?: string;
-};
-
-export type Author = {
-  name?: string;
-  email?: string;
-  url?: string;
-};
-
-export type StateContract = {
-  key: string;
-  label: string;
-  order: number;
-  active: boolean;
-  deprecated: boolean;
-};
-
-export type ProviderContract = {
-  key: string;
-  enabled: boolean;
-  priority: number;
-  supportsIdentifiers: IdentifierType[];
-};
-
-export type IdentifierType =
-  | "ISBN10"
-  | "ISBN13"
-  | "UPC"
-  | "EAN"
-  | "ASIN"
-  | "CUSTOM";
-
-export type FieldContract = {
-  key: string;
-  label: string;
-  type: FieldType;
-  required: boolean;
-  searchable: boolean;
-  filterable: boolean;
-  sortable: boolean;
-  order: number;
-  active: boolean;
-  deprecated: boolean;
-  defaultValue?: unknown;
-  identifiers: IdentifierType[];
-  enumValues: EnumValue[];
-  constraints?: Record<string, unknown>;
-  ui?: Record<string, unknown>;
-  providerMappings: ProviderMapping[];
-};
-
-export type FieldType =
-  | "TEXT"
-  | "NUMBER"
-  | "DATE"
-  | "BOOLEAN"
-  | "ENUM"
-  | "TAGS"
-  | "LINK"
-  | "JSON";
-
-export type EnumValue = {
-  key: string;
-  label: string;
-};
-
-export type ProviderMapping = {
-  provider: string;
-  path?: string;
-  transform?: string;
-};
-
-export type WorkflowContract = {
-  key: string;
-  label: string;
-  steps: WorkflowStep[];
-};
-
-export type WorkflowStep = {
-  type: WorkflowStepType;
-  field?: string;
-  fields: string[];
-  providers: string[];
-  label?: string;
-};
-
-export type WorkflowStepType =
-  | "PROMPT"
-  | "PROMPT_ANY"
-  | "LOOKUP_METADATA"
-  | "APPLY_METADATA"
-  | "SAVE_ITEM";
 
 export type ModuleRawXmlResponse = {
   xmlRaw: string;

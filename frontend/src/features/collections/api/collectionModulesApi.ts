@@ -1,5 +1,6 @@
 import { apiFetch } from "../../../api/client";
-import type { CollectionModule, ModuleSummary } from "../../../api/types";
+import type { CollectionModule } from "../../../api/types";
+import type { ModuleSummary } from "../../modules/api/modulesApi";
 
 export async function listAvailableModules() {
     return apiFetch<ModuleSummary[]>("/modules");

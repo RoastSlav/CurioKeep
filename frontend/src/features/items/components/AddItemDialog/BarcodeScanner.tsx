@@ -1,11 +1,12 @@
+import { getErrorMessage } from "@/api/errors";
 import { useEffect, useRef, useState } from "react";
 import {
   BrowserMultiFormatReader,
   type IScannerControls,
 } from "@zxing/browser";
-import { Button } from "../../../../../components/ui/button";
-import { Alert, AlertDescription } from "../../../../../components/ui/alert";
-import { cn } from "../../../../../lib/utils";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 import type { ComponentProps } from "react";
 
 export default function BarcodeScanner({
@@ -29,7 +30,6 @@ export default function BarcodeScanner({
     if (!active) return;
     const reader = new BrowserMultiFormatReader();
     readerRef.current = reader;
-    setError(null);
 
     const start = async () => {
       try {
@@ -50,13 +50,13 @@ export default function BarcodeScanner({
             }
 
             if (err && err.name !== "NotFoundException") {
-              setError(err.message || "Failed to scan");
+              setError(getErrorMessage(err, "Failed to scan"));
             }
           }
         );
         controlsRef.current = controls;
-      } catch (err: any) {
-        setError(err?.message || "Failed to scan");
+      } catch (err) {
+        setError(getErrorMessage(err, "Failed to scan"));
       }
     };
 
@@ -73,6 +73,7 @@ export default function BarcodeScanner({
       setError("Camera not supported on this device.");
       return;
     }
+    setError(null);
     setActive(true);
   };
 

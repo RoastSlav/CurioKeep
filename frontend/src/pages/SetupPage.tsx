@@ -1,20 +1,18 @@
-"use client"
-
 import {AlertCircle} from "lucide-react"
 import {useMemo, useState} from "react"
 import type {FormEvent} from "react"
 import {Navigate, useNavigate} from "react-router-dom"
 import {apiFetch} from "../api/client"
 import {type ApiError, isApiError} from "../api/errors"
-import {useSetupStatus} from "../components/AppGate"
-import {useToast} from "../components/Toasts"
+import { useSetupStatus } from "../components/setupStatusContext"
+import { useToast } from "../components/toastContext"
 import LoadingState from "../components/LoadingState"
 import ErrorState from "../components/ErrorState"
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "../../components/ui/card"
-import {Input} from "../../components/ui/input"
-import {Label} from "../../components/ui/label"
-import {Button} from "../../components/ui/button"
-import {Alert, AlertDescription} from "../../components/ui/alert"
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Button} from "@/components/ui/button"
+import {Alert, AlertDescription} from "@/components/ui/alert"
 
 export default function SetupPage() {
     const navigate = useNavigate()

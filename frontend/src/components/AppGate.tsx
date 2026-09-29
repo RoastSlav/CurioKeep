@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -11,29 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, isApiError } from "../api/errors";
 import { getSetupStatus } from "../api/setup";
 import { useAuth } from "../auth/useAuth";
-// LoadingState and ErrorState not required here
-
-type SetupStatus = {
-  setupRequired: boolean;
-};
-
-type SetupStatusContextValue = {
-  setupRequired: boolean;
-  loading: boolean;
-  error: string | null;
-  reload: () => Promise<void>;
-  setSetupRequired: (value: boolean) => void;
-};
-
-const SetupStatusContext = createContext<SetupStatusContextValue | undefined>(
-  undefined
-);
-
-export function useSetupStatus() {
-  const ctx = useContext(SetupStatusContext);
-  if (!ctx) throw new Error("useSetupStatus must be used within AppGate");
-  return ctx;
-}
+import { SetupStatusContext, type SetupStatusContextValue } from "./setupStatusContext";
 
 export default function AppGate({ children }: { children: ReactNode }) {
   const navigate = useNavigate();

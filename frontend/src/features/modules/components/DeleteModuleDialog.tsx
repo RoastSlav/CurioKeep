@@ -1,5 +1,3 @@
-"use client"
-
 import {useCallback, useEffect, useState} from "react"
 import {isApiError} from "../../../api/errors"
 import {deleteImportedModule} from "../api/modulesApi"
@@ -10,9 +8,9 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "../../../../components/ui/alert-dialog"
-import {Button} from "../../../../components/ui/button"
-import {Alert, AlertDescription} from "../../../../components/ui/alert"
+} from "@/components/ui/alert-dialog"
+import {Button} from "@/components/ui/button"
+import {Alert, AlertDescription} from "@/components/ui/alert"
 import {AlertTriangle} from "lucide-react"
 
 type Props = {

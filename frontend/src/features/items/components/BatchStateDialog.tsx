@@ -1,7 +1,5 @@
-"use client"
-
 import {useState} from "react"
-import type {ModuleStateDef} from "../../../api/types"
+import type { StateContract } from "@/features/modules/moduleTypes";
 import {
     Dialog,
     DialogContent,
@@ -9,10 +7,10 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "../../../../components/ui/dialog"
-import {Button} from "../../../../components/ui/button"
-import {Label} from "../../../../components/ui/label"
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../components/ui/select"
+} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
+import {Label} from "@/components/ui/label"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 
 export default function BatchStateDialog({
                                              open,
@@ -21,7 +19,7 @@ export default function BatchStateDialog({
                                              onConfirm,
 }: {
     open: boolean
-    states?: ModuleStateDef[]
+    states?: StateContract[]
     onClose: () => void
     onConfirm: (stateKey: string) => void
 }) {

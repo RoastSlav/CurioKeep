@@ -1,8 +1,6 @@
-"use client"
-
 import type {ReactNode} from "react"
-import {Alert, AlertDescription, AlertTitle} from "../../components/ui/alert"
-import {Button} from "../../components/ui/button"
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert"
+import {Button} from "@/components/ui/button"
 import {AlertCircle} from "lucide-react"
 
 type Props = {

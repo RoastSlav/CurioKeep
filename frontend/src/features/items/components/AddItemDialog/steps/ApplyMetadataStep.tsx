@@ -1,11 +1,10 @@
+import type { Attributes } from "@/features/items/itemTypes";
 import { useMemo, useState } from "react";
-import type {
-  ModuleDefinition,
-  ProviderLookupResponse,
-} from "../../../../../api/types";
-import { Button } from "../../../../../../components/ui/button";
-import { Alert, AlertDescription } from "../../../../../../components/ui/alert";
-import { Separator } from "../../../../../../components/ui/separator";
+import type { ProviderLookupResponse } from "../../../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 export default function ApplyMetadataStep({
   moduleDefinition,
@@ -15,13 +14,26 @@ export default function ApplyMetadataStep({
   onSkip,
   onBack,
 }: {
-  moduleDefinition: ModuleDefinition | null | undefined;
+  moduleDefinition: ModuleContract | null | undefined;
   lookup: ProviderLookupResponse | null;
-  attributes: Record<string, any>;
-  onApply: (attrs: Record<string, any>) => void;
+  attributes: Attributes;
+  onApply: (attrs: Attributes) => void;
   onSkip: () => void;
   onBack?: () => void;
 }) {
+  const suggestions = useMemo(() => lookup?.mergedAttributes ?? {}, [lookup]);
+  const fields = moduleDefinition?.fields ?? [];
+
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  const diffEntries = useMemo(
+    () =>
+      Object.entries(suggestions).filter(
+        ([key, val]) => attributes[key] !== val
+      ),
+    [suggestions, attributes]
+  );
+
   if (!lookup) {
     return (
       <div className="space-y-3">
@@ -36,22 +48,6 @@ export default function ApplyMetadataStep({
       </div>
     );
   }
-
-  const suggestions = lookup.mergedAttributes || {};
-  const fields = moduleDefinition?.fields ?? [];
-
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-
-  const diffEntries = useMemo(
-    () =>
-      Object.entries<Record<string, unknown>>(suggestions).filter(
-        ([key, val]) => {
-          const current = attributes[key];
-          return current !== val;
-        }
-      ),
-    [suggestions, attributes]
-  );
 
   const toggleSelection = (key: string) => {
     setSelectedKeys((prev) => {

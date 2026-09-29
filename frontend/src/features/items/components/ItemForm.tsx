@@ -1,4 +1,5 @@
-import type { ModuleDefinition } from "../../../api/types";
+import type { Attributes } from "@/features/items/itemTypes";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import DynamicForm from "../../forms/DynamicForm";
 
 export default function ItemForm({
@@ -10,9 +11,9 @@ export default function ItemForm({
   cancelLabel,
   submitLabel = "Save",
 }: {
-  moduleDefinition: ModuleDefinition | null | undefined;
-  initialAttributes?: Record<string, any>;
-  onSubmit: (attributes: Record<string, any>) => void | Promise<void>;
+  moduleDefinition: ModuleContract | null | undefined;
+  initialAttributes?: Attributes;
+  onSubmit: (attributes: Attributes) => void | Promise<void>;
   onCancel?: () => void;
   disabled?: boolean;
   cancelLabel?: string;

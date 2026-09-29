@@ -1,10 +1,9 @@
-"use client"
-
-import type {Item, ModuleDefinition, ModuleStateDef} from "../../../api/types"
+import type { Item } from "../../../api/types";
+import type { ModuleContract, StateContract } from "@/features/modules/moduleTypes";
 import StateDropdown from "./StateDropdown"
-import {TableCell, TableRow} from "../../../../components/ui/table"
-import {Checkbox} from "../../../../components/ui/checkbox"
-import {Badge} from "../../../../components/ui/badge"
+import {TableCell, TableRow} from "@/components/ui/table"
+import {Checkbox} from "@/components/ui/checkbox"
+import {Badge} from "@/components/ui/badge"
 
 function formatValue(value: unknown): string {
     if (value === null || value === undefined) return ""
@@ -25,9 +24,9 @@ export default function ItemRow({
                                     onToggleSelect,
 }: {
     item: Item
-    moduleDefinition?: ModuleDefinition | null
+    moduleDefinition?: ModuleContract | null
     onClick?: (item: Item) => void
-    states?: ModuleStateDef[]
+    states?: StateContract[]
     onChangeState?: (item: Item, next: string) => void
     canChangeState?: boolean
     showSelection?: boolean
@@ -48,7 +47,7 @@ export default function ItemRow({
         (item.attributes?.title as string) || (item.attributes?.name as string) || identifierDisplay || item.id
     const fieldsToShow = (moduleDefinition?.fields || [])
         .slice()
-        .sort((a, b) => (a.flags?.order ?? Number.MAX_SAFE_INTEGER) - (b.flags?.order ?? Number.MAX_SAFE_INTEGER))
+        .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
         .slice(0, 3)
     const stateLabel = moduleDefinition?.states?.find((s) => s.key === item.stateKey)?.label
 

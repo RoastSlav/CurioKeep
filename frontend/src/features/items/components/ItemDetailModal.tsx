@@ -1,9 +1,10 @@
-"use client";
-
+import { getErrorMessage } from "@/api/errors";
+import type { Attributes } from "@/features/items/itemTypes";
 import { useEffect, useMemo, useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
-import type { Item, ModuleDefinition } from "../../../api/types";
-import { useToast } from "../../../components/Toasts";
+import type { Item } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
+import { useToast } from "../../../components/toastContext";
 import ItemForm from "./ItemForm";
 import { changeItemState, deleteItem, getItem, updateItem } from "../api";
 import LoadingState from "../../../components/LoadingState";
@@ -15,8 +16,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "../../../../components/ui/dialog";
-import { Button } from "../../../../components/ui/button";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import StateDropdown from "./StateDropdown";
 
 function formatValue(value: unknown): string {
@@ -39,7 +40,7 @@ export default function ItemDetailModal({
   open: boolean;
   collectionId: string;
   itemId: string;
-  moduleDefinition: ModuleDefinition | null | undefined;
+  moduleDefinition: ModuleContract | null | undefined;
   role?: string;
   onClose: () => void;
   onUpdated?: (item: Item) => void;
@@ -63,8 +64,8 @@ export default function ItemDetailModal({
       try {
         const data = await getItem(collectionId, itemId);
         setItem(data);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load item");
+      } catch (err) {
+        setError(getErrorMessage(err, "Failed to load item"));
       } finally {
         setLoading(false);
       }
@@ -91,15 +92,15 @@ export default function ItemDetailModal({
       setItem(updated);
       onUpdated?.(updated);
       showToast("State updated", "success");
-    } catch (err: any) {
+    } catch (err) {
       setItem(prev);
-      showToast(err?.message || "Failed to change state", "error");
+      showToast(getErrorMessage(err, "Failed to change state"), "error");
     } finally {
       setChangingState(false);
     }
   };
 
-  const handleSubmit = async (attributes: Record<string, any>) => {
+  const handleSubmit = async (attributes: Attributes) => {
     if (!item) return;
     const payload = { attributes } as Partial<Item>;
     const updated = await updateItem(collectionId, item.id, payload);
@@ -121,15 +122,13 @@ export default function ItemDetailModal({
       showToast("Item deleted", "success");
       onDeleted?.();
       onClose();
-    } catch (err: any) {
-      showToast(err?.message || "Failed to delete item", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to delete item"), "error");
     } finally {
       setDeleting(false);
     }
   };
 
-  const stateLabel =
-    states.find((s) => s.key === item?.stateKey)?.label || item?.stateKey;
   const imageUrl = (item?.attributes?.providerImageUrl as string) || null;
   const title = (item?.attributes?.title as string) || item?.id || "";
 

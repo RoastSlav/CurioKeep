@@ -1,4 +1,5 @@
-import type { FieldDef } from "../../../../../api/types";
+import type { Attributes } from "@/features/items/itemTypes";
+import type { FieldContract } from "@/features/modules/moduleTypes";
 import DynamicForm from "../../../../forms/DynamicForm";
 
 export default function PromptStep({
@@ -7,9 +8,9 @@ export default function PromptStep({
   onSubmit,
   onCancel,
 }: {
-  field: FieldDef;
-  values: Record<string, any>;
-  onSubmit: (values: Record<string, any>) => void | Promise<void>;
+  field: FieldContract;
+  values: Attributes;
+  onSubmit: (values: Attributes) => void | Promise<void>;
   onCancel?: () => void;
 }) {
   return (
@@ -20,7 +21,7 @@ export default function PromptStep({
       <DynamicForm
         fields={[field]}
         initialValues={values}
-        onSubmit={(attrs: Record<string, any>) => onSubmit(attrs)}
+        onSubmit={(attrs: Attributes) => onSubmit(attrs)}
         onCancel={onCancel}
         cancelLabel="Back"
         submitLabel="Next"

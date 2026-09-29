@@ -1,9 +1,8 @@
-"use client"
-
-import type {Item, ModuleStateDef} from "../../../api/types"
-import {Card, CardContent} from "../../../../components/ui/card"
-import {Badge} from "../../../../components/ui/badge"
-import {cn} from "../../../../lib/utils"
+import type { Item } from "../../../api/types";
+import type { StateContract } from "@/features/modules/moduleTypes";
+import {Card, CardContent} from "@/components/ui/card"
+import {Badge} from "@/components/ui/badge"
+import {cn} from "@/lib/utils"
 
 export default function StatsPanel({
                                        items,
@@ -12,7 +11,7 @@ export default function StatsPanel({
                                        onFilterChange,
 }: {
     items: Item[]
-    states?: ModuleStateDef[]
+    states?: StateContract[]
     activeState?: string | null
     onFilterChange?: (stateKey: string | null) => void
 }) {
@@ -22,7 +21,7 @@ export default function StatsPanel({
     }, {})
 
     const total = items.length
-    const orderedStates = states && states.length ? states : Object.keys(counts).map((key) => ({key}) as ModuleStateDef)
+    const orderedStates = states && states.length ? states : Object.keys(counts).map((key) => ({key}) as StateContract)
 
     const handleSelect = (stateKey: string | null) => {
         if (!onFilterChange) return

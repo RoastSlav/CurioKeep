@@ -1,8 +1,6 @@
-"use client"
-
 import {X} from "lucide-react"
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "../../../../components/ui/dialog"
-import {Button} from "../../../../components/ui/button"
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
 
 export default function ImageViewerDialog({
                                               open,

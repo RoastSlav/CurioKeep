@@ -1,3 +1,4 @@
+import type { Attributes } from "@/features/items/itemTypes";
 import { apiFetch } from "../../api/client";
 import {
   clearCached,
@@ -18,7 +19,7 @@ import type {
 type RawLookupResponse = {
   results: ProviderLookupResult[];
   best?: ProviderLookupResult | null;
-  mergedAttributes: Record<string, any>;
+  mergedAttributes: Attributes;
   assets?: ProviderLookupResponse["assets"];
 };
 

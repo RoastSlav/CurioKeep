@@ -1,7 +1,5 @@
-"use client"
-
 import {useMemo, useState} from "react"
-import type {ModuleContract} from "../api/modulesApi"
+import type {ModuleContract} from "../moduleTypes"
 import {
     Dialog,
     DialogContent,
@@ -9,9 +7,9 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "../../../../components/ui/dialog"
-import {Button} from "../../../../components/ui/button"
-import {ScrollArea} from "../../../../components/ui/scroll-area"
+} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
+import {ScrollArea} from "@/components/ui/scroll-area"
 
 export default function ModuleContractDialog({
                                                  open,
@@ -27,8 +25,7 @@ export default function ModuleContractDialog({
     const [copied, setCopied] = useState(false)
     const rawContract = useMemo(() => {
         if (!contract) return ""
-        // @ts-ignore
-        return (contract as any).rawContract ?? JSON.stringify(contract, null, 2)
+        return JSON.stringify(contract, null, 2)
     }, [contract])
     const canCopy = !!rawContract
 

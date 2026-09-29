@@ -1,11 +1,9 @@
-"use client"
-
 import {Menu, Moon, Sun} from "lucide-react"
-import {useTheme} from "../contexts/ThemeContext"
+import {useTheme} from "../contexts/theme"
 import UserMenu from "./UserMenu"
-import {Button} from "../../components/ui/button"
+import {Button} from "@/components/ui/button"
 
-export default function TopBar({onMenuToggle, drawerWidth}: { onMenuToggle: () => void; drawerWidth: number }) {
+export default function TopBar({onMenuToggle}: { onMenuToggle: () => void }) {
     const {theme, setTheme} = useTheme()
 
     const toggleTheme = () => {

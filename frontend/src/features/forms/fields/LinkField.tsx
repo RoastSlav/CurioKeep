@@ -1,9 +1,8 @@
-"use client"
-
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
+import { toInputValue } from "../formValue"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
 import {Link2} from "lucide-react"
-import type {FieldDef} from "../../../api/types"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function LinkFieldField({
                                            field,
@@ -13,11 +12,11 @@ export default function LinkFieldField({
                                            onChange,
                                            onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const id = `field-${field.key}`
@@ -26,14 +25,14 @@ export default function LinkFieldField({
         <div className="flex flex-col gap-2">
             <Label htmlFor={id} className="text-sm font-semibold text-foreground">
                 {field.label || field.key}
-                {field.flags?.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
             </Label>
             <div className="relative">
                 <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                 <Input
                     id={id}
                     type="url"
-                    value={value ?? ""}
+                    value={toInputValue(value)}
                     placeholder={field.ui?.placeholder || "https://..."}
                     onChange={(e) => onChange(e.target.value)}
                     onBlur={onBlur}

@@ -1,12 +1,10 @@
-"use client"
-
 import {Copy, X} from "lucide-react"
-import type {CollectionInvite} from "../../../../api/types"
-import {Button} from "../../../../../components/ui/button"
-import {Badge} from "../../../../../components/ui/badge"
-import {Alert, AlertDescription} from "../../../../../components/ui/alert"
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "../../../../../components/ui/table"
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "../../../../../components/ui/tooltip"
+import type { CollectionInvite } from "../../../../api/types";
+import {Button} from "@/components/ui/button"
+import {Badge} from "@/components/ui/badge"
+import {Alert, AlertDescription} from "@/components/ui/alert"
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table"
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip"
 
 function buildLink(token: string) {
     if (typeof window === "undefined") return `/invites/collection/${token}`

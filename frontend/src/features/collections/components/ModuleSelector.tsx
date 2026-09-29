@@ -1,8 +1,6 @@
-"use client"
-
-import type {CollectionModule} from "../../../api/types"
-import {Badge} from "../../../../components/ui/badge"
-import {cn} from "../../../../lib/utils"
+import type { CollectionModule } from "../../../api/types";
+import {Badge} from "@/components/ui/badge"
+import {cn} from "@/lib/utils"
 
 type Props = {
     modules: CollectionModule[]

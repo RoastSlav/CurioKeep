@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import type { ProviderAsset } from "../../../providers/providerTypes";
-import { Button } from "../../../../../components/ui/button";
-import { Alert, AlertDescription } from "../../../../../components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../../../../../components/ui/dialog";
-import { Separator } from "../../../../../components/ui/separator";
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 export type SelectedImage =
   | { kind: "provider-url"; url: string }

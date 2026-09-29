@@ -1,15 +1,14 @@
-"use client";
-
-import { Label } from "../../../../components/ui/label";
+import { toStringList } from "../formValue"
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../../components/ui/select";
-import { Badge } from "../../../../components/ui/badge";
-import type { FieldDef } from "../../../api/types";
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function EnumFieldField({
   field,
@@ -19,20 +18,21 @@ export default function EnumFieldField({
   onChange,
   onBlur,
 }: {
-  field: FieldDef;
-  value: any;
+  field: FieldContract;
+  value: unknown;
   error?: string;
   disabled?: boolean;
-  onChange: (value: any) => void;
+  onChange: (value: unknown) => void;
   onBlur?: () => void;
 }) {
   const multi = Boolean(field.constraints?.multi);
-  const current = multi ? (Array.isArray(value) ? value : []) : value ?? "";
+  const selected = toStringList(value);
+  const current = typeof value === "string" ? value : "";
   const id = `field-${field.key}`;
 
   // For multi-select, we use a simple toggle approach
   const handleMultiToggle = (optKey: string) => {
-    const currentArray = Array.isArray(value) ? value : [];
+    const currentArray = selected;
     if (currentArray.includes(optKey)) {
       onChange(currentArray.filter((v: string) => v !== optKey));
     } else {
@@ -45,13 +45,13 @@ export default function EnumFieldField({
       <div className="flex flex-col gap-2">
         <Label className="text-sm font-semibold text-foreground">
           {field.label || field.key}
-          {field.flags?.required && (
+          {field.required && (
             <span className="text-destructive ml-1">*</span>
           )}
         </Label>
         <div className="flex flex-wrap gap-2 p-3 brutal-border rounded-md bg-card min-h-[44px]">
           {(field.enumValues || []).map((opt) => {
-            const isSelected = current.includes(opt.key);
+            const isSelected = selected.includes(opt.key);
             return (
               <Badge
                 key={opt.key}
@@ -85,7 +85,7 @@ export default function EnumFieldField({
     <div className="flex flex-col gap-2">
       <Label htmlFor={id} className="text-sm font-semibold text-foreground">
         {field.label || field.key}
-        {field.flags?.required && (
+        {field.required && (
           <span className="text-destructive ml-1">*</span>
         )}
       </Label>

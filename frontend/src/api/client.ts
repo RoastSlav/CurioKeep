@@ -7,7 +7,7 @@ type AuthEventListener = (event: AuthEvent) => void;
 type ApiRequestOptions = {
   method?: string;
   headers?: HeadersInit;
-  body?: any;
+  body?: unknown;
   signal?: AbortSignal;
   dedupe?: boolean;
   dedupeKey?: string;
@@ -72,7 +72,7 @@ function buildInit(options: ApiRequestOptions): RequestInit {
   return init;
 }
 
-async function parseBody(res: Response): Promise<any> {
+async function parseBody(res: Response): Promise<unknown> {
   const text = await res.text();
   if (!text) return null;
   try {
@@ -80,6 +80,13 @@ async function parseBody(res: Response): Promise<any> {
   } catch {
     return text;
   }
+}
+
+function messageFromBody(body: unknown): string | undefined {
+  if (typeof body === "object" && body !== null && "message" in body && typeof body.message === "string") {
+    return body.message;
+  }
+  return undefined;
 }
 
 export async function apiFetch<T>(
@@ -108,8 +115,7 @@ export async function apiFetch<T>(
     }
 
     if (!res.ok) {
-      const message =
-        (body as any)?.message || res.statusText || "Request failed";
+      const message = messageFromBody(body) || res.statusText || "Request failed";
       throw new ApiError(res.status, message, body);
     }
 

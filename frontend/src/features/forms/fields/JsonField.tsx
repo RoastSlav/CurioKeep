@@ -1,8 +1,6 @@
-"use client"
-
-import {Textarea} from "../../../../components/ui/textarea"
-import {Label} from "../../../../components/ui/label"
-import type {FieldDef} from "../../../api/types"
+import {Textarea} from "@/components/ui/textarea"
+import {Label} from "@/components/ui/label"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function JsonFieldField({
                                            field,
@@ -12,11 +10,11 @@ export default function JsonFieldField({
                                            onChange,
                                            onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const displayValue = typeof value === "string" ? value : value ? JSON.stringify(value, null, 2) : ""
@@ -26,7 +24,7 @@ export default function JsonFieldField({
         <div className="flex flex-col gap-2">
             <Label htmlFor={id} className="text-sm font-semibold text-foreground">
                 {field.label || field.key}
-                {field.flags?.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
             </Label>
             <Textarea
                 id={id}

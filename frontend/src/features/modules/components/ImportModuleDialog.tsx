@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -12,11 +10,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../../../components/ui/dialog"
-import { Button } from "../../../../components/ui/button"
-import { Alert, AlertDescription } from "../../../../components/ui/alert"
-import { Input } from "../../../../components/ui/input"
-import { Label } from "../../../../components/ui/label"
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { FileUp, X } from "lucide-react"
 
 type Props = {

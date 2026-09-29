@@ -1,14 +1,7 @@
-"use client"
-
-import {createContext, useContext, useMemo, type ReactNode} from "react"
+import {useMemo, type ReactNode} from "react"
 import {toast as sonnerToast} from "sonner"
-import {Toaster} from "../../components/ui/sonner"
-
-type ToastContextValue = {
-    showToast: (message: string, severity?: "success" | "error" | "warning" | "info", durationMs?: number) => void
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null)
+import {Toaster} from "@/components/ui/sonner"
+import {ToastContext, type ToastContextValue} from "./toastContext"
 
 export function ToastProvider({ children }: { children: ReactNode }) {
     const value = useMemo<ToastContextValue>(
@@ -40,10 +33,4 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <Toaster position="bottom-center"/>
         </ToastContext.Provider>
     )
-}
-
-export function useToast(): ToastContextValue {
-    const ctx = useContext(ToastContext)
-    if (!ctx) throw new Error("useToast must be used within a ToastProvider")
-    return ctx
 }

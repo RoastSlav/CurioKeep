@@ -1,12 +1,7 @@
-"use client";
-
+import type { Attributes } from "@/features/items/itemTypes";
 import { useEffect, useMemo, useState } from "react";
-import type {
-  Item,
-  ModuleDefinition,
-  ProviderLookupResponse,
-  WorkflowDef,
-} from "../../../../api/types";
+import type { Item, ProviderLookupResponse } from "../../../../api/types";
+import type { ModuleContract, WorkflowContract } from "@/features/modules/moduleTypes";
 import PromptStep from "./steps/PromptStep";
 import PromptAnyStep from "./steps/PromptAnyStep";
 import LookupMetadataStep from "./steps/LookupMetadataStep";
@@ -14,8 +9,8 @@ import ApplyMetadataStep from "./steps/ApplyMetadataStep";
 import SaveItemStep from "./steps/SaveItemStep";
 import SelectItemImageStep from "../forms/SelectItemImageStep";
 import type { SelectedImage } from "../forms/SelectItemImageStep";
-import { Alert, AlertDescription } from "../../../../../components/ui/alert";
-import { Progress } from "../../../../../components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import QueryPromptStep from "./steps/QueryPromptStep";
 
 export default function WorkflowRunner({
@@ -28,29 +23,22 @@ export default function WorkflowRunner({
   defaultState,
   onStepChange,
 }: {
-  workflow: WorkflowDef;
-  moduleDefinition: ModuleDefinition | null | undefined;
+  workflow: WorkflowContract;
+  moduleDefinition: ModuleContract | null | undefined;
   moduleId: string;
   collectionId: string;
   defaultState?: string;
   onComplete: (item: Item) => void;
   onCancel?: () => void;
   onStepChange?: (
-    stepType: WorkflowDef["steps"][number]["type"] | undefined
+    stepType: WorkflowContract["steps"][number]["type"] | undefined
   ) => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [attributes, setAttributes] = useState<Record<string, any>>({});
+  const [attributes, setAttributes] = useState<Attributes>({});
   const [lookupResult, setLookupResult] =
     useState<ProviderLookupResponse | null>(null);
   const [selectedImage, setSelectedImage] = useState<SelectedImage>(null);
-
-  useEffect(() => {
-    setStepIndex(0);
-    setAttributes({});
-    setLookupResult(null);
-    setSelectedImage(null);
-  }, [workflow]);
 
   const steps = useMemo(() => {
     const base = workflow.steps || [];
@@ -72,7 +60,7 @@ export default function WorkflowRunner({
     (moduleDefinition?.fields || []).find((f) => f.key === key);
 
   useEffect(() => {
-    onStepChange?.(current?.type as any);
+    onStepChange?.(current?.type);
   }, [current?.type, onStepChange]);
 
   const goNext = () =>
@@ -81,7 +69,7 @@ export default function WorkflowRunner({
 
   const progress = steps.length ? ((stepIndex + 1) / steps.length) * 100 : 0;
 
-  const handlePromptSubmit = async (vals: Record<string, any>) => {
+  const handlePromptSubmit = async (vals: Attributes) => {
     setAttributes((prev) => ({ ...prev, ...vals }));
     goNext();
   };
@@ -91,7 +79,7 @@ export default function WorkflowRunner({
     goNext();
   };
 
-  const handleApply = (attrs: Record<string, any>) => {
+  const handleApply = (attrs: Attributes) => {
     setAttributes(attrs);
     goNext();
   };
@@ -107,7 +95,7 @@ export default function WorkflowRunner({
     return lookupResult.results?.flatMap((result) => result.assets || []) || [];
   }, [lookupResult]);
 
-  const content = useMemo(() => {
+  const renderStep = () => {
     if (!current)
       return (
         <Alert>
@@ -116,6 +104,7 @@ export default function WorkflowRunner({
           </AlertDescription>
         </Alert>
       );
+    const stepType: string = current.type;
     switch (current.type) {
       case "PROMPT": {
         const field = resolveField(current.field);
@@ -134,7 +123,7 @@ export default function WorkflowRunner({
             <QueryPromptStep
               label={current.label || "Search"}
               placeholder={current.query}
-              initialValue={attributes.query}
+              initialValue={typeof attributes.query === "string" ? attributes.query : undefined}
               onSubmit={(val) =>
                 handlePromptSubmit({ ...attributes, query: val })
               }
@@ -151,9 +140,10 @@ export default function WorkflowRunner({
         );
       }
       case "PROMPT_ANY": {
-        const fields = (current.fields || [])
-          .map((key) => resolveField(key))
-          .filter(Boolean) as NonNullable<ModuleDefinition["fields"]>;
+        const fields = (current.fields ?? []).flatMap((key) => {
+          const field = resolveField(key);
+          return field ? [field] : [];
+        });
         return (
           <PromptAnyStep
             fields={fields.length ? fields : moduleDefinition?.fields || []}
@@ -214,22 +204,12 @@ export default function WorkflowRunner({
         return (
           <Alert variant="destructive">
             <AlertDescription>
-              Unsupported step {String((current as any)?.type)}
+              Unsupported step {stepType}
             </AlertDescription>
           </Alert>
         );
     }
-  }, [
-    current,
-    attributes,
-    moduleDefinition,
-    moduleId,
-    collectionId,
-    lookupResult,
-    lookupAssets,
-    stepIndex,
-    selectedImage,
-  ]);
+  };
 
   return (
     <div className="space-y-4">
@@ -237,7 +217,7 @@ export default function WorkflowRunner({
         <h4 className="font-bold">{workflow.label || workflow.key}</h4>
         <Progress value={progress} className="mt-2 h-2" />
       </div>
-      {content}
+      {renderStep()}
     </div>
   );
 }

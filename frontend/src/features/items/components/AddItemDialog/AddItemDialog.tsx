@@ -1,11 +1,7 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
-import type {
-  Item,
-  ModuleDefinition,
-  WorkflowDef,
-} from "../../../../api/types";
+import { useMemo, useState } from "react";
+import type { Item } from "../../../../api/types";
+import type { WorkflowContract } from "@/features/modules/moduleTypes";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import WorkflowRunner from "./WorkflowRunner";
 import {
   Dialog,
@@ -13,12 +9,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "../../../../../components/ui/dialog";
-import { cn } from "../../../../../lib/utils";
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 function buildFallbackWorkflow(
-  moduleDefinition: ModuleDefinition | null | undefined
-): WorkflowDef {
+  moduleDefinition: ModuleContract | null | undefined
+): WorkflowContract {
   const fields = moduleDefinition?.fields ?? [];
   const fieldKeys = fields.map((f) => f.key);
   return {
@@ -39,7 +35,7 @@ export default function AddItemDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  moduleDefinition: ModuleDefinition | null | undefined;
+  moduleDefinition: ModuleContract | null | undefined;
   moduleId: string;
   collectionId: string;
   defaultState?: string;
@@ -57,10 +53,12 @@ export default function AddItemDialog({
   const [selectedKey, setSelectedKey] = useState(workflows[0]?.key);
   const [showWorkflowSelector, setShowWorkflowSelector] = useState(true);
 
-  useEffect(() => {
+  const [previousWorkflows, setPreviousWorkflows] = useState(workflows);
+  if (previousWorkflows !== workflows) {
+    setPreviousWorkflows(workflows);
     setSelectedKey(workflows[0]?.key);
     setShowWorkflowSelector(true);
-  }, [workflows]);
+  }
   const selectedWorkflow =
     workflows.find((w) => w.key === selectedKey) || workflows[0];
 
@@ -70,7 +68,7 @@ export default function AddItemDialog({
   };
 
   const handleStepChange = (
-    stepType: WorkflowDef["steps"][number]["type"] | undefined
+    stepType: WorkflowContract["steps"][number]["type"] | undefined
   ) => {
     const isPrompt = stepType === "PROMPT" || stepType === "PROMPT_ANY";
     setShowWorkflowSelector(isPrompt);
@@ -115,6 +113,7 @@ export default function AddItemDialog({
 
           {selectedWorkflow ? (
             <WorkflowRunner
+              key={selectedWorkflow.key}
               workflow={selectedWorkflow}
               moduleDefinition={moduleDefinition}
               moduleId={moduleId}

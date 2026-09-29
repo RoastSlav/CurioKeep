@@ -1,9 +1,8 @@
-"use client"
-
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
-import {Badge} from "../../../../components/ui/badge"
-import type {FieldDef} from "../../../api/types"
+import { toInputValue } from "../formValue"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Badge} from "@/components/ui/badge"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function NumberFieldField({
                                              field,
@@ -13,11 +12,11 @@ export default function NumberFieldField({
                                              onChange,
                                              onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const constraints = field.constraints || {}
@@ -37,7 +36,7 @@ export default function NumberFieldField({
         <div className="flex flex-col gap-2">
             <Label htmlFor={id} className="text-sm font-semibold text-foreground">
                 {field.label || field.key}
-                {field.flags?.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
                 {field.identifiers && field.identifiers.length > 0 && (
                     <div className="inline-flex gap-1 ml-2">
                         {field.identifiers.map((idType) => (
@@ -52,7 +51,7 @@ export default function NumberFieldField({
             <Input
                 id={id}
                 type="number"
-                value={value ?? ""}
+                value={toInputValue(value)}
                 placeholder={field.ui?.placeholder}
                 onChange={(e) => handleChange(e.target.value)}
                 onBlur={onBlur}

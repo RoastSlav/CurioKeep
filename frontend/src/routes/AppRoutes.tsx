@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 
 import {Navigate, Outlet, useLocation, useRoutes} from "react-router-dom"
@@ -13,7 +11,7 @@ import ErrorState from "../components/ErrorState"
 import RequireAuth from "../auth/RequireAuth"
 import RequireSetupComplete from "../auth/RequireSetupComplete"
 import {useAuth} from "../auth/useAuth"
-import {useSetupStatus} from "../components/AppGate"
+import { useSetupStatus } from "../components/setupStatusContext"
 
 const DashboardPage = lazy(() => import("../pages/DashboardPage"))
 const CollectionsPage = lazy(() => import("../features/collections/pages/CollectionsPage"))

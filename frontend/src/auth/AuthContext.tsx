@@ -1,5 +1,4 @@
 import {
-  createContext,
   useCallback,
   useEffect,
   useMemo,
@@ -7,6 +6,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext, type AuthContextValue, type AuthUser } from "./authState";
 import { apiFetch, subscribeAuthEvents } from "../api/client";
 import { ApiError, isApiError } from "../api/errors";
 import {
@@ -16,27 +16,7 @@ import {
   DEFAULT_CACHE_TTL,
 } from "../api/cache";
 
-export type AuthUser = {
-  id: string;
-  email: string;
-  displayName?: string | null;
-  isAdmin?: boolean;
-};
-
-type AuthContextValue = {
-  user: AuthUser | null;
-  loading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshMe: (forceRefresh?: boolean) => Promise<void>;
-};
-
 const ME_CACHE_KEY = "auth:me";
-
-export const AuthContext = createContext<AuthContextValue | undefined>(
-  undefined
-);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();

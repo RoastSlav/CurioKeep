@@ -1,5 +1,7 @@
+import { getErrorMessage } from "@/api/errors";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CollectionModule, ModuleSummary } from "../../../api/types";
+import type { CollectionModule } from "../../../api/types";
+import type { ModuleSummary } from "../../modules/api/modulesApi";
 import {
     disableCollectionModule,
     enableCollectionModule,
@@ -27,8 +29,8 @@ export function useCollectionModules(collectionId?: string) {
             ]);
             setAvailableModules(available);
             setEnabledModules(enabled);
-        } catch (err: any) {
-            setError(err?.message || "Failed to load modules");
+        } catch (err) {
+            setError(getErrorMessage(err, "Failed to load modules"));
         } finally {
             setLoading(false);
         }

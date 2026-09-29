@@ -1,6 +1,6 @@
 import type {ReactNode} from "react"
-import type {Collection} from "../../../api/types"
-import {Badge} from "../../../../components/ui/badge"
+import type { Collection } from "../../../api/types";
+import {Badge} from "@/components/ui/badge"
 
 export default function CollectionHeader({ collection, actions }: { collection: Collection; actions?: ReactNode }) {
     const role = collection.role?.toUpperCase()

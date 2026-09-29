@@ -1,4 +1,4 @@
-"use client"
+import { getErrorMessage } from "@/api/errors";
 import {useCallback, useEffect, useMemo, useState} from "react"
 import ErrorState from "../../../components/ErrorState"
 import type {ModuleDetails, ModuleSummary} from "../api/modulesApi"
@@ -10,8 +10,8 @@ import ModuleRawXmlDialog from "../components/ModuleRawXmlDialog"
 import ImportModuleDialog from "../components/ImportModuleDialog"
 import ScanModulesDialog from "../components/ScanModulesDialog"
 import {useAuth} from "../../../auth/useAuth"
-import {Skeleton} from "../../../../components/ui/skeleton"
-import {Button} from "../../../../components/ui/button"
+import {Skeleton} from "@/components/ui/skeleton"
+import {Button} from "@/components/ui/button"
 import {FileUp, FolderSearch} from "lucide-react"
 
 type RawDialogState = {
@@ -44,14 +44,13 @@ export default function ModulesPage() {
         listModules()
             .then((data) => {
                 if (canceled) return
-                console.log("[v0] Modules list loaded:", data)
                 setModules(data)
                 if (!data.length) return
                 setSelectedKey((prev) => prev ?? data[0].moduleKey)
             })
             .catch((error) => {
                 console.error(error)
-                setListError(error?.message || "Failed to load modules")
+                setListError(getErrorMessage(error, "Failed to load modules"))
             })
             .finally(() => {
                 if (canceled) return
@@ -69,16 +68,12 @@ export default function ModulesPage() {
 
         if (!missingKeys.length) return
 
-        console.log("[v0] Loading details for modules:", missingKeys)
-        console.log("[v0] Current detailsMap keys:", Object.keys(detailsMap))
-        console.log("[v0] Current detailsLoading:", detailsLoading)
 
         setDetailsLoading((prev) => {
             const next = {...prev}
             missingKeys.forEach((key) => {
                 next[key] = true
             })
-            console.log("[v0] Updated detailsLoading:", next)
             return next
         })
 
@@ -86,25 +81,21 @@ export default function ModulesPage() {
             try {
                 const results = await Promise.allSettled(missingKeys.map((key) => getModuleDetails(key)))
 
-                console.log("[v0] Promise resolved, processing results:", results)
 
                 const newDetails: Record<string, ModuleDetails> = {}
                 results.forEach((result, idx) => {
                     const key = missingKeys[idx]
                     if (result.status === "fulfilled") {
                         newDetails[key] = result.value
-                        console.log(`[v0] Successfully loaded ${key}:`, result.value)
                     } else {
-                        console.error(`[v0] Failed to load ${key}:`, result.reason)
+                        console.error(`Failed to load ${key}:`, result.reason)
                         setDetailsError("Failed to load some module details")
                     }
                 })
 
-                console.log("[v0] About to update detailsMap with:", newDetails)
 
                 setDetailsMap((prev) => {
                     const next = {...prev, ...newDetails}
-                    console.log("[v0] detailsMap updated, keys:", Object.keys(next))
                     return next
                 })
 
@@ -116,7 +107,7 @@ export default function ModulesPage() {
                     return next
                 })
             } catch (error) {
-                console.error("[v0] Error in loadDetails:", error)
+                console.error("Error in loadDetails:", error)
                 setDetailsError("Failed to load module details")
                 setDetailsLoading((prev) => {
                     const next = {...prev}
@@ -133,12 +124,6 @@ export default function ModulesPage() {
 
     const selectedModule = useMemo(() => {
         const module = selectedKey ? detailsMap[selectedKey] : undefined
-        console.log("[v0] selectedModule useMemo:", {
-            selectedKey,
-            hasModule: !!module,
-            detailsMapKeys: Object.keys(detailsMap),
-            moduleData: module,
-        })
         return module
     }, [selectedKey, detailsMap])
 
@@ -149,16 +134,10 @@ export default function ModulesPage() {
 
     const selectedLoading = useMemo(() => {
         const loading = selectedKey ? Boolean(detailsLoading[selectedKey]) : false
-        console.log("[v0] selectedLoading useMemo:", {
-            selectedKey,
-            loading,
-            detailsLoadingState: detailsLoading[selectedKey ?? ""],
-        })
         return loading
     }, [selectedKey, detailsLoading])
 
     const handleSelect = useCallback((moduleKey: string) => {
-        console.log("[v0] Module selected:", moduleKey)
         setSelectedKey(moduleKey)
     }, [])
 
@@ -283,7 +262,6 @@ export default function ModulesPage() {
                                 details={detailsMap}
                                 selectedKey={selectedKey ?? undefined}
                                 onSelect={handleSelect}
-                                onViewXml={handleRaw}
                             />
                         )}
                     </div>

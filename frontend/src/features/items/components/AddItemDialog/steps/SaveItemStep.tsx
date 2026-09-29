@@ -1,10 +1,12 @@
+import { getErrorMessage } from "@/api/errors";
+import type { Attributes } from "@/features/items/itemTypes";
 import { useState } from "react";
-import type { Item, ModuleDefinition } from "../../../../../api/types";
+import type { Item } from "../../../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import { createItem, setItemImageFromUrl, uploadItemImage } from "../../../api";
 import ItemForm from "../../../components/ItemForm";
 import type { SelectedImage } from "../../forms/SelectItemImageStep";
-import { Alert, AlertDescription } from "../../../../../../components/ui/alert";
-import { Button } from "../../../../../../components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SaveItemStep({
   collectionId,
@@ -18,12 +20,12 @@ export default function SaveItemStep({
 }: {
   collectionId: string;
   moduleId: string;
-  attributes: Record<string, any>;
+  attributes: Attributes;
   selectedImage: SelectedImage;
   defaultState?: string;
   onSaved: (item: Item) => void;
   onBack?: () => void;
-  moduleDefinition: ModuleDefinition | null | undefined;
+  moduleDefinition: ModuleContract | null | undefined;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export default function SaveItemStep({
         cancelLabel="Back"
         disabled={loading}
         onCancel={onBack}
-        onSubmit={async (attrs: Record<string, any>) => {
+        onSubmit={async (attrs: Attributes) => {
           setLoading(true);
           setError(null);
           try {
@@ -72,8 +74,8 @@ export default function SaveItemStep({
             }
 
             onSaved(item);
-          } catch (err: any) {
-            setError(err?.message || "Failed to save item");
+          } catch (err) {
+            setError(getErrorMessage(err, "Failed to save item"));
           } finally {
             setLoading(false);
           }

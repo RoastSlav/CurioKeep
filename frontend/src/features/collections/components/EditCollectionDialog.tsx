@@ -1,10 +1,8 @@
-"use client"
-
 import type React from "react"
 
 import {useEffect, useState} from "react"
-import type {Collection} from "../../../api/types"
-import type {UpdateCollectionRequest} from "../api"
+import type { Collection } from "../../../api/types";
+import type {UpdateCollectionRequest} from "../api/collectionsApi"
 import {
     Dialog,
     DialogContent,
@@ -12,11 +10,11 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "../../../../components/ui/dialog"
-import {Button} from "../../../../components/ui/button"
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
-import {Textarea} from "../../../../components/ui/textarea"
+} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Textarea} from "@/components/ui/textarea"
 
 export default function EditCollectionDialog({
                                                  open,

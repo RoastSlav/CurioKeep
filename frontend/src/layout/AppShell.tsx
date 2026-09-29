@@ -1,5 +1,3 @@
-"use client"
-
 import {Suspense, useEffect, useState, type ReactNode} from "react"
 import {useLocation} from "react-router-dom"
 import {useAuth} from "../auth/useAuth"
@@ -7,22 +5,20 @@ import SideNav from "./SideNav"
 import TopBar from "./TopBar"
 import {Loader2} from "lucide-react"
 
-const DRAWER_WIDTH = 260
-
 export default function AppShell({ children }: { children: ReactNode }) {
     const {user} = useAuth()
     const location = useLocation()
-    const [mobileOpen, setMobileOpen] = useState(false)
-
-    useEffect(() => {
-        setMobileOpen(false)
-    }, [location.pathname, location.search])
+    // The drawer is open only for the route it was opened on, so navigating closes it.
+    const routeKey = location.pathname + location.search
+    const [openRouteKey, setOpenRouteKey] = useState<string | null>(null)
+    const mobileOpen = openRouteKey === routeKey
+    const setMobileOpen = (open: boolean) => setOpenRouteKey(open ? routeKey : null)
 
     useEffect(() => {
         if (!mobileOpen) return undefined
         const handleKey = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
-                setMobileOpen(false)
+                setOpenRouteKey(null)
             }
         }
         window.addEventListener("keydown", handleKey)
@@ -31,7 +27,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
     return (
         <div className="flex min-h-screen bg-background text-foreground">
-            <TopBar onMenuToggle={() => setMobileOpen(true)} drawerWidth={DRAWER_WIDTH}/>
+            <TopBar onMenuToggle={() => setMobileOpen(true)}/>
 
             {/* Mobile sidebar overlay */}
             {mobileOpen &&

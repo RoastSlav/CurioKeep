@@ -1,8 +1,6 @@
-"use client"
-
-import {Checkbox} from "../../../../components/ui/checkbox"
-import {Label} from "../../../../components/ui/label"
-import type {FieldDef} from "../../../api/types"
+import {Checkbox} from "@/components/ui/checkbox"
+import {Label} from "@/components/ui/label"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function BooleanFieldField({
                                               field,
@@ -12,11 +10,11 @@ export default function BooleanFieldField({
                                               onChange,
                                               onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const id = `field-${field.key}`

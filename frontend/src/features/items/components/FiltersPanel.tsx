@@ -1,6 +1,7 @@
+import { omitKey } from "@/lib/utils";
 import { Fragment } from "react";
 import { Box, Button, Chip, MenuItem, Stack, TextField, Typography } from "@mui/material";
-import type { ModuleDefinition } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import type { FieldFilter } from "../hooks/useItemsQuery";
 
 function renderEnumFilter(
@@ -113,7 +114,7 @@ function renderDateFilter(
 }
 
 function renderFilterControl(
-    field: ModuleDefinition["fields"][number],
+    field: ModuleContract["fields"][number],
     filter: FieldFilter | undefined,
     onChange: (next: FieldFilter | undefined) => void
 ) {
@@ -135,19 +136,19 @@ export default function FiltersPanel({
     onChange,
     onClear,
 }: {
-    moduleDefinition: ModuleDefinition | null | undefined;
+    moduleDefinition: ModuleContract | null | undefined;
     filters: Record<string, FieldFilter> | undefined;
     onChange: (next: Record<string, FieldFilter> | undefined) => void;
     onClear?: () => void;
 }) {
     if (!moduleDefinition) return null;
-    const filterableFields = (moduleDefinition.fields || []).filter((f) => f.flags?.filterable);
+    const filterableFields = (moduleDefinition.fields || []).filter((f) => f.filterable);
     if (!filterableFields.length) return null;
 
     const updateFilter = (key: string, next: FieldFilter | undefined) => {
         const current = filters || {};
         if (!next) {
-            const { [key]: _, ...rest } = current;
+            const rest = omitKey(current, key);
             onChange(Object.keys(rest).length ? rest : undefined);
             return;
         }

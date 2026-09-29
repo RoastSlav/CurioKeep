@@ -1,7 +1,7 @@
+import type { Attributes } from "@/features/items/itemTypes";
 import { apiFetch } from "../../api/client";
 import {
   clearByPrefix,
-  clearCached,
   getCached,
   setCached,
   DEFAULT_CACHE_TTL,
@@ -120,7 +120,7 @@ export async function createItem(
   collectionId: string,
   payload: {
     moduleId: string;
-    attributes: Record<string, any>;
+    attributes: Attributes;
     stateKey?: string;
   }
 ) {

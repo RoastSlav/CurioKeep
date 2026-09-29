@@ -1,5 +1,4 @@
-"use client"
-
+import { getErrorMessage } from "@/api/errors";
 import {useEffect, useMemo, useState} from "react"
 import {useNavigate, useParams} from "react-router-dom"
 import {Loader2} from "lucide-react"
@@ -7,9 +6,9 @@ import {useAuth} from "../../../auth/useAuth"
 import LoadingState from "../../../components/LoadingState"
 import ErrorState from "../../../components/ErrorState"
 import {acceptCollectionInvite, validateCollectionInvite} from "../api/collectionInvitesApi"
-import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "../../../../components/ui/card"
-import {Button} from "../../../../components/ui/button"
-import {Alert, AlertDescription} from "../../../../components/ui/alert"
+import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card"
+import {Button} from "@/components/ui/button"
+import {Alert, AlertDescription} from "@/components/ui/alert"
 
 export default function AcceptCollectionInvitePage() {
     const {token} = useParams<{ token: string }>()
@@ -39,8 +38,8 @@ export default function AcceptCollectionInvitePage() {
                 setRole(res.role || null)
                 setCollectionId(res.collectionId)
                 setStatus("ready")
-            } catch (err: any) {
-                setError(err?.message || "Failed to validate invite")
+            } catch (err) {
+                setError(getErrorMessage(err, "Failed to validate invite"))
                 setStatus("ready")
             }
         }
@@ -64,8 +63,8 @@ export default function AcceptCollectionInvitePage() {
             await acceptCollectionInvite(token)
             setStatus("accepted")
             navigate(`/collections/${collectionId}`, {replace: true})
-        } catch (err: any) {
-            setError(err?.message || "Failed to accept invite")
+        } catch (err) {
+            setError(getErrorMessage(err, "Failed to accept invite"))
             setStatus("ready")
         }
     }

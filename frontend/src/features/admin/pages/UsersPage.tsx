@@ -1,5 +1,4 @@
-"use client";
-
+import { getErrorMessage } from "@/api/errors";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Loader2,
@@ -26,9 +25,9 @@ import {
   revokeInvite,
   type AdminInvite,
 } from "../../../api/admin/invitesApi";
-import { Button } from "../../../../components/ui/button";
-import { Badge } from "../../../../components/ui/badge";
-import { Alert, AlertDescription } from "../../../../components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -36,9 +35,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../../../components/ui/table";
-import { Input } from "../../../../components/ui/input";
-import { Label } from "../../../../components/ui/label";
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -46,8 +45,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../../../components/ui/dialog";
-import { useToast } from "../../../components/Toasts";
+} from "@/components/ui/dialog";
+import { useToast } from "../../../components/toastContext";
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -76,13 +75,13 @@ export default function UsersPage() {
       try {
         const [usersData, invitesData] = await Promise.all([
           listUsers({ forceRefresh }),
-          listInvites({ forceRefresh }),
+          listInvites(),
         ]);
         setUsers(usersData);
         setInvites(invitesData);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load data");
-        showToast(err?.message || "Failed to load data", "error");
+      } catch (err) {
+        setError(getErrorMessage(err, "Failed to load data"));
+        showToast(getErrorMessage(err, "Failed to load data"), "error");
       } finally {
         isFetchingRef.current = false;
         setLoading(false);
@@ -106,9 +105,9 @@ export default function UsersPage() {
       await updateUserStatus(userId, { status: newStatus });
       clearUsersCache();
       showToast(`User ${newStatus.toLowerCase()}`, "success");
-    } catch (err: any) {
+    } catch (err) {
       setUsers(snapshot);
-      showToast(err?.message || "Failed to update status", "error");
+      showToast(getErrorMessage(err, "Failed to update status"), "error");
     } finally {
       setSaving(false);
     }
@@ -125,9 +124,9 @@ export default function UsersPage() {
       await updateUserAdmin(userId, { admin: newAdmin });
       clearUsersCache();
       showToast(newAdmin ? "Admin granted" : "Admin revoked", "success");
-    } catch (err: any) {
+    } catch (err) {
       setUsers(snapshot);
-      showToast(err?.message || "Failed to update admin", "error");
+      showToast(getErrorMessage(err, "Failed to update admin"), "error");
     } finally {
       setSaving(false);
     }
@@ -144,9 +143,9 @@ export default function UsersPage() {
       await deleteUser(userId);
       clearUsersCache();
       showToast("User deleted", "success");
-    } catch (err: any) {
+    } catch (err) {
       setUsers(snapshot);
-      showToast(err?.message || "Failed to delete user", "error");
+      showToast(getErrorMessage(err, "Failed to delete user"), "error");
     } finally {
       setSaving(false);
     }
@@ -165,8 +164,8 @@ export default function UsersPage() {
       clearUsersCache();
       await loadData(true);
       showToast("Invite created", "success");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to create invite", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to create invite"), "error");
     } finally {
       setSaving(false);
     }
@@ -180,9 +179,9 @@ export default function UsersPage() {
       await revokeInvite(token);
       clearUsersCache();
       showToast("Invite revoked", "success");
-    } catch (err: any) {
+    } catch (err) {
       setInvites(snapshot);
-      showToast(err?.message || "Failed to revoke invite", "error");
+      showToast(getErrorMessage(err, "Failed to revoke invite"), "error");
     } finally {
       setSaving(false);
     }

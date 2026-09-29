@@ -1,26 +1,22 @@
-"use client"
-
 import {useMemo, useState} from "react"
 import type {ModuleDetails, ModuleSummary} from "../api/modulesApi"
-import {Input} from "../../../../components/ui/input"
-import {Badge} from "../../../../components/ui/badge"
-import {cn} from "../../../../lib/utils"
+import {Input} from "@/components/ui/input"
+import {Badge} from "@/components/ui/badge"
+import {cn} from "@/lib/utils"
 
 type Props = {
     modules: ModuleSummary[]
     details: Record<string, ModuleDetails>
     selectedKey?: string
     onSelect: (moduleKey: string) => void
-    onViewXml: (moduleKey: string) => void
 }
 
 const sourceColors: Record<ModuleSummary["source"], string> = {
     BUILTIN: "bg-primary text-primary-foreground brutal-border",
     IMPORTED: "bg-secondary text-secondary-foreground brutal-border",
-    USER: "bg-accent text-accent-foreground brutal-border",
 }
 
-export default function ModuleList({ modules, details, selectedKey, onSelect, onViewXml }: Props) {
+export default function ModuleList({ modules, details, selectedKey, onSelect }: Props) {
     const [search, setSearch] = useState("")
 
     const filtered = useMemo(() => {

@@ -1,3 +1,4 @@
+import type { Attributes } from "@/features/items/itemTypes";
 import type { IdentifierType, ItemIdentifier } from "../items/itemTypes";
 
 export type ProviderAsset = {
@@ -21,8 +22,8 @@ export type ProviderLookupRequest = {
 
 export type ProviderLookupResult = {
   providerKey: string;
-  rawData?: Record<string, any>;
-  normalizedFields?: Record<string, any> | string | null;
+  rawData?: Attributes;
+  normalizedFields?: Attributes | string | null;
   assets?: ProviderAsset[];
   confidence?: { score?: number; reason?: string };
   error?: string;
@@ -31,11 +32,11 @@ export type ProviderLookupResult = {
 export type ProviderLookupResponse = {
   results: ProviderLookupResult[];
   best?: ProviderLookupResult | null;
-  mergedAttributes: Record<string, any>;
+  mergedAttributes: Attributes;
   assets?: ProviderAsset[];
   providerResults?: ProviderLookupResult[];
-  merged?: Record<string, any>;
-  fieldValues?: Record<string, any>;
+  merged?: Attributes;
+  fieldValues?: Attributes;
 };
 
 export type Provider = {

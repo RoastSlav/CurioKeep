@@ -1,5 +1,3 @@
-"use client"
-
 import {LogOut, User} from "lucide-react"
 import {useNavigate} from "react-router-dom"
 import {useAuth} from "../auth/useAuth"
@@ -8,14 +6,13 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu"
-import {Avatar, AvatarFallback} from "../../components/ui/avatar"
+} from "@/components/ui/dropdown-menu"
+import {Avatar, AvatarFallback} from "@/components/ui/avatar"
 
 export default function UserMenu() {
     const {user, logout} = useAuth()
     const navigate = useNavigate()
 
-    const displayName = user?.displayName || user?.email || "User"
     const initial = (user?.displayName || user?.email || "?").charAt(0).toUpperCase()
 
     const handleProfile = () => {

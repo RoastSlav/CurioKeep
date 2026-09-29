@@ -1,5 +1,7 @@
+import { getErrorMessage } from "@/api/errors";
 import { useEffect, useMemo, useState } from "react";
-import type { Item, ModuleDefinition } from "../../../api/types";
+import type { Item } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import { listItems, type ItemListQuery, type ItemSort } from "../api";
 
 export type FieldFilter =
@@ -17,11 +19,11 @@ export type ItemsQueryState = {
     sort?: ItemSort;
 };
 
-export function getDefaultSort(moduleDefinition?: ModuleDefinition | null): ItemSort {
+export function getDefaultSort(moduleDefinition?: ModuleContract | null): ItemSort {
     if (moduleDefinition) {
         const sortable = (moduleDefinition.fields || [])
-            .filter((f) => f.flags?.sortable)
-            .sort((a, b) => (a.flags?.order ?? Number.MAX_SAFE_INTEGER) - (b.flags?.order ?? Number.MAX_SAFE_INTEGER));
+            .filter((f) => f.sortable)
+            .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER));
 
         if (sortable.length) {
             return { field: sortable[0].key, direction: "asc" };
@@ -71,7 +73,7 @@ function valueMatchesFilter(value: unknown, filter: FieldFilter): boolean {
 
 function applyClientFilters(
     items: Item[],
-    moduleDefinition: ModuleDefinition | null | undefined,
+    moduleDefinition: ModuleContract | null | undefined,
     search?: string,
     states?: string[],
     filters?: Record<string, FieldFilter>
@@ -84,7 +86,7 @@ function applyClientFilters(
     }
 
     if (moduleDefinition && search) {
-        const searchableFields = (moduleDefinition.fields || []).filter((f) => f.flags?.searchable);
+        const searchableFields = (moduleDefinition.fields || []).filter((f) => f.searchable);
         const term = search.toLowerCase();
         result = result.filter((item) =>
             searchableFields.some((field) => normalizeText(item.attributes?.[field.key]).includes(term))
@@ -101,7 +103,7 @@ function applyClientFilters(
     return result;
 }
 
-function applySort(items: Item[], moduleDefinition: ModuleDefinition | null | undefined, sort?: ItemSort) {
+function applySort(items: Item[], moduleDefinition: ModuleContract | null | undefined, sort?: ItemSort) {
     if (!sort) return items;
     const { field, direction } = sort;
     const dir = direction === "desc" ? -1 : 1;
@@ -125,7 +127,7 @@ function applySort(items: Item[], moduleDefinition: ModuleDefinition | null | un
 export function useItemsQuery(
     collectionId: string | undefined,
     moduleId: string | null | undefined,
-    moduleDefinition: ModuleDefinition | null | undefined,
+    moduleDefinition: ModuleContract | null | undefined,
     query: ItemsQueryState
 ) {
     const [items, setItems] = useState<Item[]>([]);
@@ -161,8 +163,8 @@ export function useItemsQuery(
 
                 setItems(filtered);
                 setTotal(totalCount);
-            } catch (err: any) {
-                setError(err?.message || "Failed to load items");
+            } catch (err) {
+                setError(getErrorMessage(err, "Failed to load items"));
             } finally {
                 setLoading(false);
             }

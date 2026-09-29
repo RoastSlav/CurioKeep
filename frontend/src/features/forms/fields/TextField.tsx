@@ -1,9 +1,8 @@
-"use client"
-
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
-import {Badge} from "../../../../components/ui/badge"
-import type {FieldDef} from "../../../api/types"
+import { toInputValue } from "../formValue"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Badge} from "@/components/ui/badge"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function TextFieldField({
                                            field,
@@ -13,11 +12,11 @@ export default function TextFieldField({
                                            onChange,
                                            onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const id = `field-${field.key}`
@@ -27,7 +26,7 @@ export default function TextFieldField({
         <div className="flex flex-col gap-2">
             <Label htmlFor={id} className="text-sm font-semibold text-foreground">
                 {field.label || field.key}
-                {field.flags?.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
                 {field.identifiers && field.identifiers.length > 0 && (
                     <div className="inline-flex gap-1 ml-2">
                         {field.identifiers.map((idType) => (
@@ -42,7 +41,7 @@ export default function TextFieldField({
             <Input
                 id={id}
                 type="text"
-                value={value ?? ""}
+                value={toInputValue(value)}
                 placeholder={field.ui?.placeholder}
                 onChange={(e) => onChange(e.target.value)}
                 onBlur={onBlur}

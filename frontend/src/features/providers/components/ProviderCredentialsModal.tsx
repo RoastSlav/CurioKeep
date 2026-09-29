@@ -1,11 +1,10 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../../components/ui/dialog"
-import { Button } from "../../../../components/ui/button"
-import { Input } from "../../../../components/ui/input"
-import { Label } from "../../../../components/ui/label"
+import { useCallback, useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Eye, EyeOff } from "lucide-react"
+import { getErrorMessage, isApiError } from "@/api/errors"
 import { getCredentialStatus, updateCredentials, deleteCredentials } from "../api"
 import type { Provider } from "../providerTypes"
 
@@ -24,27 +23,29 @@ export function ProviderCredentialsModal({ provider, open, onClose, onUpdated }:
   const [error, setError] = useState<string | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
 
-  useEffect(() => {
-    if (open) {
-      checkStatus()
-    }
-  }, [open, provider.key])
+  const providerKey = provider.key
 
-  async function checkStatus() {
+  const checkStatus = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      await getCredentialStatus(provider.key)
+      await getCredentialStatus(providerKey)
       setIsAdmin(true)
-    } catch (err: any) {
-      if (err.status === 403) {
+    } catch (err) {
+      if (isApiError(err) && err.status === 403) {
         setIsAdmin(false)
         setError("Admin access required to manage credentials")
       }
     } finally {
       setLoading(false)
     }
-  }
+  }, [providerKey])
+
+  useEffect(() => {
+    if (open) {
+      void checkStatus()
+    }
+  }, [open, checkStatus])
 
   const handleSave = async () => {
     const missingFields = provider.credentialFields
@@ -62,8 +63,8 @@ export function ProviderCredentialsModal({ provider, open, onClose, onUpdated }:
       const status = await updateCredentials(provider.key, { values })
       onUpdated({ credentialsConfigured: status.credentialsConfigured })
       onClose()
-    } catch (err: any) {
-      setError(err.message || "Failed to save credentials")
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to save credentials"))
     } finally {
       setLoading(false)
     }
@@ -83,8 +84,8 @@ export function ProviderCredentialsModal({ provider, open, onClose, onUpdated }:
       setValues({})
       setConfirmClear(false)
       onClose()
-    } catch (err: any) {
-      setError(err.message || "Failed to clear credentials")
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to clear credentials"))
     } finally {
       setLoading(false)
     }

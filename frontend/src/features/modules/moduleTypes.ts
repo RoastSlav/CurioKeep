@@ -1,3 +1,8 @@
+import type { IdentifierType } from "../items/itemTypes";
+
+// Mirrors the compiled module contract the backend returns (org.rostislav.curiokeep.modules.contract).
+// Field flags such as `required` and `filterable` are direct properties, not nested under a `flags` object.
+
 export type FieldType =
   | "TEXT"
   | "NUMBER"
@@ -8,20 +13,12 @@ export type FieldType =
   | "LINK"
   | "JSON";
 
-export type FieldEnumValue = {
+export type EnumValue = {
   key: string;
   label: string;
 };
 
-export type FieldFlags = {
-  required?: boolean;
-  searchable?: boolean;
-  filterable?: boolean;
-  sortable?: boolean;
-  order?: number;
-};
-
-export type FieldConstraints = {
+export type Constraints = {
   min?: number;
   max?: number;
   minLength?: number;
@@ -31,7 +28,7 @@ export type FieldConstraints = {
   uniqueWithinCollection?: boolean;
 };
 
-export type FieldUI = {
+export type UiHints = {
   widget?: string;
   placeholder?: string;
   helpText?: string;
@@ -39,40 +36,54 @@ export type FieldUI = {
   hidden?: boolean;
 };
 
-export type FieldDef = {
+export type ProviderMapping = {
+  provider: string;
+  path: string;
+  transform?: "TRIM" | "JOIN_COMMA" | "FIRST" | "TO_INT";
+};
+
+export type FieldContract = {
   key: string;
   label: string;
   type: FieldType;
-  flags?: FieldFlags;
-  enumValues?: FieldEnumValue[];
-  constraints?: FieldConstraints;
-  ui?: FieldUI;
-  identifiers?: string[];
-  providerMappings?: { provider: string; path: string; transform?: string }[];
+  required: boolean;
+  searchable: boolean;
+  filterable: boolean;
+  sortable: boolean;
+  order: number;
+  active: boolean;
+  deprecated: boolean;
+  defaultValue?: unknown;
+  identifiers: IdentifierType[];
+  enumValues: EnumValue[];
+  constraints?: Constraints;
+  ui?: UiHints;
+  providerMappings: ProviderMapping[];
 };
 
-export type ModuleStateDef = {
+export type StateContract = {
   key: string;
   label: string;
-  order?: number;
-  active?: boolean;
-  deprecated?: boolean;
+  order: number;
+  active: boolean;
+  deprecated: boolean;
 };
 
-export type ModuleProviderDef = {
+export type ProviderContract = {
   key: string;
-  name?: string;
-  description?: string;
-  supportedIdentifiers?: string[];
+  enabled: boolean;
+  priority: number;
+  supportsIdentifiers: IdentifierType[];
 };
 
+// SELECT_IMAGE is inserted client-side by WorkflowRunner; the backend never sends it.
 export type WorkflowStepType =
   | "PROMPT"
   | "PROMPT_ANY"
   | "LOOKUP_METADATA"
   | "APPLY_METADATA"
-  | "SELECT_IMAGE"
-  | "SAVE_ITEM";
+  | "SAVE_ITEM"
+  | "SELECT_IMAGE";
 
 export type WorkflowStep = {
   type: WorkflowStepType;
@@ -81,23 +92,39 @@ export type WorkflowStep = {
   providers?: string[];
   query?: string;
   label?: string;
-  extensions?: Record<string, any>;
 };
 
-export type WorkflowDef = {
+export type WorkflowContract = {
   key: string;
   label?: string;
   steps: WorkflowStep[];
-  extensions?: Record<string, any>;
 };
 
-export type ModuleDefinition = {
+export type Author = {
+  name?: string;
+  email?: string;
+  url?: string;
+};
+
+export type ModuleMeta = {
+  authors: Author[];
+  license?: string;
+  homepage?: string;
+  repository?: string;
+  icon?: string;
+  tags: string[];
+  minAppVersion?: string;
+};
+
+export type ModuleContract = {
   key: string;
   version: string;
   name: string;
   description?: string;
-  states: ModuleStateDef[];
-  fields: FieldDef[];
-  providers?: ModuleProviderDef[];
-  workflows?: WorkflowDef[];
+  meta?: ModuleMeta;
+  states: StateContract[];
+  providers: ProviderContract[];
+  fields: FieldContract[];
+  workflows: WorkflowContract[];
+  extensions: Record<string, unknown>;
 };

@@ -1,11 +1,9 @@
-"use client"
-
 import {Trash2, Edit, ExternalLink} from "lucide-react"
 import {Link as RouterLink} from "react-router-dom"
-import type {Collection} from "../../../api/types"
-import {Card, CardContent, CardFooter} from "../../../../components/ui/card"
-import {Button} from "../../../../components/ui/button"
-import {Badge} from "../../../../components/ui/badge"
+import type { Collection } from "../../../api/types";
+import {Card, CardContent, CardFooter} from "@/components/ui/card"
+import {Button} from "@/components/ui/button"
+import {Badge} from "@/components/ui/badge"
 
 export default function CollectionCard({
                                            collection,

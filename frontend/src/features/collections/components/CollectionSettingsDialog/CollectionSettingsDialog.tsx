@@ -1,7 +1,6 @@
-"use client"
-
 import {useMemo, useState} from "react"
-import type {CollectionMember, CollectionModule, CollectionInvite, ModuleSummary} from "../../../../api/types"
+import type { CollectionMember, CollectionModule, CollectionInvite } from "../../../../api/types";
+import type { ModuleSummary } from "../../../modules/api/modulesApi";
 import ModulesSection from "./ModulesSection"
 import MembersSection from "./MembersSection"
 import InviteMemberForm from "./InviteMemberForm"
@@ -12,8 +11,8 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-} from "../../../../../components/ui/dialog"
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "../../../../../components/ui/tabs"
+} from "@/components/ui/dialog"
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 
 type TabKey = "modules" | "members"
 

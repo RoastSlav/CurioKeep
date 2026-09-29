@@ -1,10 +1,8 @@
-"use client"
-
 import {Trash2, Edit} from "lucide-react"
-import type {ModuleStateDef} from "../../../api/types"
+import type { StateContract } from "@/features/modules/moduleTypes";
 import StateDropdown from "./StateDropdown"
-import {Button} from "../../../../components/ui/button"
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "../../../../components/ui/tooltip"
+import {Button} from "@/components/ui/button"
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip"
 
 export default function ItemActions({
                                         role,
@@ -18,7 +16,7 @@ export default function ItemActions({
 }: {
     role?: string
     stateKey: string
-    states: ModuleStateDef[]
+    states: StateContract[]
     onChangeState?: (stateKey: string) => void
     onEdit?: () => void
     onDelete?: () => void

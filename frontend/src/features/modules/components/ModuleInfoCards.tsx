@@ -1,7 +1,5 @@
-"use client"
-
 import type {ModuleDetails} from "../api/modulesApi"
-import {Badge} from "../../../../components/ui/badge"
+import {Badge} from "@/components/ui/badge"
 
 type Props = {
     module: ModuleDetails

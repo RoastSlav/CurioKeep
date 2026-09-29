@@ -10,7 +10,8 @@ import {
     TableRow,
     Typography,
 } from "@mui/material";
-import type { Item, ModuleDefinition } from "../../../api/types";
+import type { Item } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import EmptyState from "../../../components/EmptyState";
 import ErrorState from "../../../components/ErrorState";
 import LoadingState from "../../../components/LoadingState";
@@ -45,7 +46,7 @@ export default function ItemsTable({
     onRetry,
     onAdd,
 }: {
-    moduleDefinition: ModuleDefinition | null | undefined;
+    moduleDefinition: ModuleContract | null | undefined;
     items: Item[];
     total: number;
     page: number;

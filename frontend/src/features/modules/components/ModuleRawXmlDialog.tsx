@@ -1,5 +1,3 @@
-"use client"
-
 import {useCallback, useMemo, useState} from "react"
 import LoadingState from "../../../components/LoadingState"
 import {
@@ -9,10 +7,10 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "../../../../components/ui/dialog"
-import {Button} from "../../../../components/ui/button"
-import {Alert, AlertDescription} from "../../../../components/ui/alert"
-import {ScrollArea} from "../../../../components/ui/scroll-area"
+} from "@/components/ui/dialog"
+import {Button} from "@/components/ui/button"
+import {Alert, AlertDescription} from "@/components/ui/alert"
+import {ScrollArea} from "@/components/ui/scroll-area"
 
 type Props = {
     open: boolean

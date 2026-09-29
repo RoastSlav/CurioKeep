@@ -1,20 +1,17 @@
-"use client";
-
+import { getErrorMessage } from "@/api/errors";
+import type { Attributes } from "@/features/items/itemTypes";
 import { useMemo, useState } from "react";
-import type {
-  ItemIdentifier,
-  ModuleDefinition,
-  ProviderLookupResponse,
-} from "../../../../../api/types";
+import type { ItemIdentifier, ProviderLookupResponse } from "../../../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import { lookupProviders } from "../../../../providers/api";
 import BarcodeScanner from "../BarcodeScanner";
-import { Button } from "../../../../../../components/ui/button";
-import { Alert, AlertDescription } from "../../../../../../components/ui/alert";
-import { Separator } from "../../../../../../components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 function collectIdentifiers(
-  moduleDefinition: ModuleDefinition | null | undefined,
-  attributes: Record<string, any>
+  moduleDefinition: ModuleContract | null | undefined,
+  attributes: Attributes
 ): ItemIdentifier[] {
   if (!moduleDefinition) return [];
   const list: ItemIdentifier[] = [];
@@ -40,13 +37,13 @@ export default function LookupMetadataStep({
   onBack,
   onAttributesChange,
 }: {
-  moduleDefinition: ModuleDefinition | null | undefined;
+  moduleDefinition: ModuleContract | null | undefined;
   moduleId: string;
-  attributes: Record<string, any>;
+  attributes: Attributes;
   providers?: string[];
   onComplete: (response: ProviderLookupResponse) => void;
   onBack?: () => void;
-  onAttributesChange: (next: Record<string, any>) => void;
+  onAttributesChange: (next: Attributes) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +52,9 @@ export default function LookupMetadataStep({
     () => collectIdentifiers(moduleDefinition, attributes),
     [moduleDefinition, attributes]
   );
-  const hasQuery =
-    typeof attributes.query === "string" && attributes.query.trim().length > 0;
+  const query =
+    typeof attributes.query === "string" ? attributes.query.trim() : "";
+  const hasQuery = query.length > 0;
   const canLookup = identifiers.length > 0 || hasQuery;
 
   const runLookup = async () => {
@@ -71,12 +69,12 @@ export default function LookupMetadataStep({
         moduleId,
         identifiers,
         providers,
-        query: hasQuery ? attributes.query.trim() : undefined,
+        query: hasQuery ? query : undefined,
       });
       setResult(response);
       onComplete(response);
-    } catch (err: any) {
-      setError(err?.message || "Lookup failed");
+    } catch (err) {
+      setError(getErrorMessage(err, "Lookup failed"));
     } finally {
       setLoading(false);
     }

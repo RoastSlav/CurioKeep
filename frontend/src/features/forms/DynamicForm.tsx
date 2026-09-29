@@ -1,27 +1,27 @@
-"use client"
-
 import type React from "react"
 
 import {useEffect, useMemo, useState} from "react"
-import type {FieldDef, ModuleDefinition} from "../../api/types"
+import type { FieldContract, ModuleContract } from "@/features/modules/moduleTypes";
+import type { Attributes } from "@/features/items/itemTypes";
 import FieldRenderer from "./FieldRenderer"
+import {omitKey} from "@/lib/utils"
 import {validateAttributes, type ValidationErrors} from "./validation"
-import {Button} from "../../../components/ui/button"
-import {Separator} from "../../../components/ui/separator"
+import {Button} from "@/components/ui/button"
+import {Separator} from "@/components/ui/separator"
 
 export type DynamicFormProps = {
-    moduleDefinition?: ModuleDefinition | null
-    fields?: FieldDef[]
-    initialValues?: Record<string, any>
+    moduleDefinition?: ModuleContract | null
+    fields?: FieldContract[]
+    initialValues?: Attributes
     disabled?: boolean
     submitLabel?: string
     cancelLabel?: string
-    onSubmit: (attributes: Record<string, any>) => void | Promise<void>
+    onSubmit: (attributes: Attributes) => void | Promise<void>
     onCancel?: () => void
 }
 
-function groupFields(visibleFields: FieldDef[]) {
-    const groups: { name?: string; fields: FieldDef[] }[] = []
+function groupFields(visibleFields: FieldContract[]) {
+    const groups: { name?: string; fields: FieldContract[] }[] = []
     visibleFields.forEach((field) => {
         const groupName = field.ui?.group
         const existing = groups.find((g) => g.name === groupName)
@@ -49,7 +49,7 @@ export default function DynamicForm({
         return source.filter((f) => !f.ui?.hidden)
     }, [fields, moduleDefinition])
 
-    const [values, setValues] = useState<Record<string, any>>(initialValues || {})
+    const [values, setValues] = useState<Attributes>(initialValues || {})
     const [errors, setErrors] = useState<ValidationErrors>({})
     const [submitting, setSubmitting] = useState(false)
 
@@ -57,28 +57,26 @@ export default function DynamicForm({
         setValues(initialValues || {})
     }, [initialValues])
 
-    const handleChange = (key: string, value: any) => {
+    const handleChange = (key: string, value: unknown) => {
         setValues((prev) => ({...prev, [key]: value}))
         setErrors((prev) => {
             if (!prev[key]) return prev
-            const {[key]: _, ...rest} = prev
-            return rest
+            return omitKey(prev, key)
         })
     }
 
-    const handleBlur = (field: FieldDef) => {
+    const handleBlur = (field: FieldContract) => {
         const err = validateAttributes([field], {...values, [field.key]: values[field.key]})[field.key]
         setErrors((prev) => {
             if (!err) {
-                const {[field.key]: _, ...rest} = prev
-                return rest
+                return omitKey(prev, field.key)
             }
             return {...prev, [field.key]: err}
         })
     }
 
-    const prepareAttributes = (): Record<string, any> => {
-        const result: Record<string, any> = {}
+    const prepareAttributes = (): Attributes => {
+        const result: Attributes = {}
         visibleFields.forEach((field) => {
             const raw = values[field.key]
             if (field.type === "JSON" && typeof raw === "string" && raw.trim()) {

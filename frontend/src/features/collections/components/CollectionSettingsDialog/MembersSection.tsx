@@ -1,14 +1,12 @@
-"use client"
-
 import {useState} from "react"
 import {Loader2, RefreshCw, Trash2} from "lucide-react"
-import type {CollectionMember} from "../../../../api/types"
+import type { CollectionMember } from "../../../../api/types";
 import ConfirmRemoveMemberDialog from "./ConfirmRemoveMemberDialog"
-import {Button} from "../../../../../components/ui/button"
-import {Badge} from "../../../../../components/ui/badge"
-import {Alert, AlertDescription} from "../../../../../components/ui/alert"
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../../components/ui/select"
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "../../../../../components/ui/table"
+import {Button} from "@/components/ui/button"
+import {Badge} from "@/components/ui/badge"
+import {Alert, AlertDescription} from "@/components/ui/alert"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table"
 
 const ROLE_OPTIONS: Array<CollectionMember["role"]> = ["ADMIN", "EDITOR", "VIEWER"]
 

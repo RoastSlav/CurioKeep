@@ -1,7 +1,6 @@
-"use client"
-
 import {useState} from "react"
-import type {Item, ModuleDefinition} from "../../../api/types"
+import type { Item } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import EmptyState from "../../../components/EmptyState"
 import ErrorState from "../../../components/ErrorState"
 import LoadingState from "../../../components/LoadingState"
@@ -10,8 +9,8 @@ import BatchDeleteDialog from "./BatchDeleteDialog"
 import BatchSelection from "./BatchSelection"
 import BatchStateDialog from "./BatchStateDialog"
 import ItemRow from "./ItemRow"
-import {Card, CardContent} from "../../../../components/ui/card"
-import {Table, TableBody, TableHead, TableHeader, TableRow} from "../../../../components/ui/table"
+import {Card, CardContent} from "@/components/ui/card"
+import {Table, TableBody, TableHead, TableHeader, TableRow} from "@/components/ui/table"
 
 export default function ItemsList({
                                       items,
@@ -37,7 +36,7 @@ export default function ItemsList({
     loading?: boolean
     error?: string | null
     moduleName?: string
-    moduleDefinition?: ModuleDefinition | null
+    moduleDefinition?: ModuleContract | null
     canAdd?: boolean
     onAdd?: () => void
     onRetry?: () => void

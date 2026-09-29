@@ -1,16 +1,15 @@
-"use client"
-
+import { getErrorMessage } from "@/api/errors";
 import type React from "react"
 
 import {useMemo, useState} from "react"
 import {Copy} from "lucide-react"
-import type {CollectionInvite} from "../../../../api/types"
-import type {CreateCollectionInviteRequest} from "../../../../api/types"
-import {Button} from "../../../../../components/ui/button"
-import {Input} from "../../../../../components/ui/input"
-import {Label} from "../../../../../components/ui/label"
-import {Alert, AlertDescription} from "../../../../../components/ui/alert"
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../../components/ui/select"
+import type { CollectionInvite } from "../../../../api/types";
+import type { CreateCollectionInviteRequest } from "../../../../api/types";
+import {Button} from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Alert, AlertDescription} from "@/components/ui/alert"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 
 const ROLES: Array<CreateCollectionInviteRequest["role"]> = ["VIEWER", "EDITOR", "ADMIN"]
 
@@ -42,8 +41,8 @@ export default function InviteMemberForm({ onCreate }: Props) {
             }
             const resp = await onCreate(payload)
             setLink(resp.token)
-        } catch (err: any) {
-            setError(err?.message || "Failed to create invite")
+        } catch (err) {
+            setError(getErrorMessage(err, "Failed to create invite"))
         } finally {
             setLoading(false)
         }

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/api/errors";
 import { useCallback, useEffect, useState } from "react";
 import type { CollectionMember } from "../../../api/types";
 import {
@@ -34,8 +35,8 @@ export function useCollectionMembers(
       const data = await listCollectionMembers(collectionId);
       setMembers(data);
       setLoaded(true);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load members");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to load members"));
     } finally {
       setLoading(false);
     }

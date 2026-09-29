@@ -1,9 +1,7 @@
-"use client"
-
-import type {Item} from "../../../api/types"
-import {Card, CardContent} from "../../../../components/ui/card"
-import {Badge} from "../../../../components/ui/badge"
-import {Avatar, AvatarFallback} from "../../../../components/ui/avatar"
+import type { Item } from "../../../api/types";
+import {Card, CardContent} from "@/components/ui/card"
+import {Badge} from "@/components/ui/badge"
+import {Avatar, AvatarFallback} from "@/components/ui/avatar"
 
 export default function ItemCard({ item }: { item: Item }) {
     const firstIdentifier = item.identifiers?.[0]

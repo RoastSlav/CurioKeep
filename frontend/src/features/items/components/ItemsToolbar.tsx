@@ -1,7 +1,7 @@
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SearchIcon from "@mui/icons-material/Search";
 import { Box, Divider, IconButton, InputAdornment, Stack, TextField, Tooltip } from "@mui/material";
-import type { ModuleDefinition } from "../../../api/types";
+import type { ModuleContract } from "@/features/modules/moduleTypes";
 import type { ItemSort } from "../api";
 import StateChips from "./StateChips";
 import SortControl from "./SortControl";
@@ -17,7 +17,7 @@ export default function ItemsToolbar({
     showFilters,
     onToggleFilters,
 }: {
-    moduleDefinition: ModuleDefinition | null | undefined;
+    moduleDefinition: ModuleContract | null | undefined;
     search: string;
     onSearchChange: (value: string) => void;
     states: string[];
@@ -31,7 +31,7 @@ export default function ItemsToolbar({
         { value: "createdAt", label: "Created" },
         { value: "updatedAt", label: "Updated" },
         ...(moduleDefinition?.fields || [])
-            .filter((f) => f.flags?.sortable)
+            .filter((f) => f.sortable)
             .map((f) => ({ value: f.key, label: f.label || f.key })),
     ];
 

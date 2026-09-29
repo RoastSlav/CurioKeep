@@ -9,7 +9,6 @@ export type GlobalStats = {
 };
 
 export async function fetchGlobalStats(): Promise<GlobalStats | null> {
-    // eslint-disable-next-line no-console
     console.info("Global stats endpoint is not available yet. Add backend support to enable this.");
     return null;
 }

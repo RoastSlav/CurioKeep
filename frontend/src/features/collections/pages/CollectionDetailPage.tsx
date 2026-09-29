@@ -1,27 +1,20 @@
-"use client";
-
+import { getErrorMessage } from "@/api/errors";
 import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type {
-  Collection,
-  CollectionModule,
-  Item,
-  ModuleDetails,
-  CollectionInvite,
-} from "../../../api/types";
-import { useToast } from "../../../components/Toasts";
+import type { Collection, CollectionModule, Item, CollectionInvite } from "../../../api/types";
+import { useToast } from "../../../components/toastContext";
 import EmptyState from "../../../components/EmptyState";
 import ErrorState from "../../../components/ErrorState";
 import LoadingState from "../../../components/LoadingState";
 import CollectionHeader from "../components/CollectionHeader";
 import ModuleSelector from "../components/ModuleSelector";
 import CollectionActionsMenu from "../components/CollectionActionsMenu";
-import { getCollection, listCollectionModules } from "../api";
+import { getCollection, listCollectionModules } from "../api/collectionsApi";
 import ItemsList from "../../items/components/ItemsList";
 import { changeItemState, deleteItem, listItems } from "../../items/api";
 import AddItemDialog from "../../items/components/AddItemDialog/AddItemDialog";
-import { getModuleDetails } from "../../modules/api";
+import { getModuleDetails, type ModuleDetails } from "../../modules/api/modulesApi";
 import CollectionSettingsDialog from "../components/CollectionSettingsDialog/CollectionSettingsDialog";
 import { useCollectionModules } from "../hooks/useCollectionModules";
 import { useCollectionMembers } from "../hooks/useCollectionMembers";
@@ -32,8 +25,8 @@ import {
 } from "../api/collectionInvitesApi";
 import { useAuth } from "../../../auth/useAuth";
 import StatsPanel from "../components/StatsPanel";
-import { Input } from "../../../../components/ui/input";
-import { Alert, AlertDescription } from "../../../../components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CollectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -115,8 +108,8 @@ export default function CollectionDetailPage() {
       setModules(mods);
       setActiveModuleKey((prev) => prev || mods[0]?.moduleKey || null);
       setEnabledModules(mods);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load collection");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to load collection"));
     } finally {
       setLoading(false);
     }
@@ -140,7 +133,7 @@ export default function CollectionDetailPage() {
         const data = await listCollectionInvites(id);
         setInvites(data);
         setInvitesLoaded(true);
-      } catch (err) {
+      } catch {
         // ignore silently to keep settings usable
       }
     },
@@ -155,7 +148,7 @@ export default function CollectionDetailPage() {
   const canAddItems = useMemo(() => {
     return (
       !!collection &&
-      ["OWNER", "ADMIN", "EDITOR"].includes((collection as any).role)
+      ["OWNER", "ADMIN", "EDITOR"].includes(collection.role)
     );
   }, [collection]);
 
@@ -216,8 +209,8 @@ export default function CollectionDetailPage() {
             resolvedPage.totalElements ?? resolvedPage.content.length,
         }));
       }
-    } catch (err: any) {
-      const message = err?.message || "Failed to load module or items";
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to load module or items");
       setModuleError(message);
       setItemsError(message);
     } finally {
@@ -230,9 +223,15 @@ export default function CollectionDetailPage() {
     setStateFilter(null);
   }, [activeModuleKey, items.length]);
 
+  // The effect must run only when the module, collection or module list changes, but it needs the
+  // fetcher from the latest render (it closes over the caches), so it is reached through a ref.
+  const fetchModuleAndItemsRef = useRef(fetchModuleAndItems);
+  useEffect(() => {
+    fetchModuleAndItemsRef.current = fetchModuleAndItems;
+  });
   useEffect(() => {
     if (activeModuleKey && id) {
-      void fetchModuleAndItems(activeModuleKey);
+      void fetchModuleAndItemsRef.current(activeModuleKey);
     }
   }, [activeModuleKey, id, modules]);
 
@@ -283,7 +282,7 @@ export default function CollectionDetailPage() {
         return next;
       });
       showToast("State updated", "success");
-    } catch (err: any) {
+    } catch (err) {
       setItems(snapshot);
       if (activeModuleKey) {
         setModuleItemsCache((cache) => ({
@@ -291,7 +290,7 @@ export default function CollectionDetailPage() {
           [activeModuleKey]: snapshot,
         }));
       }
-      showToast(err?.message || "Failed to update state", "error");
+      showToast(getErrorMessage(err, "Failed to update state"), "error");
     }
   };
 
@@ -328,7 +327,7 @@ export default function CollectionDetailPage() {
   const handleCreateInvite = async (role: string, expiresInDays?: number) => {
     if (!id) throw new Error("Missing collection id");
     const resp = await createCollectionInvite(id, {
-      role: role as any,
+      role,
       expiresInDays,
     });
     setInvites((prev) => [resp, ...prev]);
@@ -338,10 +337,10 @@ export default function CollectionDetailPage() {
 
   const handleChangeRole = async (userId: string, role: string) => {
     try {
-      await changeRole(userId, role as any);
+      await changeRole(userId, role);
       showToast("Role updated", "success");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to update role", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to update role"), "error");
     }
   };
 
@@ -383,7 +382,7 @@ export default function CollectionDetailPage() {
           return next;
         });
         successes.push(itemId);
-      } catch (err: any) {
+      } catch {
         failures.push(itemId);
         setItems((prev) => {
           const next = prev.map((i) => (i.id === itemId ? original : i));
@@ -442,7 +441,7 @@ export default function CollectionDetailPage() {
             ),
           }));
         }
-      } catch (err: any) {
+      } catch {
         failures.push(itemId);
       }
     }
@@ -469,8 +468,8 @@ export default function CollectionDetailPage() {
         await revokeCollectionInvite(id, token);
         setInvites((prev) => prev.filter((invite) => invite.token !== token));
         showToast("Invite revoked", "success");
-      } catch (err: any) {
-        showToast(err?.message || "Failed to revoke invite", "error");
+      } catch (err) {
+        showToast(getErrorMessage(err, "Failed to revoke invite"), "error");
       }
     })();
   };
@@ -479,8 +478,8 @@ export default function CollectionDetailPage() {
     try {
       await remove(userId);
       showToast("Member removed", "success");
-    } catch (err: any) {
-      showToast(err?.message || "Failed to remove member", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "Failed to remove member"), "error");
     }
   };
 
@@ -536,7 +535,7 @@ export default function CollectionDetailPage() {
             ...prev,
             [mod.moduleKey]: page.totalElements ?? page.content.length,
           }));
-        } catch (err) {
+        } catch {
           // ignore background preload errors
         }
       }

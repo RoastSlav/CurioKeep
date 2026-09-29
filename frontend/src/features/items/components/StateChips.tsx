@@ -1,12 +1,12 @@
 import { Chip, Stack, Typography } from "@mui/material";
-import type { ModuleStateDef } from "../../../api/types";
+import type { StateContract } from "@/features/modules/moduleTypes";
 
 export default function StateChips({
     states,
     selected,
     onChange,
 }: {
-    states: ModuleStateDef[];
+    states: StateContract[];
     selected: string[];
     onChange: (next: string[]) => void;
 }) {

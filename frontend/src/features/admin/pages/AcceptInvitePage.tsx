@@ -1,16 +1,15 @@
-"use client"
-
+import { getErrorMessage } from "@/api/errors";
 import type React from "react"
 
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import { validateInvite, acceptInvite } from "../../../api/admin/invitesApi"
-import { Button } from "../../../../components/ui/button"
-import { Input } from "../../../../components/ui/input"
-import { Label } from "../../../../components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../../../components/ui/card"
-import { Alert, AlertDescription } from "../../../../components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AcceptInvitePage() {
   const { token } = useParams<{ token: string }>()
@@ -40,8 +39,8 @@ export default function AcceptInvitePage() {
       if (!result.valid) {
         setError("This invite is invalid or has expired")
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to validate invite")
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to validate invite"))
       setValid(false)
     } finally {
       setValidating(false)
@@ -79,8 +78,8 @@ export default function AcceptInvitePage() {
       setTimeout(() => {
         navigate("/login")
       }, 2000)
-    } catch (err: any) {
-      setError(err?.message || "Failed to accept invite")
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to accept invite"))
     } finally {
       setSubmitting(false)
     }

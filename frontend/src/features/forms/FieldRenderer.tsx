@@ -1,4 +1,4 @@
-import type { FieldDef } from "../../api/types";
+import type { FieldContract } from "@/features/modules/moduleTypes";
 import BooleanFieldField from "./fields/BooleanField";
 import DateFieldField from "./fields/DateField";
 import EnumFieldField from "./fields/EnumField";
@@ -9,11 +9,11 @@ import TagsFieldField from "./fields/TagsField";
 import TextFieldField from "./fields/TextField";
 
 export type FieldRendererProps = {
-    field: FieldDef;
-    value: any;
+    field: FieldContract;
+    value: unknown;
     error?: string;
     disabled?: boolean;
-    onChange: (value: any) => void;
+    onChange: (value: unknown) => void;
     onBlur?: () => void;
 };
 

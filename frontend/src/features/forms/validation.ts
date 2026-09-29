@@ -1,4 +1,5 @@
-import type { FieldDef } from "../../api/types";
+import type { Attributes } from "@/features/items/itemTypes";
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export type ValidationErrors = Record<string, string>;
 
@@ -22,12 +23,11 @@ function isValidDate(value: unknown): boolean {
     return !Number.isNaN(date.getTime());
 }
 
-export function validateField(field: FieldDef, value: unknown): string | undefined {
+export function validateField(field: FieldContract, value: unknown): string | undefined {
     const label = field.label || field.key;
-    const flags = field.flags || {};
     const constraints = field.constraints || {};
 
-    if (flags.required && isEmpty(value)) {
+    if (field.required && isEmpty(value)) {
         return `${label} is required`;
     }
 
@@ -75,12 +75,12 @@ export function validateField(field: FieldDef, value: unknown): string | undefin
         }
         case "ENUM": {
             if (constraints.multi && Array.isArray(value)) {
-                if (flags.required && value.length === 0) return `${label} is required`;
+                if (field.required && value.length === 0) return `${label} is required`;
             }
             break;
         }
         case "TAGS": {
-            if (flags.required && Array.isArray(value) && value.length === 0) {
+            if (field.required && Array.isArray(value) && value.length === 0) {
                 return `${label} is required`;
             }
             break;
@@ -102,7 +102,7 @@ export function validateField(field: FieldDef, value: unknown): string | undefin
     return undefined;
 }
 
-export function validateAttributes(fields: FieldDef[], attributes: Record<string, any>): ValidationErrors {
+export function validateAttributes(fields: FieldContract[], attributes: Attributes): ValidationErrors {
     const errors: ValidationErrors = {};
     fields.forEach((field) => {
         const error = validateField(field, attributes[field.key]);

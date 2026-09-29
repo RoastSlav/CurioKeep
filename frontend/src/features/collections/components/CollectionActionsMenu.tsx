@@ -1,7 +1,5 @@
-"use client"
-
 import {Plus, Settings} from "lucide-react"
-import {Button} from "../../../../components/ui/button"
+import {Button} from "@/components/ui/button"
 
 export default function CollectionActionsMenu({
                                                   role,

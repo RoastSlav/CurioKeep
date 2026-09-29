@@ -1,7 +1,5 @@
-"use client"
-
 import {Trash2, ArrowLeftRight, X} from "lucide-react"
-import {Button} from "../../../../components/ui/button"
+import {Button} from "@/components/ui/button"
 
 export default function BatchActionsBar({
                                             selectedCount,

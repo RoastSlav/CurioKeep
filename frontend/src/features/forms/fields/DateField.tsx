@@ -1,8 +1,7 @@
-"use client"
-
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
-import type {FieldDef} from "../../../api/types"
+import { toInputValue } from "../formValue"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function DateFieldField({
                                            field,
@@ -12,11 +11,11 @@ export default function DateFieldField({
                                            onChange,
                                            onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const id = `field-${field.key}`
@@ -25,12 +24,12 @@ export default function DateFieldField({
         <div className="flex flex-col gap-2">
             <Label htmlFor={id} className="text-sm font-semibold text-foreground">
                 {field.label || field.key}
-                {field.flags?.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
             </Label>
             <Input
                 id={id}
                 type="date"
-                value={value ?? ""}
+                value={toInputValue(value)}
                 placeholder={field.ui?.placeholder}
                 onChange={(e) => onChange(e.target.value)}
                 onBlur={onBlur}

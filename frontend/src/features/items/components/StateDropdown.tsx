@@ -1,7 +1,5 @@
-"use client"
-
-import type {ModuleStateDef} from "../../../api/types"
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "../../../../components/ui/select"
+import type { StateContract } from "@/features/modules/moduleTypes";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 
 export default function StateDropdown({
                                           states,
@@ -9,7 +7,7 @@ export default function StateDropdown({
                                           disabled,
                                           onChange,
 }: {
-    states: ModuleStateDef[]
+    states: StateContract[]
     value: string
     disabled?: boolean
     onChange: (stateKey: string) => void

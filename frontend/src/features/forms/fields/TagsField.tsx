@@ -1,11 +1,9 @@
-"use client"
-
 import {useState, type KeyboardEvent} from "react"
-import {Input} from "../../../../components/ui/input"
-import {Label} from "../../../../components/ui/label"
-import {Badge} from "../../../../components/ui/badge"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Badge} from "@/components/ui/badge"
 import {X} from "lucide-react"
-import type {FieldDef} from "../../../api/types"
+import type { FieldContract } from "@/features/modules/moduleTypes";
 
 export default function TagsFieldField({
                                            field,
@@ -15,11 +13,11 @@ export default function TagsFieldField({
                                            onChange,
                                            onBlur,
 }: {
-    field: FieldDef
-    value: any
+    field: FieldContract
+    value: unknown
     error?: string
     disabled?: boolean
-    onChange: (value: any) => void
+    onChange: (value: unknown) => void
     onBlur?: () => void
 }) {
     const [inputValue, setInputValue] = useState("")
@@ -51,7 +49,7 @@ export default function TagsFieldField({
         <div className="flex flex-col gap-2">
             <Label htmlFor={id} className="text-sm font-semibold text-foreground">
                 {field.label || field.key}
-                {field.flags?.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && <span className="text-destructive ml-1">*</span>}
             </Label>
             <div
                 className={`flex flex-wrap gap-2 p-2 brutal-border rounded-md bg-card min-h-[44px] ${
