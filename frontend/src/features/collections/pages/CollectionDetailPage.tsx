@@ -1,6 +1,5 @@
 import { getErrorMessage } from "@/api/errors";
-import { Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Collection, CollectionModule, Item, CollectionInvite } from "../../../api/types";
 import { useToast } from "../../../components/toastContext";
@@ -12,9 +11,16 @@ import ModuleSelector from "../components/ModuleSelector";
 import CollectionActionsMenu from "../components/CollectionActionsMenu";
 import { getCollection, listCollectionModules } from "../api/collectionsApi";
 import ItemsList from "../../items/components/ItemsList";
-import { changeItemState, deleteItem, listItems } from "../../items/api";
+import { ItemFiltersDialog } from "../../items/components/ItemFiltersDialog";
+import { ItemsPagination } from "../../items/components/ItemsPagination";
+import { ItemsToolbar } from "../../items/components/ItemsToolbar";
+import { changeItemState, deleteItem } from "../../items/api";
+import { countActiveFilters, filterableFields } from "../../items/itemFilters";
+import { sortOptions } from "../../items/itemSort";
+import { useItemCounts } from "../../items/hooks/useItemCounts";
+import { useItemList } from "../../items/hooks/useItemList";
 import AddItemDialog from "../../items/components/AddItemDialog/AddItemDialog";
-import { getModuleDetails, type ModuleDetails } from "../../modules/api/modulesApi";
+import { useModuleDetails } from "../../modules/hooks/useModuleDetails";
 import CollectionSettingsDialog from "../components/CollectionSettingsDialog/CollectionSettingsDialog";
 import { useCollectionModules } from "../hooks/useCollectionModules";
 import { useCollectionMembers } from "../hooks/useCollectionMembers";
@@ -24,9 +30,11 @@ import {
   revokeCollectionInvite,
 } from "../api/collectionInvitesApi";
 import { useAuth } from "../../../auth/useAuth";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import StatsPanel from "../components/StatsPanel";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function CollectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,32 +44,17 @@ export default function CollectionDetailPage() {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [modules, setModules] = useState<CollectionModule[]>([]);
   const [activeModuleKey, setActiveModuleKey] = useState<string | null>(null);
-  const [items, setItems] = useState<Item[]>([]);
-  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
-  const [moduleDetails, setModuleDetails] = useState<ModuleDetails | null>(
-    null
-  );
-  const [moduleItemsCache, setModuleItemsCache] = useState<
-    Record<string, Item[]>
-  >({});
-  const [moduleDetailsCache, setModuleDetailsCache] = useState<
-    Record<string, ModuleDetails>
-  >({});
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [itemsLoading, setItemsLoading] = useState(false);
-  const [itemsError, setItemsError] = useState<string | null>(null);
-  const [moduleError, setModuleError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [invites, setInvites] = useState<CollectionInvite[]>([]);
   const [invitesLoaded, setInvitesLoaded] = useState(false);
-  const prefetchedModules = useRef<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [batchBusy, setBatchBusy] = useState(false);
-  const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
   const { user } = useAuth();
 
   const {
@@ -90,9 +83,6 @@ export default function CollectionDetailPage() {
   useEffect(() => {
     setInvites([]);
     setInvitesLoaded(false);
-    setModuleItemsCache({});
-    setModuleDetailsCache({});
-    prefetchedModules.current = new Set();
   }, [id]);
 
   const loadCollection = useCallback(async () => {
@@ -145,6 +135,11 @@ export default function CollectionDetailPage() {
     [activeModuleKey, modules]
   );
 
+  const search = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS);
+  const { details: moduleDetails, error: moduleError } = useModuleDetails(activeModule?.moduleKey);
+  const list = useItemList(id, activeModule?.moduleId, search);
+  const { counts, reload: reloadCounts } = useItemCounts(id);
+
   const canAddItems = useMemo(() => {
     return (
       !!collection &&
@@ -153,87 +148,25 @@ export default function CollectionDetailPage() {
   }, [collection]);
 
   const defaultStateKey = moduleDetails?.contract?.states?.[0]?.key || "OWNED";
+  const moduleCounts = activeModule ? counts[activeModule.moduleId] : undefined;
+  const itemCountsByModule = useMemo(
+    () => Object.fromEntries(modules.map((m) => [m.moduleKey, counts[m.moduleId]?.total ?? 0])),
+    [modules, counts]
+  );
+  const filterFields = useMemo(() => filterableFields(moduleDetails?.contract.fields), [moduleDetails]);
+  const activeFilterCount = countActiveFilters(list.filters);
+  const filtersActive = search !== "" || list.states.length > 0 || activeFilterCount > 0;
 
-  const fetchModuleAndItems = async (
-    moduleKey: string,
-    forceRefresh = false
-  ) => {
-    if (!id) return;
-    const module = modules.find((m) => m.moduleKey === moduleKey);
-    if (!module) return;
+  // Selection belongs to the page on screen: an id that is no longer listed (another page, module or filter) is dropped.
+  const visibleSelectedIds = useMemo(
+    () => selectedIds.filter((selected) => list.items.some((item) => item.id === selected)),
+    [selectedIds, list.items]
+  );
 
-    const cachedItems = moduleItemsCache[moduleKey];
-    const cachedDetails = moduleDetailsCache[moduleKey];
-
-    if (!forceRefresh && cachedItems) {
-      setItems(cachedItems);
-      setModuleDetails(cachedDetails ?? null);
-      setModuleError(null);
-      setItemsError(null);
-      setItemsLoading(false);
-      if (cachedDetails) return;
-    }
-
-    const detailsPromise = cachedDetails
-      ? Promise.resolve(cachedDetails)
-      : getModuleDetails(moduleKey);
-
-    const shouldFetchItems = forceRefresh || !cachedItems;
-    const itemsPromise = shouldFetchItems
-      ? listItems(id, module.moduleId, { forceRefresh })
-      : Promise.resolve(null);
-
-    setModuleError(null);
-    setItemsError(null);
-    setItemsLoading(shouldFetchItems);
-
-    try {
-      const [details, page] = await Promise.all([detailsPromise, itemsPromise]);
-
-      setModuleDetails(details as ModuleDetails);
-      setModuleDetailsCache((prev) => ({
-        ...prev,
-        [module.moduleKey]: details as ModuleDetails,
-      }));
-
-      if (page) {
-        const resolvedPage = page as Awaited<ReturnType<typeof listItems>>;
-        setItems(resolvedPage.content);
-        setModuleItemsCache((prev) => ({
-          ...prev,
-          [module.moduleKey]: resolvedPage.content,
-        }));
-        setItemCounts((prev) => ({
-          ...prev,
-          [module.moduleKey]:
-            resolvedPage.totalElements ?? resolvedPage.content.length,
-        }));
-      }
-    } catch (err) {
-      const message = getErrorMessage(err, "Failed to load module or items");
-      setModuleError(message);
-      setItemsError(message);
-    } finally {
-      setItemsLoading(false);
-    }
+  const refreshItems = () => {
+    list.reload();
+    reloadCounts();
   };
-
-  useEffect(() => {
-    setSelectedIds([]);
-    setStateFilter(null);
-  }, [activeModuleKey, items.length]);
-
-  // The effect must run only when the module, collection or module list changes, but it needs the
-  // fetcher from the latest render (it closes over the caches), so it is reached through a ref.
-  const fetchModuleAndItemsRef = useRef(fetchModuleAndItems);
-  useEffect(() => {
-    fetchModuleAndItemsRef.current = fetchModuleAndItems;
-  });
-  useEffect(() => {
-    if (activeModuleKey && id) {
-      void fetchModuleAndItemsRef.current(activeModuleKey);
-    }
-  }, [activeModuleKey, id, modules]);
 
   const handleAddItem = () => {
     if (!moduleDetails) {
@@ -258,59 +191,19 @@ export default function CollectionDetailPage() {
 
   const handleChangeState = async (item: Item, stateKey: string) => {
     if (!id) return;
-    const snapshot = items;
-    setItems((prev) => {
-      const next = prev.map((i) => (i.id === item.id ? { ...i, stateKey } : i));
-      if (activeModuleKey) {
-        setModuleItemsCache((cache) => ({
-          ...cache,
-          [activeModuleKey]: next,
-        }));
-      }
-      return next;
-    });
+    list.patchItem({ ...item, stateKey });
     try {
-      const updated = await changeItemState(id, item.id, stateKey);
-      setItems((prev) => {
-        const next = prev.map((i) => (i.id === updated.id ? updated : i));
-        if (activeModuleKey) {
-          setModuleItemsCache((cache) => ({
-            ...cache,
-            [activeModuleKey]: next,
-          }));
-        }
-        return next;
-      });
+      await changeItemState(id, item.id, stateKey);
       showToast("State updated", "success");
+      refreshItems();
     } catch (err) {
-      setItems(snapshot);
-      if (activeModuleKey) {
-        setModuleItemsCache((cache) => ({
-          ...cache,
-          [activeModuleKey]: snapshot,
-        }));
-      }
+      list.patchItem(item);
       showToast(getErrorMessage(err, "Failed to update state"), "error");
     }
   };
 
-  const handleItemCreated = (item: Item) => {
-    setItems((prev) => {
-      const next = [item, ...prev];
-      if (activeModuleKey) {
-        setModuleItemsCache((cache) => ({
-          ...cache,
-          [activeModuleKey]: next,
-        }));
-      }
-      return next;
-    });
-    if (activeModuleKey) {
-      setItemCounts((prev) => ({
-        ...prev,
-        [activeModuleKey]: (prev[activeModuleKey] || 0) + 1,
-      }));
-    }
+  const handleItemCreated = () => {
+    refreshItems();
     showToast("Item added", "success");
   };
 
@@ -345,60 +238,23 @@ export default function CollectionDetailPage() {
   };
 
   const handleBatchStateChange = async (stateKey: string) => {
-    if (!id || !selectedIds.length) return;
+    if (!id || !visibleSelectedIds.length) return;
     setBatchBusy(true);
     const failures: string[] = [];
     const successes: string[] = [];
 
-    for (const itemId of selectedIds) {
-      const original = items.find((i) => i.id === itemId);
-      if (!original) {
-        failures.push(itemId);
-        continue;
-      }
-
-      setItems((prev) => {
-        const next = prev.map((i) =>
-          i.id === itemId ? { ...i, stateKey } : i
-        );
-        if (activeModuleKey) {
-          setModuleItemsCache((cache) => ({
-            ...cache,
-            [activeModuleKey]: next,
-          }));
-        }
-        return next;
-      });
+    for (const itemId of visibleSelectedIds) {
       try {
-        const updated = await changeItemState(id, itemId, stateKey);
-        setItems((prev) => {
-          const next = prev.map((i) => (i.id === updated.id ? updated : i));
-          if (activeModuleKey) {
-            setModuleItemsCache((cache) => ({
-              ...cache,
-              [activeModuleKey]: next,
-            }));
-          }
-          return next;
-        });
+        await changeItemState(id, itemId, stateKey);
         successes.push(itemId);
       } catch {
         failures.push(itemId);
-        setItems((prev) => {
-          const next = prev.map((i) => (i.id === itemId ? original : i));
-          if (activeModuleKey) {
-            setModuleItemsCache((cache) => ({
-              ...cache,
-              [activeModuleKey]: next,
-            }));
-          }
-          return next;
-        });
       }
     }
 
     setSelectedIds(failures);
     setBatchBusy(false);
+    refreshItems();
 
     if (failures.length && successes.length) {
       showToast(
@@ -413,34 +269,15 @@ export default function CollectionDetailPage() {
   };
 
   const handleBatchDelete = async () => {
-    if (!id || !selectedIds.length) return;
+    if (!id || !visibleSelectedIds.length) return;
     setBatchBusy(true);
     const failures: string[] = [];
     const deleted: string[] = [];
 
-    for (const itemId of selectedIds) {
+    for (const itemId of visibleSelectedIds) {
       try {
         await deleteItem(id, itemId);
         deleted.push(itemId);
-        setItems((prev) => {
-          const next = prev.filter((i) => i.id !== itemId);
-          if (activeModuleKey) {
-            setModuleItemsCache((cache) => ({
-              ...cache,
-              [activeModuleKey]: next,
-            }));
-          }
-          return next;
-        });
-        if (activeModuleKey) {
-          setItemCounts((prev) => ({
-            ...prev,
-            [activeModuleKey]: Math.max(
-              (prev[activeModuleKey] ?? items.length) - 1,
-              0
-            ),
-          }));
-        }
       } catch {
         failures.push(itemId);
       }
@@ -448,6 +285,7 @@ export default function CollectionDetailPage() {
 
     setSelectedIds(failures);
     setBatchBusy(false);
+    refreshItems();
 
     if (failures.length && deleted.length) {
       showToast(
@@ -482,71 +320,6 @@ export default function CollectionDetailPage() {
       showToast(getErrorMessage(err, "Failed to remove member"), "error");
     }
   };
-
-  const filteredItems = useMemo(() => {
-    let base = items;
-    if (stateFilter) {
-      base = base.filter((item) => item.stateKey === stateFilter);
-    }
-    if (!search.trim()) return base;
-    const q = search.toLowerCase();
-    return base.filter((item) => {
-      const title =
-        (item.attributes?.title as string) ||
-        (item.attributes?.name as string) ||
-        "";
-      const identifiers = (item.identifiers || [])
-        .map((id) => `${id.type} ${id.value}`)
-        .join(" ");
-      return [title, item.id, identifiers]
-        .filter(Boolean)
-        .some((val) => val.toLowerCase().includes(q));
-    });
-  }, [items, search, stateFilter]);
-
-  const itemCountsByModule = useMemo(
-    () => ({
-      ...modules.reduce((acc, m) => ({ ...acc, [m.moduleKey]: 0 }), {}),
-      ...itemCounts,
-    }),
-    [modules, itemCounts]
-  );
-
-  useEffect(() => {
-    if (!id || !modules.length) return;
-    let cancelled = false;
-
-    const preload = async () => {
-      for (const mod of modules) {
-        if (prefetchedModules.current.has(mod.moduleKey)) continue;
-        if (moduleItemsCache[mod.moduleKey]) {
-          prefetchedModules.current.add(mod.moduleKey);
-          continue;
-        }
-        try {
-          const page = await listItems(id, mod.moduleId);
-          if (cancelled) return;
-          prefetchedModules.current.add(mod.moduleKey);
-          setModuleItemsCache((prev) => ({
-            ...prev,
-            [mod.moduleKey]: page.content,
-          }));
-          setItemCounts((prev) => ({
-            ...prev,
-            [mod.moduleKey]: page.totalElements ?? page.content.length,
-          }));
-        } catch {
-          // ignore background preload errors
-        }
-      }
-    };
-
-    void preload();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id, modules, moduleItemsCache]);
 
   if (loading) return <LoadingState message="Loading collection..." />;
   if (error || !collection || !id)
@@ -586,10 +359,11 @@ export default function CollectionDetailPage() {
       )}
 
       <StatsPanel
-        items={items}
+        total={moduleCounts?.total ?? 0}
+        counts={moduleCounts?.byState ?? {}}
         states={moduleDetails?.contract?.states}
-        activeState={stateFilter}
-        onFilterChange={(stateKey) => setStateFilter(stateKey)}
+        activeState={list.states[0] ?? null}
+        onFilterChange={(stateKey) => list.setStates(stateKey ? [stateKey] : [])}
       />
 
       {!modules.length ? (
@@ -599,19 +373,21 @@ export default function CollectionDetailPage() {
         />
       ) : (
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+          <ItemsToolbar
+            search={searchInput}
+            onSearchChange={setSearchInput}
+            sort={list.sort}
+            sortOptions={sortOptions(moduleDetails?.contract.fields)}
+            onSortChange={list.setSort}
+            activeFilterCount={activeFilterCount}
+            onOpenFilters={filterFields.length ? () => setFiltersOpen(true) : undefined}
+          />
           <ItemsList
-            items={filteredItems}
-            loading={itemsLoading}
-            error={itemsError}
+            items={list.items}
+            loading={list.loading}
+            refreshing={list.fetching && !list.loading}
+            filtersActive={filtersActive}
+            error={list.error}
             moduleName={
               moduleDetails?.name ||
               activeModule?.name ||
@@ -620,17 +396,13 @@ export default function CollectionDetailPage() {
             moduleDefinition={moduleDetails?.contract}
             canAdd={canAddItems}
             onAdd={canAddItems ? handleAddItem : undefined}
-            onRetry={
-              activeModuleKey
-                ? () => fetchModuleAndItems(activeModuleKey, true)
-                : undefined
-            }
+            onRetry={list.reload}
             role={collection.role}
             onChangeState={canAddItems ? handleChangeState : undefined}
             onItemClick={(item) =>
               navigate(`/collections/${id}/items/${item.id}`)
             }
-            selectedIds={selectedIds}
+            selectedIds={visibleSelectedIds}
             onToggleItem={toggleItemSelection}
             onToggleAll={handleToggleAll}
             onClearSelection={clearSelection}
@@ -638,8 +410,24 @@ export default function CollectionDetailPage() {
             onBatchDelete={handleBatchDelete}
             batchBusy={batchBusy}
           />
+          <ItemsPagination
+            page={list.page}
+            size={list.size}
+            total={list.total}
+            disabled={list.fetching}
+            onPageChange={list.setPage}
+            onSizeChange={list.setSize}
+          />
         </div>
       )}
+
+      <ItemFiltersDialog
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        fields={filterFields}
+        filters={list.filters}
+        onApply={list.setFilters}
+      />
 
       {id && moduleDetails && activeModule ? (
         <AddItemDialog

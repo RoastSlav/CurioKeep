@@ -1,26 +1,22 @@
-import type { Item } from "../../../api/types";
 import type { StateContract } from "@/features/modules/moduleTypes";
 import {Card, CardContent} from "@/components/ui/card"
 import {Badge} from "@/components/ui/badge"
 import {cn} from "@/lib/utils"
 
 export default function StatsPanel({
-                                       items,
+                                       total,
+                                       counts,
                                        states,
                                        activeState,
                                        onFilterChange,
 }: {
-    items: Item[]
+    /** How many items the module holds in this collection, not how many are on the current page. */
+    total: number
+    counts: Record<string, number>
     states?: StateContract[]
     activeState?: string | null
     onFilterChange?: (stateKey: string | null) => void
 }) {
-    const counts = items.reduce<Record<string, number>>((acc, item) => {
-        acc[item.stateKey] = (acc[item.stateKey] || 0) + 1
-        return acc
-    }, {})
-
-    const total = items.length
     const orderedStates = states && states.length ? states : Object.keys(counts).map((key) => ({key}) as StateContract)
 
     const handleSelect = (stateKey: string | null) => {

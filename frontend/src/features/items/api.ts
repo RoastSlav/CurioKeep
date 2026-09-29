@@ -1,11 +1,5 @@
 import type { Attributes } from "@/features/items/itemTypes";
 import { apiFetch } from "../../api/client";
-import {
-  clearByPrefix,
-  getCached,
-  setCached,
-  DEFAULT_CACHE_TTL,
-} from "../../api/cache";
 import type { Item, PagedResult } from "../../api/types";
 
 export type ItemSort = {
@@ -20,55 +14,58 @@ export type ItemListQuery = {
   search?: string;
   states?: string[];
   sort?: ItemSort;
+  /** Field filters as the server expects them: `<fieldKey>.<operator>` mapped to a value. */
+  filters?: Record<string, string>;
 };
 
-export type ListItemsOptions = {
-  forceRefresh?: boolean;
+export type ModuleItemCounts = {
+  total: number;
+  byState: Record<string, number>;
 };
 
-const ITEMS_CACHE_PREFIX = "items:list:";
+export type ItemCounts = {
+  /** Keyed by module id; a module with no items is absent. */
+  modules: Record<string, ModuleItemCounts>;
+};
 
-function buildParams(query: ItemListQuery) {
+export const DEFAULT_PAGE_SIZE = 25;
+export const PAGE_SIZES = [10, DEFAULT_PAGE_SIZE, 50, 100];
+
+export function buildListParams(query: ItemListQuery): string {
   const params = new URLSearchParams({
     moduleId: query.moduleId,
     page: String(query.page ?? 0),
-    size: String(query.size ?? 25),
+    size: String(query.size ?? DEFAULT_PAGE_SIZE),
   });
 
   if (query.search) params.set("search", query.search);
   if (query.states?.length) params.set("state", query.states.join(","));
-  if (query.sort)
-    params.set("sort", `${query.sort.field},${query.sort.direction}`);
+  if (query.sort) params.set("sort", `${query.sort.field},${query.sort.direction}`);
+  for (const [name, value] of Object.entries(query.filters ?? {})) {
+    params.set(name, value);
+  }
 
   return params.toString();
 }
 
-function buildCacheKey(collectionId: string, params: string) {
-  return `${ITEMS_CACHE_PREFIX}${collectionId}:${params}`;
+// Every request goes to the server: search, state, sort and filters are applied there, so a page is always a
+// slice of the full result. There is no client-side cache because any edit by anyone can change a page.
+export function listItems(
+  collectionId: string,
+  query: ItemListQuery,
+  options?: { signal?: AbortSignal }
+) {
+  return apiFetch<PagedResult<Item>>(
+    `/collections/${collectionId}/items?${buildListParams(query)}`,
+    { signal: options?.signal, dedupe: false }
+  );
 }
 
-// The backend currently only supports paging + moduleId. Extra params may be ignored server-side; client-side
-// filtering/sorting is handled in the hook layer when unsupported.
-export async function listItems(
-  collectionId: string,
-  queryOrModuleId: ItemListQuery | string,
-  options?: ListItemsOptions
-) {
-  const query: ItemListQuery =
-    typeof queryOrModuleId === "string"
-      ? { moduleId: queryOrModuleId }
-      : queryOrModuleId;
-
-  const params = buildParams(query);
-  const cacheKey = buildCacheKey(collectionId, params);
-  if (!options?.forceRefresh) {
-    const cached = getCached<PagedResult<Item>>(cacheKey);
-    if (cached) return cached;
-  }
-
-  const url = `/collections/${collectionId}/items?${params}`;
-  const result = await apiFetch<PagedResult<Item>>(url);
-  return setCached(cacheKey, result, DEFAULT_CACHE_TTL, true);
+export function fetchItemCounts(collectionId: string, options?: { signal?: AbortSignal }) {
+  return apiFetch<ItemCounts>(`/collections/${collectionId}/items/counts`, {
+    signal: options?.signal,
+    dedupe: false,
+  });
 }
 
 export async function getItem(collectionId: string, itemId: string) {
@@ -87,7 +84,6 @@ export async function updateItem(
       body: payload,
     }
   );
-  clearItemsCache(collectionId);
   return updated;
 }
 
@@ -96,7 +92,6 @@ export async function deleteItem(collectionId: string, itemId: string) {
     `/collections/${collectionId}/items/${itemId}`,
     { method: "DELETE" }
   );
-  clearItemsCache(collectionId);
   return res;
 }
 
@@ -112,7 +107,6 @@ export async function changeItemState(
       body: { stateKey },
     }
   );
-  clearItemsCache(collectionId);
   return updated;
 }
 
@@ -128,7 +122,6 @@ export async function createItem(
     method: "POST",
     body: payload,
   });
-  clearItemsCache(collectionId);
   return created;
 }
 
@@ -144,7 +137,6 @@ export async function setItemImageFromUrl(
       body: { url },
     }
   );
-  clearItemsCache(collectionId);
   return updated;
 }
 
@@ -163,14 +155,5 @@ export async function uploadItemImage(
       body: formData,
     }
   );
-  clearItemsCache(collectionId);
   return updated;
-}
-
-export function clearItemsCache(collectionId: string, moduleId?: string) {
-  if (moduleId) {
-    clearByPrefix(`${ITEMS_CACHE_PREFIX}${collectionId}:moduleId=${moduleId}`);
-    return;
-  }
-  clearByPrefix(`${ITEMS_CACHE_PREFIX}${collectionId}:`);
 }

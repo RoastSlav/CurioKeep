@@ -10,11 +10,14 @@ import BatchSelection from "./BatchSelection"
 import BatchStateDialog from "./BatchStateDialog"
 import ItemRow from "./ItemRow"
 import {Card, CardContent} from "@/components/ui/card"
+import {cn} from "@/lib/utils"
 import {Table, TableBody, TableHead, TableHeader, TableRow} from "@/components/ui/table"
 
 export default function ItemsList({
                                       items,
                                       loading,
+                                      refreshing,
+                                      filtersActive,
                                       error,
                                       moduleName,
                                       moduleDefinition,
@@ -34,6 +37,10 @@ export default function ItemsList({
 }: {
     items: Item[]
     loading?: boolean
+    /** A newer page is being fetched; the current one stays visible but dimmed. */
+    refreshing?: boolean
+    /** A search, state or field filter is in effect, so an empty list means nothing matched rather than nothing exists. */
+    filtersActive?: boolean
     error?: string | null
     moduleName?: string
     moduleDefinition?: ModuleContract | null
@@ -80,6 +87,10 @@ export default function ItemsList({
     if (loading) return <LoadingState message="Loading items..."/>
     if (error) return <ErrorState title="Could not load items" message={error} onRetry={onRetry}/>
 
+    if (!items.length && filtersActive) {
+        return <EmptyState title="No matching items" description="Try a different search or clear the filters."/>
+    }
+
     if (!items.length) {
         return (
             <EmptyState
@@ -113,7 +124,7 @@ export default function ItemsList({
                     />
                 ) : null}
 
-                <div className="border-2 border-border overflow-x-auto">
+                <div className={cn("border-2 border-border overflow-x-auto transition-opacity", refreshing && "opacity-60")} aria-busy={refreshing || undefined}>
                     <Table>
                         <TableHeader>
                             <TableRow>
