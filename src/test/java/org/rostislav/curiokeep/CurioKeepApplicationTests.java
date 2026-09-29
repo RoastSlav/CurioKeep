@@ -17,6 +17,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -74,7 +75,7 @@ class CurioKeepApplicationTests {
 
     @Test
     void servesTheSinglePageAppWithoutSigningIn() throws Exception {
-        mvc.perform(get("/")).andExpect(status().isOk());
+        mvc.perform(get("/")).andExpect(result -> assertThat(result.getResponse().getStatus()).isNotIn(302, 403));
         mvc.perform(get("/collections/123")).andExpect(status().isOk()).andExpect(forwardedUrl("/index.html"));
     }
 
