@@ -29,7 +29,7 @@ During development, `./mvnw spring-boot:run` starts the database from `compose.y
 | `server.forward-headers-strategy` | `SERVER_FORWARD_HEADERS_STRATEGY` | `native` | Reads `X-Forwarded-For` and `X-Forwarded-Proto` from trusted proxies, which the login throttle needs to see real client addresses |
 | `LOG_DIR` | `LOG_DIR` | `./logs` | Directory for the rolling log file `curiokeep.log` |
 
-Cover images are limited to 5 MB; an upload above the 6 MB request limit is answered with `413`.
+Cover images are limited to 5 MB. Uploads, including an item import file, are limited to 25 MB in total; anything larger is answered with `413`.
 
 Relative paths are resolved against the working directory. In the Docker image that is `/app`, so the defaults become `/app/data/assets`, `/app/data/modules-imported` and `/app/logs`. Mount a volume on `/app/data` to keep images and imported modules across container restarts.
 

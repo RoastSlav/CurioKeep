@@ -16,7 +16,7 @@ Key principles:
 - **Modules define what you collect.** A module is an XML file that declares the fields, states and add-item workflows for one kind of collectible. Books and comics ship with the app; you can import your own.
 - **Metadata lookup.** Add an item by ISBN, UPC/EAN or a title search and CurioKeep fills the fields from external providers (Open Library, Google Books, Metron, Comic Vine and [others](docs/providers.md)).
 - **Barcode scanning** from the browser camera, item states (owned, wishlist, lent out, …), cover images stored locally, filters, sorting and batch actions.
-- **Your data stays yours.** Everything lives in your own PostgreSQL database and data directory.
+- **Your data stays yours.** Everything lives in your own PostgreSQL database and data directory, and any collection can be exported as JSON (importable again) or as a CSV per module for a spreadsheet.
 - **Invite-only accounts.** The first visit creates the admin; everyone else joins through an invite.
 
 ## Quick start with Docker

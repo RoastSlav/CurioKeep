@@ -34,6 +34,8 @@ docker compose exec db pg_dump -U curiokeep curiokeep > curiokeep.sql
 docker compose exec app tar czf - -C /app/data . > curiokeep-data.tgz
 ```
 
+Besides these full backups, every collection can be exported from its page (**Export**) as JSON, which can be imported into any CurioKeep, or as a CSV per module for a spreadsheet. An export holds the items, not the users, the collection's members or the cover image files (those are in `/app/data/assets`), so it complements the backups above and does not replace them. See [exporting and importing](architecture.md#exporting-and-importing-items).
+
 Provider API keys are stored in the database encrypted with `CURIOKEEP_PROVIDERS_CREDENTIALS_ENCRYPTION_PASSWORD`. **Keep that password with your backups**; without it the stored keys cannot be read after a restore.
 
 ## Upgrading

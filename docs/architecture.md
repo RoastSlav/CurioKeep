@@ -82,6 +82,19 @@ All filters must match. Every order ends with the creation time and the id, so p
 
 `GET /api/collections/{id}/items/counts` returns the item totals per module and per state, which the module badges and the state filter chips show.
 
+## Exporting and importing items
+
+`GET /api/collections/{id}/export` downloads a collection's items and needs viewer access. It is streamed in batches read in creation order, so a large collection does not have to fit in memory.
+
+| `format` | What it contains |
+|---|---|
+| `json` (default) | Every module enabled in the collection, or the one named by `moduleId`. Lossless: item state, title, attributes, identifiers and creation time. This is the format that can be imported. |
+| `csv` | One module (`moduleId`, optional when the collection has just one) as a table: state, title, one column per field, one per identifier type, and the creation time. Text that a spreadsheet could run as a formula gets a leading apostrophe. |
+
+The JSON file starts with `{"format": "curiokeep-export", "version": 1, ...}`. Cover image files are not included, and a `providerImageUrl` that points at a locally stored cover is left out because the path means nothing elsewhere; an external cover URL is kept.
+
+`POST /api/collections/{id}/import` (multipart field `file`, editor access) adds the items of such a file. Each item is checked like a normal save: its module must be enabled in the collection, its state declared by the module and its attributes valid for the module's fields. An invalid item is skipped and reported (`index` and `reason`); the others are stored in batches of 200. The result is `{"imported": n, "failed": n, "errors": [...]}` with at most the first 50 errors. An import only adds: it never updates or removes an item and does not detect duplicates, so importing the same file twice adds everything twice. A file may hold at most 10,000 items.
+
 ## Security model
 
 - **Sessions.** Login (`POST /api/auth/login`) creates a server-side session with a `JSESSIONID` cookie (`SameSite=Lax`, replaced with a new id on every login). Everything under `/api` requires a session except the setup, invite-validation/accept and login endpoints. The bundled frontend files are public so the login page can load. Swagger UI and `/v3/api-docs` are reachable without a session.
