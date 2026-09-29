@@ -46,7 +46,9 @@ Downgrading is not supported: migrations are never reversed.
 
 ## Health checks and monitoring
 
-Nearly every endpoint requires a login, including `/api/health`. For a container health check or a reverse-proxy probe use the public `GET /api/setup/status`: it returns `200` with `{"setupRequired": false}` once the instance is set up, and it touches the database, so it also fails when the database is unreachable.
+Nearly every endpoint requires a login, including `/api/health`. For a container health check or a reverse-proxy probe use the public `GET /api/setup/status`: it returns `200` with `{"setupRequired": false}` once the instance is set up, and it touches the database, so it also fails when the database is unreachable. The Docker image already declares this as its `HEALTHCHECK`, so `docker ps` shows `healthy` once the application is up.
+
+The container runs as the unprivileged user `curiokeep` (uid `10001`). A named volume on `/app/data` works as is; if you bind-mount a host directory, make it writable by uid `10001` (for example `chown -R 10001 ./data`), otherwise the application cannot store images or imported modules.
 
 Logs go to the console and to a rolling file (`curiokeep.log` in `LOG_DIR`, compressed daily). Each line has a request id (`rid`).
 
@@ -74,6 +76,5 @@ Set `CURIOKEEP_SETUP_TOKEN` before you expose a fresh installation. Until the fi
 
 The `Jenkinsfile` describes the pipeline used for this project:
 
-- **Pull requests**: `mvn -B clean verify` (backend build and tests; the frontend is not built or tested by this job).
-- **Other builds**: `mvn -B -DskipTests -Pfrontend clean package`, which builds the frontend into the jar.
+- **Every build**: `mvn -B -Pfrontend clean verify` runs the backend tests, the frontend lint and tests, and builds the jar with the frontend inside. The PostgreSQL integration test needs Docker on the agent and is skipped without it.
 - **Docker image**: on `master`, when the version in `pom.xml` differs from the one recorded by the previous run, a multi-arch image is built and pushed with the tags `latest` and `v<version>`. Bump the POM version to publish a release.

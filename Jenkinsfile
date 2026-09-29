@@ -10,18 +10,12 @@ pipeline {
 
   stages {
 
-    stage('Build (PR runs tests, master skips tests)') {
+    stage('Build and test') {
       steps {
         withMaven(maven: 'Maven') {
-          script {
-            if (env.CHANGE_ID) {
-              // PR build -> run tests
-              sh 'mvn -B clean verify'
-            } else {
-              // master build -> build full jar incl frontend, skip tests
-              sh 'mvn -B -DskipTests -Pfrontend clean package'
-            }
-          }
+          // Every build, pull request or not, runs the backend tests (the PostgreSQL ones need Docker on the agent)
+          // and the frontend lint and tests, then builds the jar with the frontend inside.
+          sh 'mvn -B -Pfrontend clean verify'
         }
       }
     }
