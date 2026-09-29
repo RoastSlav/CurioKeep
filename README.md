@@ -59,7 +59,7 @@ Open <http://localhost:8080>. The first page asks you to create the admin accoun
 
 ## Development
 
-You need Java 21 and Docker (for the development database). The frontend needs Node.js 20.19 or newer (the `frontend` Maven profile downloads its own Node 20.19).
+You need Java 21 and Docker (for the development database). The frontend needs Node.js 24 (the `frontend` Maven profile downloads its own Node 24).
 
 ```bash
 # backend: starts the compose.yaml database automatically, then the API on :8080
