@@ -1,7 +1,6 @@
 import type React from "react"
 
 import {Navigate, Outlet, useLocation, useRoutes} from "react-router-dom"
-import {Stack, Typography} from "@mui/material"
 import {lazy, Suspense} from "react"
 import AppShell from "../layout/AppShell"
 import LoginPage from "../pages/LoginPage"
@@ -66,23 +65,19 @@ function SetupRoute() {
 
 function NotFoundPage() {
     return (
-        <Stack spacing={1}>
-            <Typography variant="h5" fontWeight={700}>
-                Page not found
-            </Typography>
-            <Typography color="text.secondary">Check the URL or go back to the dashboard.</Typography>
-        </Stack>
+        <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Page not found</h1>
+            <p className="text-muted-foreground">Check the URL or go back to the dashboard.</p>
+        </div>
     )
 }
 
 function StubPage({ title, note }: { title: string; note?: string }) {
     return (
-        <Stack spacing={1.5}>
-            <Typography variant="h5" fontWeight={700}>
-                {title}
-            </Typography>
-            {note && <Typography color="text.secondary">{note}</Typography>}
-        </Stack>
+        <div className="space-y-3">
+            <h1 className="text-2xl font-bold">{title}</h1>
+            {note && <p className="text-muted-foreground">{note}</p>}
+        </div>
     )
 }
 

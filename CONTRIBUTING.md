@@ -49,7 +49,7 @@ A change should come with:
 - Derive values while rendering instead of copying them into state; use `useEffect` only to synchronise with something outside React.
 - Components do not call `fetch`. Use the feature's API module, which is built on `src/api/client.ts`.
 - Every data-driven view has real loading, error and empty states. Colour is never the only signal, controls are keyboard reachable, and interactive elements have accessible names.
-- Use the shadcn/Tailwind components in `src/components/ui`; new screens should not add MUI.
+- Build screens from the shadcn/Tailwind components in `src/components/ui`.
 
 **Comments** explain *why*, not *what*: a workaround (and what would remove it), non-obvious business logic, a deliberate departure from the usual approach, or a gotcha. Delete comments that restate the code.
 
