@@ -2,12 +2,12 @@ import {defineConfig} from "vitest/config"
 import react from "@vitejs/plugin-react"
 import path from "path"
 
-// Manual chunks keep the main bundle smaller so we avoid the 500 kB warning.
+// Vendor chunks keep the main bundle smaller so we avoid the 500 kB warning.
 export default defineConfig({
   plugins: [react()],
     resolve: {
         alias: {
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(import.meta.dirname, "./src"),
         },
     },
   test: {
@@ -21,11 +21,12 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 900,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom", "react-router", "react-router-dom"],
-          "vendor-mui": ["@mui/material", "@mui/icons-material", "@emotion/react", "@emotion/styled"],
+        codeSplitting: {
+          groups: [
+            { name: "vendor-react", test: /node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/ },
+          ],
         },
       },
     },

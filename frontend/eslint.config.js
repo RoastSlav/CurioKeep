@@ -19,6 +19,11 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Pages and hooks load their data in an effect that sets a loading flag first. Removing the pattern means
+      // moving server state into a data-fetching layer, which is a separate change from keeping the linter current.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
   {
     // shadcn primitives export their class-variance helpers next to the component.
