@@ -6,6 +6,6 @@ import java.util.Map;
 
 @Schema(description = "Payload for updating provider credentials")
 public record UpdateProviderCredentialsRequest(
-        @Schema(description = "Map of credential field names to their values", required = true) Map<String, String> values
+        @Schema(description = "Map of credential field names to their values", requiredMode = Schema.RequiredMode.REQUIRED) Map<String, String> values
 ) {
 }

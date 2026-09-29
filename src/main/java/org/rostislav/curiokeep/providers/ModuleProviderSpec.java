@@ -41,7 +41,7 @@ public record ModuleProviderSpec(String key, int priority, boolean enabled) {
 
     private static String text(JsonNode n) {
         if (n == null || n.isNull() || n.isMissingNode()) return null;
-        String v = n.asText(null);
+        String v = n.asString(null);
         return (v == null || v.isBlank()) ? null : v;
     }
 }

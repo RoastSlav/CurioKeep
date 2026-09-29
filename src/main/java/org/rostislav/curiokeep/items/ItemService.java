@@ -319,7 +319,7 @@ public class ItemService {
                 .filter(FieldContract::required)
                 .forEach(f -> {
                     JsonNode v = attributes.get(f.key());
-                    if (v == null || v.isNull() || (v.isTextual() && v.asText().isBlank())) {
+                    if (v == null || v.isNull() || (v.isString() && v.asString().isBlank())) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "MISSING_REQUIRED_FIELD_" + f.key());
                     }
                 });

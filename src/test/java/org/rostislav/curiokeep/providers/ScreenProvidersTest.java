@@ -46,11 +46,11 @@ class ScreenProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Fight Club");
+        assertThat(normalized.path("title").asString()).isEqualTo("Fight Club");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(1999);
-        assertThat(normalized.path("language").asText()).isEqualTo("en");
-        assertThat(normalized.path("tmdb_id").asText()).isEqualTo("550");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://www.themoviedb.org/movie/550");
+        assertThat(normalized.path("language").asString()).isEqualTo("en");
+        assertThat(normalized.path("tmdb_id").asString()).isEqualTo("550");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://www.themoviedb.org/movie/550");
         assertThat(r.assets()).hasSize(2);
     }
 
@@ -74,11 +74,11 @@ class ScreenProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Test Show");
+        assertThat(normalized.path("title").asString()).isEqualTo("Test Show");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2010);
-        assertThat(normalized.path("language").asText()).isEqualTo("en");
-        assertThat(normalized.path("tvmaze_id").asText()).isEqualTo("123");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://www.tvmaze.com/shows/123");
+        assertThat(normalized.path("language").asString()).isEqualTo("en");
+        assertThat(normalized.path("tvmaze_id").asString()).isEqualTo("123");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://www.tvmaze.com/shows/123");
         assertThat(r.assets()).hasSize(2);
     }
 
@@ -103,10 +103,10 @@ class ScreenProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Test Anime EN");
+        assertThat(normalized.path("title").asString()).isEqualTo("Test Anime EN");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2021);
-        assertThat(normalized.path("anilist_id").asText()).isEqualTo("42");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://anilist.co/anime/42");
+        assertThat(normalized.path("anilist_id").asString()).isEqualTo("42");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://anilist.co/anime/42");
         assertThat(r.assets()).hasSize(3);
     }
 }

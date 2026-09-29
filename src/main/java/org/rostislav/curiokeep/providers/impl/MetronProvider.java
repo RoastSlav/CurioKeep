@@ -234,8 +234,8 @@ public class MetronProvider implements MetadataProvider {
         // Assets
         List<ProviderAsset> assets = new ArrayList<>();
         JsonNode image = node.get("image");
-        if (image != null && image.isTextual()) {
-            String url = image.asText().trim();
+        if (image != null && image.isString()) {
+            String url = image.asString().trim();
             if (!url.isEmpty()) assets.add(new ProviderAsset(AssetType.COVER, URI.create(url), null, null));
         }
 
@@ -285,7 +285,7 @@ public class MetronProvider implements MetadataProvider {
 
     private String text(JsonNode n) {
         if (n == null || n.isNull() || n.isMissingNode()) return null;
-        String v = n.asText(null);
+        String v = n.asString(null);
         if (v == null) return null;
         v = v.trim();
         return v.isEmpty() ? null : v;

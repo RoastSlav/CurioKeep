@@ -58,11 +58,11 @@ class BoardGameGeekProviderTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Terraforming Mars");
+        assertThat(normalized.path("title").asString()).isEqualTo("Terraforming Mars");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2016);
-        assertThat(normalized.path("publisher").asText()).isEqualTo("Stronghold Games");
-        assertThat(normalized.path("bgg_id").asText()).isEqualTo("174430");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://boardgamegeek.com/boardgame/174430");
+        assertThat(normalized.path("publisher").asString()).isEqualTo("Stronghold Games");
+        assertThat(normalized.path("bgg_id").asString()).isEqualTo("174430");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://boardgamegeek.com/boardgame/174430");
         assertThat(normalized.path("min_players").asInt()).isEqualTo(1);
         assertThat(normalized.path("max_players").asInt()).isEqualTo(5);
         assertThat(normalized.path("playing_time").asInt()).isEqualTo(120);

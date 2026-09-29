@@ -51,11 +51,11 @@ class MusicProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Test Release");
-        assertThat(normalized.path("artists").asText()).isEqualTo("Artist A, Artist B");
-        assertThat(normalized.path("publisher").asText()).isEqualTo("Test Label");
+        assertThat(normalized.path("title").asString()).isEqualTo("Test Release");
+        assertThat(normalized.path("artists").asString()).isEqualTo("Artist A, Artist B");
+        assertThat(normalized.path("publisher").asString()).isEqualTo("Test Label");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2020);
-        assertThat(normalized.path("upc").asText()).isEqualTo("012345678905");
+        assertThat(normalized.path("upc").asString()).isEqualTo("012345678905");
         assertThat(r.assets()).hasSize(2);
     }
 
@@ -81,10 +81,10 @@ class MusicProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Artist A - Test Release");
-        assertThat(normalized.path("publisher").asText()).isEqualTo("Test Label");
+        assertThat(normalized.path("title").asString()).isEqualTo("Artist A - Test Release");
+        assertThat(normalized.path("publisher").asString()).isEqualTo("Test Label");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2020);
-        assertThat(normalized.path("upc").asText()).isEqualTo("012345678905");
+        assertThat(normalized.path("upc").asString()).isEqualTo("012345678905");
         assertThat(normalized.path("discogs_id").asInt()).isEqualTo(321);
         assertThat(r.assets()).isNotEmpty();
     }
@@ -110,8 +110,8 @@ class MusicProvidersTest {
                 assertThat(result).isPresent();
                 ProviderResult r = result.get();
                 JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-                assertThat(normalized.path("musicbrainz_id").asText()).isEqualTo(mbid);
-                assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://musicbrainz.org/release/" + mbid);
+                assertThat(normalized.path("musicbrainz_id").asString()).isEqualTo(mbid);
+                assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://musicbrainz.org/release/" + mbid);
                 assertThat(r.assets()).hasSize(2);
         }
 }

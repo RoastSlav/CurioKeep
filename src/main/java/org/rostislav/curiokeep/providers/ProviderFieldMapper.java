@@ -20,11 +20,11 @@ public class ProviderFieldMapper {
     }
 
     private static String text(JsonNode n) {
-        return (n == null || n.isNull() || n.isMissingNode()) ? null : n.asText(null);
+        return (n == null || n.isNull() || n.isMissingNode()) ? null : n.asString(null);
     }
 
     private static Object toJava(JsonNode n) {
-        if (n.isTextual()) return n.asText();
+        if (n.isString()) return n.asString();
         if (n.isInt()) return n.asInt();
         if (n.isLong()) return n.asLong();
         if (n.isFloat() || n.isDouble() || n.isBigDecimal()) return n.asDouble();
@@ -43,8 +43,8 @@ public class ProviderFieldMapper {
         if (transform == null) return toJava(value);
         switch (transform) {
             case "TRIM" -> {
-                if (!value.isTextual()) return toJava(value);
-                String trimmed = value.asText().trim();
+                if (!value.isString()) return toJava(value);
+                String trimmed = value.asString().trim();
                 return trimmed.isEmpty() ? null : trimmed;
             }
             case "JOIN_COMMA" -> {
@@ -59,7 +59,7 @@ public class ProviderFieldMapper {
             case "FIRST" -> {
                 if (!value.isArray()) return toJava(value);
                 for (JsonNode element : value) {
-                    if (!element.isNull() && !(element.isTextual() && element.asText().isBlank())) {
+                    if (!element.isNull() && !(element.isString() && element.asString().isBlank())) {
                         return toJava(element);
                     }
                 }
@@ -67,9 +67,9 @@ public class ProviderFieldMapper {
             }
             case "TO_INT" -> {
                 if (value.isNumber()) return value.asInt();
-                if (!value.isTextual()) return toJava(value);
+                if (!value.isString()) return toJava(value);
                 try {
-                    return Integer.parseInt(value.asText().trim());
+                    return Integer.parseInt(value.asString().trim());
                 } catch (NumberFormatException ex) {
                     return null;
                 }

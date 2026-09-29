@@ -80,7 +80,7 @@ public class ProviderChainingService {
 
     private String asText(JsonNode n) {
         if (n == null || n.isMissingNode() || n.isNull()) return null;
-        String v = n.asText(null);
+        String v = n.asString(null);
         if (v == null) return null;
         v = v.trim();
         return v.isEmpty() ? null : v;

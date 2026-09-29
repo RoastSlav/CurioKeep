@@ -104,7 +104,7 @@ public class CoverArtArchiveProvider implements MetadataProvider {
 
     private String text(JsonNode n) {
         if (n == null || n.isNull() || n.isMissingNode()) return null;
-        String v = n.asText(null);
+        String v = n.asString(null);
         if (v == null) return null;
         v = v.trim();
         return v.isEmpty() ? null : v;

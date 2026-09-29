@@ -49,11 +49,11 @@ class GameProvidersExtendedTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Test Game");
-        assertThat(normalized.path("description").asText()).contains("Great game");
+        assertThat(normalized.path("title").asString()).isEqualTo("Test Game");
+        assertThat(normalized.path("description").asString()).contains("Great game");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2021);
-        assertThat(normalized.path("igdb_id").asText()).isEqualTo("123");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://www.igdb.com/games/test-game");
+        assertThat(normalized.path("igdb_id").asString()).isEqualTo("123");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://www.igdb.com/games/test-game");
         assertThat(r.assets()).hasSize(1);
     }
 
@@ -79,11 +79,11 @@ class GameProvidersExtendedTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Rawg Game");
-        assertThat(normalized.path("description").asText()).isEqualTo("Adventure");
+        assertThat(normalized.path("title").asString()).isEqualTo("Rawg Game");
+        assertThat(normalized.path("description").asString()).isEqualTo("Adventure");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2019);
-        assertThat(normalized.path("rawg_id").asText()).isEqualTo("42");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://rawg.io/games/rawg-game");
+        assertThat(normalized.path("rawg_id").asString()).isEqualTo("42");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://rawg.io/games/rawg-game");
         assertThat(r.assets()).hasSize(2);
     }
 
@@ -107,11 +107,11 @@ class GameProvidersExtendedTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Lotus");
-        assertThat(normalized.path("description").asText()).contains("Add three mana");
+        assertThat(normalized.path("title").asString()).isEqualTo("Lotus");
+        assertThat(normalized.path("description").asString()).contains("Add three mana");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(1993);
-        assertThat(normalized.path("scryfall_id").asText()).isEqualTo("abcd");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://scryfall.com/card/abcd");
+        assertThat(normalized.path("scryfall_id").asString()).isEqualTo("abcd");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://scryfall.com/card/abcd");
         assertThat(r.assets()).hasSize(2);
     }
 
@@ -135,9 +135,9 @@ class GameProvidersExtendedTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("pikachu");
+        assertThat(normalized.path("title").asString()).isEqualTo("pikachu");
         assertThat(normalized.path("pokedex_number").asInt()).isEqualTo(25);
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://pokeapi.co/api/v2/pokemon/pikachu");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://pokeapi.co/api/v2/pokemon/pikachu");
         assertThat(normalized.path("types").toString()).contains("electric");
         assertThat(normalized.path("abilities").toString()).contains("static");
         assertThat(normalized.path("weight").asInt()).isEqualTo(60);

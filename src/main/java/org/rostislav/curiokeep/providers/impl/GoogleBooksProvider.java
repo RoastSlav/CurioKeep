@@ -111,7 +111,7 @@ public class GoogleBooksProvider implements MetadataProvider {
         // authors array -> join comma
         if (info.has("authors") && info.get("authors").isArray()) {
             List<String> authors = new ArrayList<>();
-            for (JsonNode a : info.get("authors")) if (a.isTextual()) authors.add(a.asText());
+            for (JsonNode a : info.get("authors")) if (a.isString()) authors.add(a.asString());
             if (!authors.isEmpty()) normalized.put("authors", String.join(", ", authors));
         }
 

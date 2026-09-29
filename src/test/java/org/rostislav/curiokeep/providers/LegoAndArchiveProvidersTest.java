@@ -48,13 +48,13 @@ class LegoAndArchiveProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Space Cruiser");
-        assertThat(normalized.path("set_number").asText()).isEqualTo("928-1");
+        assertThat(normalized.path("title").asString()).isEqualTo("Space Cruiser");
+        assertThat(normalized.path("set_number").asString()).isEqualTo("928-1");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(1979);
         assertThat(normalized.path("pieces").asInt()).isEqualTo(338);
         assertThat(normalized.path("minifigs").asInt()).isEqualTo(2);
-        assertThat(normalized.path("brickset_id").asText()).isEqualTo("9999");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://brickset.com/sets/928-1");
+        assertThat(normalized.path("brickset_id").asString()).isEqualTo("9999");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://brickset.com/sets/928-1");
         assertThat(r.assets()).hasSize(1);
     }
 
@@ -81,12 +81,12 @@ class LegoAndArchiveProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Galaxy Explorer");
-        assertThat(normalized.path("set_number").asText()).isEqualTo("497-1");
+        assertThat(normalized.path("title").asString()).isEqualTo("Galaxy Explorer");
+        assertThat(normalized.path("set_number").asString()).isEqualTo("497-1");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(1979);
         assertThat(normalized.path("pieces").asInt()).isEqualTo(338);
-        assertThat(normalized.path("rebrickable_id").asText()).isEqualTo("497-1");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://rebrickable.com/sets/497-1");
+        assertThat(normalized.path("rebrickable_id").asString()).isEqualTo("497-1");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://rebrickable.com/sets/497-1");
         assertThat(r.assets()).hasSize(1);
     }
 
@@ -110,12 +110,12 @@ class LegoAndArchiveProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Archive Item");
-        assertThat(normalized.path("description").asText()).contains("Public domain");
+        assertThat(normalized.path("title").asString()).isEqualTo("Archive Item");
+        assertThat(normalized.path("description").asString()).contains("Public domain");
         assertThat(normalized.path("published_year").asInt()).isEqualTo(2012);
-        assertThat(normalized.path("language").asText()).isEqualTo("eng");
-        assertThat(normalized.path("internet_archive_id").asText()).isEqualTo("sample-item");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://archive.org/details/sample-item");
+        assertThat(normalized.path("language").asString()).isEqualTo("eng");
+        assertThat(normalized.path("internet_archive_id").asString()).isEqualTo("sample-item");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://archive.org/details/sample-item");
         assertThat(r.assets()).hasSize(1);
     }
 
@@ -139,12 +139,12 @@ class LegoAndArchiveProvidersTest {
         assertThat(result).isPresent();
         ProviderResult r = result.get();
         JsonNode normalized = objectMapper.readTree((String) r.normalizedFields().get("json"));
-        assertThat(normalized.path("title").asText()).isEqualTo("Test Snack");
-        assertThat(normalized.path("brand").asText()).isEqualTo("SnackCorp");
-        assertThat(normalized.path("gtin").asText()).isEqualTo("012345678905");
-        assertThat(normalized.path("canonical_url").asText()).isEqualTo("https://openfoodfacts.org/product/012345678905");
-        assertThat(normalized.path("categories").asText()).contains("Snacks");
-        assertThat(normalized.path("ingredients").asText()).contains("sugar");
+        assertThat(normalized.path("title").asString()).isEqualTo("Test Snack");
+        assertThat(normalized.path("brand").asString()).isEqualTo("SnackCorp");
+        assertThat(normalized.path("gtin").asString()).isEqualTo("012345678905");
+        assertThat(normalized.path("canonical_url").asString()).isEqualTo("https://openfoodfacts.org/product/012345678905");
+        assertThat(normalized.path("categories").asString()).contains("Snacks");
+        assertThat(normalized.path("ingredients").asString()).contains("sugar");
         assertThat(r.assets()).hasSize(2);
     }
 }

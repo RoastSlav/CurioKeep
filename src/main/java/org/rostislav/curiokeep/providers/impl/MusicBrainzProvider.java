@@ -188,7 +188,7 @@ public class MusicBrainzProvider implements MetadataProvider {
     private String joinPhrase(JsonNode credit) {
         JsonNode joinNode = credit.get("joinphrase");
         if (joinNode == null || joinNode.isNull() || joinNode.isMissingNode()) return ", ";
-        String join = joinNode.asText();
+        String join = joinNode.asString();
         if (join == null || join.isBlank()) return ", ";
         return join;
     }
@@ -224,7 +224,7 @@ public class MusicBrainzProvider implements MetadataProvider {
 
     private String text(JsonNode n) {
         if (n == null || n.isNull() || n.isMissingNode()) return null;
-        String v = n.asText(null);
+        String v = n.asString(null);
         if (v == null) return null;
         v = v.trim();
         return v.isEmpty() ? null : v;
