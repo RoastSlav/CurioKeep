@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.providers;
+package org.rostislav.curiokeep.providers.credentials;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

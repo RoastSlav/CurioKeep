@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.providers;
+package org.rostislav.curiokeep.providers.credentials;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class ProviderCredentialService implements ProviderCredentialLookup {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderCredentialService.class);
+    private static final String DEFAULT_PASSWORD = "changeme";
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE = new TypeReference<>() {
     };
 
@@ -37,6 +38,10 @@ public class ProviderCredentialService implements ProviderCredentialLookup {
                                      @Value("${curiokeep.providers.credentials.encryption.salt:0123456789abcdef}") String salt) {
         this.repository = repository;
         this.objectMapper = objectMapper;
+        if (DEFAULT_PASSWORD.equals(password)) {
+            // Changing it later makes already-stored provider credentials undecryptable, so it is only warned about.
+            log.warn("Provider credentials are encrypted with the default password; set curiokeep.providers.credentials.encryption.password before storing real API keys");
+        }
         TextEncryptor enc;
         try {
             if (salt != null && salt.matches("(?i)[0-9a-f]+") && (salt.length() % 2 == 0)) {

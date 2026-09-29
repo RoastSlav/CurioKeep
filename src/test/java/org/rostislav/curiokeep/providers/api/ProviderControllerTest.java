@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,7 +52,7 @@ class ProviderControllerTest {
         ProviderStatusService providerStatusService;
 
         @Mock
-        org.rostislav.curiokeep.providers.ProviderCredentialService providerCredentialService;
+        org.rostislav.curiokeep.providers.credentials.ProviderCredentialService providerCredentialService;
 
     @Mock
     AppUserRepository appUserRepository;
@@ -93,7 +94,7 @@ class ProviderControllerTest {
                 Map.of("title", "Dune"),
                 List.of()
         );
-        when(providerLookupService.lookup(eq(module), any())).thenReturn(response);
+        when(providerLookupService.lookup(eq(module), any(), eq(List.of()), isNull())).thenReturn(response);
 
         mockMvc.perform(post("/api/providers/lookup")
                         .contentType(MediaType.APPLICATION_JSON)

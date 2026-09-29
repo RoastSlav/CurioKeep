@@ -1,5 +1,8 @@
 package org.rostislav.curiokeep.providers;
 
+import org.rostislav.curiokeep.providers.credentials.ProviderCredential;
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialLookup;
+
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;

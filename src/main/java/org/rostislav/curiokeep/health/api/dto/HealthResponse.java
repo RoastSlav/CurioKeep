@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.controller.dto;
+package org.rostislav.curiokeep.health.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

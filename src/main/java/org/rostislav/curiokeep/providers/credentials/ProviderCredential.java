@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.providers;
+package org.rostislav.curiokeep.providers.credentials;
 
 import java.time.Instant;
 import java.util.Map;

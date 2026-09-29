@@ -20,7 +20,7 @@ public class ModuleContractValidator {
     public ModuleContractValidator(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
 
-        try (InputStream in = new ClassPathResource("docs/spec/module-contract-v1.schema.json").getInputStream()) {
+        try (InputStream in = new ClassPathResource("schema/module-contract-v1.schema.json").getInputStream()) {
             JSONObject raw = new JSONObject(new JSONTokener(in));
             this.schema = SchemaLoader.builder()
                     .schemaJson(raw)

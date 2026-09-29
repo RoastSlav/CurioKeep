@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.providers;
+package org.rostislav.curiokeep.providers.credentials;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.providers;
+package org.rostislav.curiokeep.providers.credentials;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

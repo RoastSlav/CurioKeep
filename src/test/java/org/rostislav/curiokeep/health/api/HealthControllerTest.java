@@ -1,4 +1,4 @@
-package org.rostislav.curiokeep.controller;
+package org.rostislav.curiokeep.health.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

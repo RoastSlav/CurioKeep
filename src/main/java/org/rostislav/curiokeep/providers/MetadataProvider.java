@@ -1,5 +1,7 @@
 package org.rostislav.curiokeep.providers;
 
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialField;
+
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 
 import java.util.List;

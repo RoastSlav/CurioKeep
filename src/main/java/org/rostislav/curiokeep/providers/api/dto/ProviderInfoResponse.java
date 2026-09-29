@@ -2,7 +2,7 @@ package org.rostislav.curiokeep.providers.api.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
-import org.rostislav.curiokeep.providers.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialField;
 
 import java.util.List;
 

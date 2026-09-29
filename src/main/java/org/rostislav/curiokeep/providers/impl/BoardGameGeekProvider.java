@@ -1,5 +1,9 @@
 package org.rostislav.curiokeep.providers.impl;
 
+import org.rostislav.curiokeep.providers.credentials.ProviderCredential;
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialLookup;
+
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.providers.*;
 import org.slf4j.Logger;

@@ -2,8 +2,8 @@ package org.rostislav.curiokeep.providers.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import org.rostislav.curiokeep.providers.ProviderCredentialField;
-import org.rostislav.curiokeep.providers.ProviderCredentialService;
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialField;
+import org.rostislav.curiokeep.providers.credentials.ProviderCredentialService;
 import org.rostislav.curiokeep.providers.ProviderDescriptor;
 import org.rostislav.curiokeep.providers.ProviderRegistry;
 import org.rostislav.curiokeep.providers.api.dto.ProviderCredentialStatusResponse;
