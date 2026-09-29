@@ -10,6 +10,7 @@ import org.rostislav.curiokeep.collections.CollectionAccessService;
 import org.rostislav.curiokeep.collections.api.dto.Role;
 import org.rostislav.curiokeep.items.api.dto.ChangeStateRequest;
 import org.rostislav.curiokeep.items.api.dto.CreateItemRequest;
+import org.rostislav.curiokeep.items.api.dto.ItemCountsResponse;
 import org.rostislav.curiokeep.items.api.dto.ItemIdentifierDto;
 import org.rostislav.curiokeep.items.api.dto.ItemResponse;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
@@ -63,6 +64,8 @@ class ItemServiceTest {
     ModuleQueryService modules;
     @Mock
     ItemImageService imageService;
+    @Mock
+    ItemSearchRepository search;
 
     ItemService service;
     ModuleDefinitionEntity moduleEntity;
@@ -70,7 +73,7 @@ class ItemServiceTest {
     @BeforeEach
     void setUp() {
         service = new ItemService(items, identifiers, currentUser, access, modules, new ObjectMapper(), imageService,
-                new TransactionTemplate(mock(PlatformTransactionManager.class)));
+                search, new TransactionTemplate(mock(PlatformTransactionManager.class)));
 
         AppUserEntity user = new AppUserEntity();
         user.setId(USER_ID);
@@ -287,6 +290,46 @@ class ItemServiceTest {
         ArgumentCaptor<ItemIdentifierEntity> saved = ArgumentCaptor.forClass(ItemIdentifierEntity.class);
         verify(identifiers, org.mockito.Mockito.times(2)).save(saved.capture());
         assertThat(saved.getAllValues()).extracting(ItemIdentifierEntity::getIdValue).containsExactly("222", "333");
+    }
+
+    private static ItemRepository.StateCount row(UUID moduleId, String state, long count) {
+        return new ItemRepository.StateCount() {
+            @Override
+            public UUID getModuleId() {
+                return moduleId;
+            }
+
+            @Override
+            public String getStateKey() {
+                return state;
+            }
+
+            @Override
+            public long getCount() {
+                return count;
+            }
+        };
+    }
+
+    @Test
+    void countsSumsTheStatesOfEachModuleAndNeedsOnlyViewerAccess() {
+        UUID otherModule = UUID.fromString("66666666-6666-6666-6666-666666666666");
+        when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of(
+                row(MODULE_ID, "OWNED", 3), row(MODULE_ID, "WISHLIST", 2), row(otherModule, "OWNED", 1)));
+
+        ItemCountsResponse counts = service.counts(COLLECTION_ID);
+
+        verify(access).requireRole(COLLECTION_ID, USER_ID, Role.VIEWER);
+        assertThat(counts.modules().get(MODULE_ID).total()).isEqualTo(5);
+        assertThat(counts.modules().get(MODULE_ID).byState()).containsEntry("OWNED", 3L).containsEntry("WISHLIST", 2L);
+        assertThat(counts.modules().get(otherModule).total()).isEqualTo(1);
+    }
+
+    @Test
+    void countsAreEmptyForACollectionWithoutItems() {
+        when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of());
+
+        assertThat(service.counts(COLLECTION_ID).modules()).isEmpty();
     }
 
     private void givenModule() {

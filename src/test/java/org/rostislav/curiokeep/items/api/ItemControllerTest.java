@@ -1,5 +1,8 @@
 package org.rostislav.curiokeep.items.api;
 
+import org.mockito.ArgumentCaptor;
+import org.rostislav.curiokeep.items.api.dto.ItemCountsResponse;
+import org.rostislav.curiokeep.items.api.dto.ItemListRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -72,7 +78,7 @@ class ItemControllerTest {
         UUID moduleId = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
         UUID itemId = UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
         Page<ItemResponse> page = new PageImpl<>(List.of(sampleItem(collectionId, moduleId, itemId)), PageRequest.of(0, 25), 1);
-        when(itemService.list(collectionId, moduleId, PageRequest.of(0, 25))).thenReturn(page);
+        when(itemService.list(eq(collectionId), any(ItemListRequest.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/collections/" + collectionId + "/items")
                         .param("moduleId", moduleId.toString())
@@ -81,6 +87,48 @@ class ItemControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(itemId.toString()))
                 .andExpect(jsonPath("$.content[0].title").value("Dune"));
+    }
+
+    @Test
+    void listPassesSearchStateSortAndFieldFiltersToTheService() throws Exception {
+        UUID collectionId = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        UUID moduleId = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        when(itemService.list(eq(collectionId), any(ItemListRequest.class))).thenReturn(new PageImpl<>(List.of(), PageRequest.of(2, 50), 0));
+
+        mockMvc.perform(get("/api/collections/" + collectionId + "/items")
+                        .param("moduleId", moduleId.toString())
+                        .param("page", "2")
+                        .param("size", "50")
+                        .param("search", "dune")
+                        .param("state", "OWNED,WISHLIST")
+                        .param("sort", "title,desc")
+                        .param("publisher.in", "Acme,Zed")
+                        .param("pages.gte", "100"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<ItemListRequest> captor = ArgumentCaptor.forClass(ItemListRequest.class);
+        verify(itemService).list(eq(collectionId), captor.capture());
+        ItemListRequest request = captor.getValue();
+        assertThat(request.moduleId()).isEqualTo(moduleId);
+        assertThat(request.search()).isEqualTo("dune");
+        assertThat(request.state()).isEqualTo("OWNED,WISHLIST");
+        assertThat(request.sort()).isEqualTo("title,desc");
+        assertThat(request.page()).isEqualTo(2);
+        assertThat(request.size()).isEqualTo(50);
+        assertThat(request.otherParams()).containsEntry("publisher.in", "Acme,Zed").containsEntry("pages.gte", "100");
+    }
+
+    @Test
+    void countsReturnsTheTotalsPerModuleAndState() throws Exception {
+        UUID collectionId = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        UUID moduleId = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        when(itemService.counts(collectionId)).thenReturn(new ItemCountsResponse(
+                Map.of(moduleId, new ItemCountsResponse.ModuleCounts(5, Map.of("OWNED", 3L, "WISHLIST", 2L)))));
+
+        mockMvc.perform(get("/api/collections/" + collectionId + "/items/counts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.modules['" + moduleId + "'].total").value(5))
+                .andExpect(jsonPath("$.modules['" + moduleId + "'].byState.OWNED").value(3));
     }
 
     @Test

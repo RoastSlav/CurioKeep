@@ -9,7 +9,6 @@ import org.rostislav.curiokeep.items.api.dto.*;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
-import org.rostislav.curiokeep.modules.contract.FieldContract;
 import org.rostislav.curiokeep.modules.contract.ModuleContract;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
 import org.rostislav.curiokeep.user.CurrentUserService;
@@ -17,7 +16,6 @@ import org.rostislav.curiokeep.user.entities.AppUserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +44,7 @@ public class ItemService {
     private final ModuleQueryService modules;
     private final ObjectMapper objectMapper;
     private final ItemImageService imageService;
+    private final ItemSearchRepository search;
     private final TransactionTemplate tx;
 
     public ItemService(
@@ -56,6 +55,7 @@ public class ItemService {
             ModuleQueryService modules,
             ObjectMapper objectMapper,
             ItemImageService imageService,
+            ItemSearchRepository search,
             TransactionTemplate tx
     ) {
         this.items = items;
@@ -65,15 +65,21 @@ public class ItemService {
         this.modules = modules;
         this.objectMapper = objectMapper;
         this.imageService = imageService;
+        this.search = search;
         this.tx = tx;
     }
 
     @Transactional(readOnly = true)
-    public Page<ItemResponse> list(UUID collectionId, UUID moduleId, Pageable pageable) {
+    public Page<ItemResponse> list(UUID collectionId, ItemListRequest request) {
         checkUserRole(collectionId, Role.VIEWER);
 
-        return items.findAllByCollectionIdAndModuleId(collectionId, moduleId, pageable)
-                .map(e -> ItemResponse.from(e, objectMapper));
+        ModuleDefinitionEntity def = modules.getEntityById(request.moduleId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "MODULE_NOT_FOUND"));
+        ItemQuery query = ItemQueryParser.parse(modules.getContract(def), new ItemQueryParser.Params(
+                collectionId, request.moduleId(), request.search(), request.state(), request.sort(),
+                request.page(), request.size(), request.otherParams()));
+
+        return search.search(query).map(e -> ItemResponse.from(e, objectMapper));
     }
 
     public ItemResponse create(UUID collectionId, CreateItemRequest req) {
@@ -85,7 +91,7 @@ public class ItemService {
         validateState(contract, req.stateKey());
 
         Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes() == null ? Map.of() : req.attributes());
-        validateAttributes(contract, toJsonNode(attrsMap));
+        ItemAttributeValidator.validate(contract, toJsonNode(attrsMap));
         // The cover is downloaded before the transaction starts so a slow host cannot hold a database connection.
         ImageProcessResult imageResult = handleImage(attrsMap);
         JsonNode attrs = toJsonNode(attrsMap);
@@ -143,7 +149,7 @@ public class ItemService {
         ImageProcessResult imageResult = ImageProcessResult.NONE;
         if (req.attributes() != null) {
             Map<String, Object> attrsMap = new java.util.LinkedHashMap<>(req.attributes());
-            validateAttributes(contract, toJsonNode(attrsMap));
+            ItemAttributeValidator.validate(contract, toJsonNode(attrsMap));
             imageResult = handleImage(attrsMap);
             attrs = toJsonNode(attrsMap);
         }
@@ -217,6 +223,20 @@ public class ItemService {
         log.info("Item image set from url: itemId={} collectionId={} byUserId={}", itemId, collectionId, u.getId());
 
         return ItemResponse.from(result.entity(), objectMapper);
+    }
+
+    @Transactional(readOnly = true)
+    public ItemCountsResponse counts(UUID collectionId) {
+        checkUserRole(collectionId, Role.VIEWER);
+
+        Map<UUID, Map<String, Long>> byModule = new java.util.LinkedHashMap<>();
+        for (ItemRepository.StateCount row : items.countByModuleAndState(collectionId)) {
+            byModule.computeIfAbsent(row.getModuleId(), id -> new java.util.LinkedHashMap<>()).put(row.getStateKey(), row.getCount());
+        }
+        Map<UUID, ItemCountsResponse.ModuleCounts> modulesCounts = new java.util.LinkedHashMap<>();
+        byModule.forEach((moduleId, byState) -> modulesCounts.put(moduleId,
+                new ItemCountsResponse.ModuleCounts(byState.values().stream().mapToLong(Long::longValue).sum(), byState)));
+        return new ItemCountsResponse(modulesCounts);
     }
 
     @Transactional
@@ -345,21 +365,6 @@ public class ItemService {
 
         boolean ok = contract.states().stream().anyMatch(s -> s.key().equalsIgnoreCase(key));
         if (!ok) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_STATE");
-    }
-
-    private void validateAttributes(ModuleContract contract, JsonNode attributes) {
-        if (attributes == null || !attributes.isObject()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ATTRIBUTES_MUST_BE_OBJECT");
-        }
-
-        contract.fields().stream()
-                .filter(FieldContract::required)
-                .forEach(f -> {
-                    JsonNode v = attributes.get(f.key());
-                    if (v == null || v.isNull() || (v.isString() && v.asString().isBlank())) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "MISSING_REQUIRED_FIELD_" + f.key());
-                    }
-                });
     }
 
     private JsonNode toJsonNode(Map<String, Object> attributes) {

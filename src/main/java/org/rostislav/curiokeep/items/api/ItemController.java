@@ -12,17 +12,18 @@ import org.rostislav.curiokeep.api.dto.ApiError;
 import org.rostislav.curiokeep.items.ItemService;
 import org.rostislav.curiokeep.items.api.dto.ChangeStateRequest;
 import org.rostislav.curiokeep.items.api.dto.CreateItemRequest;
+import org.rostislav.curiokeep.items.api.dto.ItemCountsResponse;
 import org.rostislav.curiokeep.items.api.dto.ItemImageUrlRequest;
+import org.rostislav.curiokeep.items.api.dto.ItemListRequest;
 import org.rostislav.curiokeep.items.api.dto.ItemResponse;
 import org.rostislav.curiokeep.items.api.dto.UpdateItemRequest;
 import org.rostislav.curiokeep.user.api.dto.OkResponse;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "Items", description = "CRUD for module-driven items inside collections.")
@@ -37,7 +38,12 @@ public class ItemController {
         this.service = service;
     }
 
-    @Operation(summary = "List items", description = "Lists items in a collection filtered by module id.")
+    @Operation(summary = "List items", description = "Lists a module's items in a collection, newest first by default. "
+            + "Optional parameters: `search` (title and the module's searchable fields), `state` (comma separated state keys), "
+            + "`sort` (`createdAt`, `updatedAt`, `title` or a sortable field key, optionally followed by `,asc` or `,desc`), "
+            + "and field filters named `<fieldKey>.<operator>` on filterable fields: `in` (enum, text, tags, boolean, link), "
+            + "`contains` (text, link), `gte`/`lte` (number) and `from`/`to` (date, `YYYY`, `YYYY-MM` or `YYYY-MM-DD`). "
+            + "`size` is at most 100.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Items returned"),
             @ApiResponse(responseCode = "401", description = "Not authenticated",
@@ -50,10 +56,19 @@ public class ItemController {
             @PathVariable UUID collectionId,
             @RequestParam UUID moduleId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String state,
+            @RequestParam(required = false) String sort,
+            @RequestParam Map<String, String> params
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        return service.list(collectionId, moduleId, pageable);
+        return service.list(collectionId, new ItemListRequest(moduleId, search, state, sort, page, size, params));
+    }
+
+    @Operation(summary = "Count items", description = "Returns how many items the collection holds per module and per state.")
+    @GetMapping("/counts")
+    public ItemCountsResponse counts(@PathVariable UUID collectionId) {
+        return service.counts(collectionId);
     }
 
     @Operation(summary = "Create item", description = "Creates a new item for a module in the collection. Attributes are validated against the module contract.")
