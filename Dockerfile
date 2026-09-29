@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM maven:3.9.16-eclipse-temurin-21 AS build
+FROM maven:3.9.16-eclipse-temurin-25 AS build
 WORKDIR /build
 
 # copy only dependency descriptors first for caching
@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     --mount=type=cache,target=/build/frontend/node_modules \
     mvn -DskipTests -Pfrontend clean package
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 ENV JAVA_OPTS=""

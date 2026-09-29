@@ -12,7 +12,7 @@ flowchart LR
 ```
 
 - **Frontend** (`frontend/`): React 19 and TypeScript, built with Vite. In production it is copied into the jar (`-Pfrontend`) and served by the backend; unknown non-API paths forward to `index.html` so client-side routes work (`SpaWebConfig`). In development Vite proxies `/api` to `localhost:8080`.
-- **Backend** (`src/main/java/org/rostislav/curiokeep`): Java 21, Spring Boot 4, Spring Security, Spring Data JPA, Flyway.
+- **Backend** (`src/main/java/org/rostislav/curiokeep`): Java 25, Spring Boot 4, Spring Security, Spring Data JPA, Flyway.
 - **Database**: PostgreSQL 16. Schema changes are Flyway migrations in `src/main/resources/db/migration`.
 - **Data directory**: cover images (`curiokeep.assets.dir`) and imported module XML files (`curiokeep.modules.import-dir`). See [configuration](configuration.md).
 

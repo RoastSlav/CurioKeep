@@ -4,7 +4,7 @@ Thanks for helping out. This page covers how to get set up, what a change should
 
 ## Set up
 
-Follow [Development](README.md#development) in the README. In short: Java 21, Docker for the development database, and `./mvnw spring-boot:run` for the backend plus `npm ci && npm run dev` in `frontend/`.
+Follow [Development](README.md#development) in the README. In short: Java 25, Docker for the development database, and `./mvnw spring-boot:run` for the backend plus `npm ci && npm run dev` in `frontend/`.
 
 Read [Architecture](docs/architecture.md) first if you are new to the code base: the backend and frontend are both organised by feature, and a new feature is a new package, not another file in a shared `service/` or `components/` folder.
 
