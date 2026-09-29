@@ -227,6 +227,71 @@ class ModuleLoadTxTest {
         assertThat(contract.fields().stream().filter(f -> f.key().equals("published_year")).findFirst().orElseThrow().defaultValue()).isNull();
     }
 
+    private String withMigration(String to, String steps) throws Exception {
+        return booksXml().replace("</workflows>", "</workflows><migrations><migration to=\"" + to + "\">" + steps + "</migration></migrations>");
+    }
+
+    @Test
+    void aModuleWithMigrationsCompilesThemOldestFirst() throws Exception {
+        String xml = booksXml().replace("version=\"1.0.0\"", "version=\"2.0.0\"").replace("</workflows>",
+                "</workflows><migrations>"
+                        + "<migration to=\"2.0.0\"><step op=\"DROP\" field=\"legacy\"/></migration>"
+                        + "<migration to=\"1.10.0\"><step op=\"MOVE\" from=\"old_notes\" to=\"notes\" transform=\"TRIM\"/></migration>"
+                        + "</migrations>");
+
+        ModuleContract contract = new ModuleCompiler().compile(new ModuleXmlParser().parse(xml));
+
+        assertThat(contract.migrations()).extracting(m -> m.to()).containsExactly("1.10.0", "2.0.0");
+        load(xml);
+    }
+
+    @Test
+    void migrationStepsMustCarryTheAttributesTheirOperationNeeds() throws Exception {
+        assertRejected(withMigration("1.0.0", "<step op=\"MOVE\" from=\"old\"/>"), "needs from and to");
+        assertRejected(withMigration("1.0.0", "<step op=\"MAP\" field=\"binding\"/>"), "needs field and at least one mapping");
+        assertRejected(withMigration("1.0.0", "<step op=\"DEFAULT\" field=\"format\"/>"), "needs field and value");
+        assertRejected(withMigration("1.0.0", "<step op=\"DROP\"/>"), "needs field");
+        assertRejected(withMigration("1.0.0", "<step op=\"DROP\" field=\"gone\" value=\"x\"/>"), "has attributes that DROP does not use");
+    }
+
+    @Test
+    void aMigrationCannotTargetAVersionNewerThanTheModule() throws Exception {
+        assertRejected(withMigration("1.1.0", "<step op=\"DROP\" field=\"gone\"/>"), "is newer than the module version 1.0.0");
+    }
+
+    @Test
+    void aMigrationMustMoveIntoALiveDeclaredField() throws Exception {
+        assertRejected(withMigration("1.0.0", "<step op=\"MOVE\" from=\"old\" to=\"ghost\"/>"), "names field 'ghost', which the module does not declare");
+        assertRejected(withMigration("1.0.0", "<step op=\"MOVE\" from=\"notes\" to=\"notes\"/>"), "different from and to");
+    }
+
+    @Test
+    void aMigrationCannotDropALiveField() throws Exception {
+        assertRejected(withMigration("1.0.0", "<step op=\"DROP\" field=\"title\"/>"), "drops 'title', which is still a live field");
+    }
+
+    @Test
+    void mapStepsNeedAnEnumOrTagsFieldAndDeclaredTargets() throws Exception {
+        assertRejected(withMigration("1.0.0", "<step op=\"MAP\" field=\"title\"><mapping from=\"a\" to=\"b\"/></step>"), "not an ENUM or TAGS field");
+        assertRejected(withMigration("1.0.0", "<step op=\"MAP\" field=\"binding\"><mapping from=\"OLD\" to=\"NOPE\"/></step>"), "'NOPE', which is not a value of 'binding'");
+        assertRejected(withMigration("1.0.0", "<step op=\"MAP\" field=\"binding\"><mapping from=\"OLD\" to=\"SEWN\"/><mapping from=\"OLD\" to=\"GLUED\"/></step>"), "maps the same value twice");
+    }
+
+    @Test
+    void aDefaultStepMustHoldAValueTheFieldAccepts() throws Exception {
+        assertRejected(withMigration("1.0.0", "<step op=\"DEFAULT\" field=\"format\" value=\"FOLIO\"/>"), "not valid for field 'format'");
+        load(withMigration("1.0.0", "<step op=\"DEFAULT\" field=\"format\" value=\"PAPERBACK\"/>"));
+    }
+
+    @Test
+    void twoMigrationsToTheSameVersionAreRejectedBySchema() throws Exception {
+        String xml = booksXml().replace("</workflows>", "</workflows><migrations>"
+                + "<migration to=\"1.0.0\"><step op=\"DROP\" field=\"a_b\"/></migration>"
+                + "<migration to=\"1.0.0\"><step op=\"DROP\" field=\"c_d\"/></migration></migrations>");
+
+        assertRejectedBySchema(xml, "uniq_migration_target");
+    }
+
     private void assertRejected(String xml, String expectedMessagePart) {
         assertThatThrownBy(() -> load(xml))
                 .isInstanceOf(IllegalStateException.class)

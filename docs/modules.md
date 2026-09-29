@@ -49,6 +49,8 @@ For each module file, in this order (`ModuleLoadTx`):
 | Every provider mapping refers to a provider the module declares | semantic check |
 | Workflow steps refer only to declared fields and providers | semantic check |
 | A `PROMPT` step names a field, or has a `query`; `query` is allowed only on `PROMPT` | semantic check |
+| Migration versions are unique, are not newer than the module's `version`, and each step carries exactly the attributes its `op` uses | XSD, semantic check |
+| A migration step's target field is declared and live (not deprecated or inactive); `MAP` is used on `ENUM` or `TAGS` fields, maps to declared values, and lists each source value once; `DEFAULT` holds a value the field accepts; `DROP` names a field that is no longer live | semantic check |
 
 Not enforced: a field of type `ENUM` without `enumValues` is accepted (it renders an empty choice list), and `identifiers` on a field are not cross-checked against anything.
 
@@ -77,6 +79,12 @@ A module is updated by replacing its file (same `key`, a new `version`). Existin
 
 A deprecated `required` field never blocks saving. States can be deprecated in the same way (`deprecated="true"` on `<state>`): a deprecated state is not offered in the state menus, and items already in it keep it.
 
+### Migrating items automatically
+
+A module can also say how to bring items saved under an older version up to date, so users do not have to move values by hand. Every item remembers the module version it was last brought up to. When the module's `version` is higher than an item's and the module has a `<migration>` for the versions in between, the collection page tells its admins how many items can be migrated. An admin opens a preview (how many items are affected and a few examples of what would change), and accepts it. Only then are the items rewritten; ordinary members never trigger it and nothing changes on its own.
+
+Accepting is a plain rewrite: there is no undo and no history. Items a user edited in the meantime are migrated like the others. Steps are conservative on purpose (see [`<migrations>`](#migrations-optional)): they never overwrite a value the item already has and never store a value the new field would reject, so an item a step does not fit is left alone. Items the module has no migration for keep their old version and stay usable, and a later version's migration still applies to them.
+
 ## The XML format
 
 `key` is the module's permanent identity (used in the database and URLs). **Never change it after publishing.**
@@ -93,6 +101,7 @@ A deprecated `required` field never blocks saving. States can be deprecated in t
     <providers> ... </providers>
     <fields> ... </fields>
     <workflows> ... </workflows>
+    <migrations> ... </migrations>
 </module>
 ```
 
@@ -195,6 +204,33 @@ Workflows are guided add-item wizards. They are a list of known step types, not 
 | `SAVE_ITEM` | none | shows the form for the remaining fields and saves |
 
 The web app automatically inserts a cover-selection step before `SAVE_ITEM` (it says so when the providers returned no images). Without any workflows the app still offers a manual add form, but workflows make adding items much faster.
+
+### `<migrations>` (optional)
+
+Each `<migration to="2.0.0">` lists the steps that bring an item from any earlier version up to version `2.0.0`. When an item is migrated, the migrations after its version, up to the module's current `version`, run oldest first, and the steps of each run in the order written. `to` must be unique and not newer than the module's `version`.
+
+```xml
+<migrations>
+    <migration to="2.0.0">
+        <step op="MOVE" from="author_text" to="authors" transform="TRIM"/>
+        <step op="MAP" field="binding"><mapping from="PERFECT" to="GLUED"/></step>
+        <step op="DEFAULT" field="format" value="PAPERBACK"/>
+        <step op="DROP" field="legacy_notes"/>
+    </migration>
+</migrations>
+```
+
+| Step | Attributes | What it does to one item |
+|---|---|---|
+| `MOVE` | `from`, `to`, optional `transform` | Puts the value of `from` into `to` and removes `from`. `to` must be a declared, live field; `from` can be a deprecated or already removed key |
+| `COPY` | same as `MOVE` | The same, but keeps `from` |
+| `MAP` | `field`, one or more `<mapping from="" to=""/>` | Replaces the listed values of an `ENUM` or `TAGS` field; values not listed stay as they are |
+| `DEFAULT` | `field`, `value` | Sets the field when it is empty. `value` is read as the field's type (a number for `NUMBER`, `true` or `false` for `BOOLEAN`, comma separated entries for `TAGS`) |
+| `DROP` | `field` | Deletes a key that is no longer a live field, so its data is gone for good |
+
+`transform` is one of the [mapping transforms](#provider-mappings) (`TRIM`, `JOIN_COMMA`, `FIRST`, `TO_INT`), for when the old and new fields differ in type.
+
+A step leaves an item unchanged instead of guessing when: `MOVE` or `COPY` would overwrite a value in `to`; the value, after the transform, is not valid for `to` (wrong type, outside its constraints, not a declared choice); or the source is empty (a `MOVE` still removes an empty source). Use a `transform` to convert, for example `TO_INT` to turn a text page count into a number.
 
 ## Authoring guidelines
 

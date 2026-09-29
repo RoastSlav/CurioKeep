@@ -18,6 +18,9 @@ import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
 import org.rostislav.curiokeep.modules.contract.FieldContract;
 import org.rostislav.curiokeep.modules.contract.FieldType;
+import org.rostislav.curiokeep.modules.contract.MigrationContract;
+import org.rostislav.curiokeep.modules.contract.MigrationOp;
+import org.rostislav.curiokeep.modules.contract.MigrationStep;
 import org.rostislav.curiokeep.modules.contract.ModuleContract;
 import org.rostislav.curiokeep.modules.contract.StateContract;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
@@ -153,6 +156,7 @@ class ItemServiceTest {
         assertThat(saved.getValue().getCollectionId()).isEqualTo(COLLECTION_ID);
         assertThat(saved.getValue().getModuleId()).isEqualTo(MODULE_ID);
         assertThat(saved.getValue().getCreatedBy()).isEqualTo(USER_ID);
+        assertThat(saved.getValue().getModuleVersion()).isEqualTo("1.0.0");
         assertThat(saved.getValue().getAttributes()).contains("\"title\":\"Dune\"").contains("\"pages\":412");
     }
 
@@ -362,10 +366,42 @@ class ItemServiceTest {
     }
 
     @Test
+    void countsReportItemsOnEarlierVersionsOnlyWhenTheModuleHasMigrationsForThem() {
+        when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of(row(MODULE_ID, "OWNED", 9)));
+        when(items.countByModuleAndVersion(COLLECTION_ID)).thenReturn(List.of(
+                versionRow("1.0.0", 4), versionRow("2.0.0", 3), versionRow("2.5.0", 2)));
+        when(modules.getEntityById(MODULE_ID)).thenReturn(Optional.of(moduleEntity));
+        MigrationContract toTwo = new MigrationContract("2.0.0", List.of(new MigrationStep(MigrationOp.DROP, null, null, "gone", null, null, List.of())));
+        when(modules.getContract(moduleEntity)).thenReturn(new ModuleContract("books", "2.5.0", "Books", null, null, List.of(), List.of(),
+                List.of(), List.of(), Map.of(), List.of(toTwo)));
+
+        assertThat(service.counts(COLLECTION_ID).modules().get(MODULE_ID).pendingMigration()).isEqualTo(4);
+    }
+
+    @Test
     void countsAreEmptyForACollectionWithoutItems() {
         when(items.countByModuleAndState(COLLECTION_ID)).thenReturn(List.of());
 
         assertThat(service.counts(COLLECTION_ID).modules()).isEmpty();
+    }
+
+    private ItemRepository.VersionCount versionRow(String version, long count) {
+        return new ItemRepository.VersionCount() {
+            @Override
+            public UUID getModuleId() {
+                return MODULE_ID;
+            }
+
+            @Override
+            public String getModuleVersion() {
+                return version;
+            }
+
+            @Override
+            public long getCount() {
+                return count;
+            }
+        };
     }
 
     private void givenModule() {

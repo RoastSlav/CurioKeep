@@ -156,6 +156,7 @@ public class ItemImportService {
         ItemEntity item = new ItemEntity();
         item.setCollectionId(collectionId);
         item.setModuleId(module.id());
+        item.setModuleVersion(module.contract().version());
         item.setStateKey(ItemStateRules.normalize(state, module.contract()));
         item.setTitle(title);
         item.setAttributes(attributes.toString());

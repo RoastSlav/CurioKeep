@@ -104,6 +104,8 @@ public class ModuleLoadTx {
             warnAboutOddConstraints(f, sourceName, moduleKey);
         }
 
+        validateMigrations(m, fieldsByKey, sourceName);
+
         // provider mappings must reference declared providers
         java.util.Set<String> providerKeys = m.providers().stream().map(ProviderContract::key).collect(Collectors.toSet());
         for (FieldContract f : m.fields()) {
@@ -162,6 +164,73 @@ public class ModuleLoadTx {
                 }
             }
         }
+    }
+
+    private void validateMigrations(ModuleContract m, java.util.Map<String, FieldContract> fieldsByKey, String sourceName) {
+        for (MigrationContract migration : m.migrations()) {
+            if (ModuleVersion.compare(migration.to(), m.version()) > 0) {
+                throw new IllegalStateException("[" + sourceName + "] Module '" + m.key() + "': migration to " + migration.to()
+                        + " is newer than the module version " + m.version());
+            }
+            for (MigrationStep step : migration.steps()) {
+                String where = "[" + sourceName + "] Module '" + m.key() + "': " + step.op() + " step in migration to " + migration.to();
+                switch (step.op()) {
+                    case MOVE, COPY -> {
+                        requireOnly(step, where, step.from() != null && step.to() != null, "from and to",
+                                step.field() == null && step.value() == null && step.mappings().isEmpty());
+                        if (step.from().equals(step.to())) throw new IllegalStateException(where + " must use different from and to fields");
+                        requireDeclared(fieldsByKey, step.to(), where);
+                    }
+                    case MAP -> {
+                        requireOnly(step, where, step.field() != null && !step.mappings().isEmpty(), "field and at least one mapping",
+                                step.from() == null && step.to() == null && step.value() == null && step.transform() == null);
+                        FieldContract field = requireDeclared(fieldsByKey, step.field(), where);
+                        if (field.type() != FieldType.ENUM && field.type() != FieldType.TAGS) {
+                            throw new IllegalStateException(where + " maps values of '" + field.key() + "', which is not an ENUM or TAGS field");
+                        }
+                        ensureUnique(step.mappings().stream().map(MigrationStep.ValueMapping::from).toList(),
+                                where + " maps the same value twice");
+                        if (field.type() == FieldType.ENUM && !field.enumValues().isEmpty()) {
+                            for (MigrationStep.ValueMapping mapping : step.mappings()) {
+                                if (field.enumValues().stream().noneMatch(e -> e.key().equals(mapping.to()))) {
+                                    throw new IllegalStateException(where + " maps to '" + mapping.to() + "', which is not a value of '" + field.key() + "'");
+                                }
+                            }
+                        }
+                    }
+                    case DEFAULT -> {
+                        requireOnly(step, where, step.field() != null && step.value() != null, "field and value",
+                                step.from() == null && step.to() == null && step.transform() == null && step.mappings().isEmpty());
+                        FieldContract field = requireDeclared(fieldsByKey, step.field(), where);
+                        if (FieldValues.parse(field, step.value()).isEmpty()) {
+                            throw new IllegalStateException(where + " has a value that is not valid for field '" + field.key() + "'");
+                        }
+                    }
+                    case DROP -> {
+                        requireOnly(step, where, step.field() != null, "field",
+                                step.from() == null && step.to() == null && step.value() == null && step.transform() == null && step.mappings().isEmpty());
+                        FieldContract field = fieldsByKey.get(step.field());
+                        if (field != null && field.active() && !field.deprecated()) {
+                            throw new IllegalStateException(where + " drops '" + field.key() + "', which is still a live field");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void requireOnly(MigrationStep step, String where, boolean hasRequired, String required, boolean hasNothingElse) {
+        if (!hasRequired) throw new IllegalStateException(where + " needs " + required);
+        if (!hasNothingElse) throw new IllegalStateException(where + " has attributes that " + step.op() + " does not use");
+    }
+
+    private static FieldContract requireDeclared(java.util.Map<String, FieldContract> fieldsByKey, String key, String where) {
+        FieldContract field = fieldsByKey.get(key);
+        if (field == null) throw new IllegalStateException(where + " names field '" + key + "', which the module does not declare");
+        if (!field.active() || field.deprecated()) {
+            throw new IllegalStateException(where + " names field '" + key + "', which is retired");
+        }
+        return field;
     }
 
     /** Constraints that cannot work are only warned about: they were silently ignored before, and a module that has them must keep loading. */

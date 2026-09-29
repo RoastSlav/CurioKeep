@@ -101,6 +101,45 @@
     </xs:simpleType>
 
     <!-- ============================
+         MIGRATIONS (how items of an older module version are brought up to date)
+         ============================ -->
+    <xs:simpleType name="MigrationOpType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="MOVE"/>
+            <xs:enumeration value="COPY"/>
+            <xs:enumeration value="MAP"/>
+            <xs:enumeration value="DEFAULT"/>
+            <xs:enumeration value="DROP"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="migrationMappingType">
+        <xs:attribute name="from" type="xs:string" use="required"/>
+        <xs:attribute name="to" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="migrationStepType">
+        <xs:sequence>
+            <xs:element name="mapping" type="migrationMappingType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="op" type="MigrationOpType" use="required"/>
+        <!-- MOVE and COPY: the old key may no longer be a declared field, the new one must be -->
+        <xs:attribute name="from" type="FieldKeyType" use="optional"/>
+        <xs:attribute name="to" type="FieldKeyType" use="optional"/>
+        <!-- MAP, DEFAULT and DROP -->
+        <xs:attribute name="field" type="FieldKeyType" use="optional"/>
+        <xs:attribute name="value" type="xs:string" use="optional"/>
+        <xs:attribute name="transform" type="TransformType" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="migrationType">
+        <xs:sequence>
+            <xs:element name="step" type="migrationStepType" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="to" type="SemVerType" use="required"/>
+    </xs:complexType>
+
+    <!-- ============================
          EXTENSIONS (forward-compatible bag)
          ============================ -->
     <xs:complexType name="extensionsType">
@@ -362,6 +401,14 @@
                     </xs:complexType>
                 </xs:element>
 
+                <xs:element name="migrations" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="migration" type="migrationType" minOccurs="1" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
                 <xs:element name="extensions" type="extensionsType" minOccurs="0"/>
             </xs:sequence>
 
@@ -383,6 +430,11 @@
         <xs:unique name="uniq_field_key">
             <xs:selector xpath="fields/field"/>
             <xs:field xpath="@key"/>
+        </xs:unique>
+
+        <xs:unique name="uniq_migration_target">
+            <xs:selector xpath="migrations/migration"/>
+            <xs:field xpath="@to"/>
         </xs:unique>
 
     </xs:element>

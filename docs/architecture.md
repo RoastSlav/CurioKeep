@@ -51,6 +51,7 @@ erDiagram
 ```
 
 - `item.attributes` is a JSONB object whose keys are the module's field keys. The module definition says how to interpret it; required fields are enforced when an item is saved.
+- `item.module_version` is the module version the item's attributes were last brought up to. Updating a module leaves items on their old version until a collection admin accepts the module's migration.
 - `module_definition` stores the raw XML, its checksum and the compiled contract JSON. `module_state` and `module_field` are materialised rows for querying.
 - `provider_credentials` holds provider API keys encrypted with the configured password.
 
@@ -80,7 +81,11 @@ At startup every bundled module (`src/main/resources/modules/*.xml`) and every f
 
 All filters must match. Every order ends with the creation time and the id, so pages never overlap or skip an item, even when many share a timestamp. Field keys and operators are checked against the module contract and every value is a bound SQL parameter. Values of the wrong type in old data are ignored by number and date filters instead of failing the query.
 
-`GET /api/collections/{id}/items/counts` returns the item totals per module and per state, which the module badges and the state filter chips show, and for each deprecated field of a module how many items still hold a value in it (`deprecatedFieldUse`).
+`GET /api/collections/{id}/items/counts` returns the item totals per module and per state, which the module badges and the state filter chips show, and for each deprecated field of a module how many items still hold a value in it (`deprecatedFieldUse`) and how many are on an earlier module version that has a migration waiting (`pendingMigration`).
+
+## Migrating items to a new module version
+
+A module can declare migrations (`MOVE`, `COPY`, `MAP`, `DEFAULT`, `DROP` steps, see [modules.md](modules.md)). `GET /api/collections/{id}/items/migration?moduleId=` previews them for the collection's items of that module: it reads every item that is behind, in batches, and returns the counts and a few examples without writing. `POST` on the same path accepts them. Both need the collection ADMIN role. Accepting rewrites items in batches of 200 in creation order, one transaction per batch, sets each item's `module_version` to the module's current version, and leaves items on a newer version alone. It cannot be undone and nothing is recorded but a log line. The steps themselves run in `MigrationEngine`, a pure function of the module contract and an item's attributes.
 
 ## Exporting and importing items
 

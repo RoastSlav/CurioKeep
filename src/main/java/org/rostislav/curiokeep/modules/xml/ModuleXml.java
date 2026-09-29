@@ -24,7 +24,9 @@ public record ModuleXml(
         FieldsXml fields,
 
         @JacksonXmlProperty(localName = "workflows")
-        WorkflowsXml workflows
+        WorkflowsXml workflows,
+        @JacksonXmlProperty(localName = "migrations")
+        MigrationsXml migrations
 ) {
         public List<StateXml> statesList() {
                 return states == null || states.state() == null ? List.of() : states.state();
@@ -38,6 +40,9 @@ public record ModuleXml(
                 return fields == null || fields.field() == null ? List.of() : fields.field();
         }
 
+        public List<MigrationXml> migrationsList() {
+                return migrations == null || migrations.migration() == null ? List.of() : migrations.migration();
+        }
         public List<WorkflowXml> workflowsList() {
                 return workflows == null || workflows.workflow() == null ? List.of() : workflows.workflow();
         }

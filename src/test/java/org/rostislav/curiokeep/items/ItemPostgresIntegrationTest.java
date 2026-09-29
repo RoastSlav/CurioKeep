@@ -3,18 +3,28 @@ package org.rostislav.curiokeep.items;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rostislav.curiokeep.items.ItemQueryParser.Params;
+import org.rostislav.curiokeep.collections.CollectionAccessService;
+import org.rostislav.curiokeep.items.api.dto.MigrationPreviewResponse;
+import org.rostislav.curiokeep.items.api.dto.MigrationResultResponse;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
 import org.rostislav.curiokeep.modules.ModuleDefinitionRepository;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
 import org.rostislav.curiokeep.modules.contract.FieldContract;
 import org.rostislav.curiokeep.modules.contract.FieldType;
+import org.rostislav.curiokeep.modules.contract.MigrationContract;
+import org.rostislav.curiokeep.modules.contract.MigrationOp;
+import org.rostislav.curiokeep.modules.contract.MigrationStep;
 import org.rostislav.curiokeep.modules.contract.ModuleContract;
 import org.rostislav.curiokeep.modules.contract.StateContract;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
+import org.rostislav.curiokeep.user.CurrentUserService;
+import org.rostislav.curiokeep.user.entities.AppUserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Container;
@@ -27,10 +37,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Runs the real Flyway migrations on PostgreSQL and the item listing query against real JSONB data. The H2-based tests cannot
@@ -68,6 +81,10 @@ class ItemPostgresIntegrationTest {
     ModuleQueryService modules;
     @Autowired
     ModuleDefinitionRepository moduleRepository;
+    @Autowired
+    ObjectMapper objectMapper;
+    @Autowired
+    TransactionTemplate transactions;
 
     private static UUID collectionId;
     private static UUID otherCollectionId;
@@ -127,8 +144,12 @@ class ItemPostgresIntegrationTest {
     private static UUID extraCollectionId;
 
     private void insert(UUID collection, String state, String title, String attributes, OffsetDateTime createdAt) {
-        jdbc.update("INSERT INTO item (collection_id, module_id, state_key, title, attributes, created_at, updated_at) "
-                + "VALUES (?, ?, ?, ?, CAST(? AS jsonb), ?, ?)", collection, moduleId, state, title, attributes, createdAt, createdAt);
+        insert(collection, state, title, attributes, createdAt, books.version());
+    }
+
+    private void insert(UUID collection, String state, String title, String attributes, OffsetDateTime createdAt, String moduleVersion) {
+        jdbc.update("INSERT INTO item (collection_id, module_id, module_version, state_key, title, attributes, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?)", collection, moduleId, moduleVersion, state, title, attributes, createdAt, createdAt);
     }
 
     private Page<ItemEntity> query(UUID collection, ModuleContract contract, String search, String state, String sort, int page, int size, Map<String, String> filters) {
@@ -150,7 +171,7 @@ class ItemPostgresIntegrationTest {
         List<String> versions = jdbc.queryForList("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank", String.class);
         List<String> indexes = jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE tablename = 'item'", String.class);
 
-        assertThat(versions).containsExactly("1", "2");
+        assertThat(versions).containsExactly("1", "2", "3");
         assertThat(indexes).contains("idx_item_collection_module_created", "idx_item_module_state", "gin_item_attributes")
                 .doesNotContain("idx_item_collection_module");
     }
@@ -337,12 +358,12 @@ class ItemPostgresIntegrationTest {
     void exportingAndImportingACollectionLargerThanOneBatchLosesNothing() throws Exception {
         UUID source = newCollectionWithBooksModule("Export source");
         // groups of three items share a timestamp, so some ties straddle the 500-item batch boundary
-        jdbc.update("INSERT INTO item (collection_id, module_id, state_key, title, attributes, created_at, updated_at) "
-                + "SELECT ?, ?, CASE WHEN n % 4 = 0 THEN 'WISHLIST' ELSE 'OWNED' END, 'Book ' || n, "
+        jdbc.update("INSERT INTO item (collection_id, module_id, module_version, state_key, title, attributes, created_at, updated_at) "
+                + "SELECT ?, ?, ?, CASE WHEN n % 4 = 0 THEN 'WISHLIST' ELSE 'OWNED' END, 'Book ' || n, "
                 + "jsonb_build_object('title', 'Book ' || n, 'published_year', n, 'authors', 'Author ' || (n % 7), "
                 + "'providerImageUrl', '/api/assets/0123456789abcdef0123456789abcdef.png'), "
                 + "timestamptz '2026-01-01 00:00:00+00' + (n / 3) * interval '1 second', timestamptz '2026-01-01 00:00:00+00' + (n / 3) * interval '1 second' "
-                + "FROM generate_series(1, 1200) n", source, moduleId);
+                + "FROM generate_series(1, 1200) n", source, moduleId, books.version());
         jdbc.update("INSERT INTO item_identifier (item_id, id_type, id_value) SELECT id, 'ISBN13', 'isbn-' || title "
                 + "FROM item WHERE collection_id = ? AND (attributes ->> 'published_year')::int <= 100", source);
 
@@ -434,6 +455,75 @@ class ItemPostgresIntegrationTest {
 
         assertThat(titles(page)).containsExactly("text", "list", "zero", "false");
         assertThat(repository.count(ItemQueryParser.parse(withOld, new Params(has, moduleId, null, null, null, 0, 1, Map.of("old.has", "true"))))).isEqualTo(4);
+    }
+
+    /** The books module as if its version were 2.0.0 and it declared a migration from older item data. */
+    private ModuleContract booksWithMigration() {
+        return new ModuleContract(books.key(), "2.0.0", books.name(), null, null, books.states(), books.providers(), books.fields(),
+                books.workflows(), Map.of(), List.of(new MigrationContract("2.0.0", List.of(
+                new MigrationStep(MigrationOp.MOVE, "old_notes", "notes", null, null, "TRIM", List.of()),
+                new MigrationStep(MigrationOp.DROP, null, null, "legacy", null, null, List.of())))));
+    }
+
+    private ItemMigrationService migrationService(ModuleContract contract) {
+        ModuleQueryService queryService = mock(ModuleQueryService.class);
+        ModuleDefinitionEntity entity = new ModuleDefinitionEntity();
+        when(queryService.getEntityById(moduleId)).thenReturn(Optional.of(entity));
+        when(queryService.getContract(entity)).thenReturn(contract);
+        CurrentUserService currentUser = mock(CurrentUserService.class);
+        when(currentUser.requireCurrentUser()).thenReturn(new AppUserEntity());
+        return new ItemMigrationService(items, queryService, mock(CollectionAccessService.class), currentUser, objectMapper, transactions);
+    }
+
+    private UUID collectionOfOldItems(int count) {
+        UUID owner = jdbc.queryForObject("SELECT id FROM app_user WHERE email = 'it@example.test'", UUID.class);
+        UUID collection = jdbc.queryForObject("INSERT INTO collection (owner_user_id, name) VALUES (?, 'Migrating') RETURNING id", UUID.class, owner);
+        OffsetDateTime t = OffsetDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        for (int i = 0; i < count; i++) {
+            insert(collection, "OWNED", "Old " + i, "{\"old_notes\":\" note " + i + " \",\"legacy\":\"x\"}", t.plusSeconds(i), "1.0.0");
+        }
+        insert(collection, "OWNED", "Current", "{\"old_notes\":\"kept\"}", t.plusSeconds(count), "2.0.0");
+        insert(collection, "OWNED", "From the future", "{\"old_notes\":\"kept\"}", t.plusSeconds(count + 1), "3.0.0");
+        return collection;
+    }
+
+    @Test
+    void aMigrationPreviewReadsEveryBatchAndChangesNothing() {
+        seed();
+        UUID collection = collectionOfOldItems(450);
+
+        MigrationPreviewResponse preview = migrationService(booksWithMigration()).preview(collection, moduleId);
+
+        assertThat(preview.targetVersion()).isEqualTo("2.0.0");
+        assertThat(preview.behind()).isEqualTo(450);
+        assertThat(preview.changed()).isEqualTo(450);
+        assertThat(preview.versions()).singleElement().satisfies(v -> {
+            assertThat(v.version()).isEqualTo("1.0.0");
+            assertThat(v.items()).isEqualTo(450);
+        });
+        assertThat(preview.samples()).hasSize(5);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND module_version = '1.0.0'", Long.class, collection)).isEqualTo(450);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND jsonb_exists(attributes, 'notes')", Long.class, collection)).isZero();
+    }
+
+    @Test
+    void acceptingAMigrationRewritesOldItemsInBatchesAndLeavesTheRestAlone() {
+        seed();
+        UUID collection = collectionOfOldItems(450);
+        ItemMigrationService service = migrationService(booksWithMigration());
+
+        MigrationResultResponse result = service.apply(collection, moduleId);
+
+        assertThat(result.migrated()).isEqualTo(450);
+        assertThat(result.changed()).isEqualTo(450);
+        assertThat(result.skipped()).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND module_version = '2.0.0'", Long.class, collection)).isEqualTo(451);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND module_version = '3.0.0'", Long.class, collection)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT attributes->>'notes' FROM item WHERE collection_id = ? AND title = 'Old 7'", String.class, collection)).isEqualTo("note 7");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM item WHERE collection_id = ? AND title LIKE 'Old %' "
+                + "AND (jsonb_exists(attributes, 'legacy') OR jsonb_exists(attributes, 'old_notes'))", Long.class, collection)).isZero();
+        assertThat(jdbc.queryForObject("SELECT attributes->>'old_notes' FROM item WHERE collection_id = ? AND title = 'Current'", String.class, collection)).isEqualTo("kept");
+        assertThat(service.apply(collection, moduleId).migrated()).isZero();
     }
 
     @Test

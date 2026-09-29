@@ -54,6 +54,14 @@
       },
       "default": []
     },
+    "migrations": {
+      "type": "array",
+      "description": "How items saved under an earlier module version are brought up to date, oldest target version first.",
+      "items": {
+        "$ref": "#/$defs/migration"
+      },
+      "default": []
+    },
     "extensions": {
       "type": "object",
       "description": "Forward-compatible bag for custom data (must not affect core behavior unless app explicitly supports it).",
@@ -277,6 +285,70 @@
           "type": "object",
           "additionalProperties": true,
           "default": {}
+        }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["to", "steps"],
+      "properties": {
+        "to": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/migrationStep"
+          }
+        }
+      }
+    },
+    "migrationStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["MOVE", "COPY", "MAP", "DEFAULT", "DROP"]
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "field": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "value": {
+          "type": "string"
+        },
+        "transform": {
+          "type": "string",
+          "enum": ["TRIM", "JOIN_COMMA", "FIRST", "TO_INT"]
+        },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },

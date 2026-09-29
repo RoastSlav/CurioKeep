@@ -123,13 +123,14 @@ class ItemControllerTest {
         UUID collectionId = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
         UUID moduleId = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
         when(itemService.counts(collectionId)).thenReturn(new ItemCountsResponse(
-                Map.of(moduleId, new ItemCountsResponse.ModuleCounts(5, Map.of("OWNED", 3L, "WISHLIST", 2L), Map.of("old_authors", 4L)))));
+                Map.of(moduleId, new ItemCountsResponse.ModuleCounts(5, Map.of("OWNED", 3L, "WISHLIST", 2L), Map.of("old_authors", 4L), 2))));
 
         mockMvc.perform(get("/api/collections/" + collectionId + "/items/counts"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modules['" + moduleId + "'].total").value(5))
                 .andExpect(jsonPath("$.modules['" + moduleId + "'].byState.OWNED").value(3))
-                .andExpect(jsonPath("$.modules['" + moduleId + "'].deprecatedFieldUse.old_authors").value(4));
+                .andExpect(jsonPath("$.modules['" + moduleId + "'].deprecatedFieldUse.old_authors").value(4))
+                .andExpect(jsonPath("$.modules['" + moduleId + "'].pendingMigration").value(2));
     }
 
     @Test

@@ -20,7 +20,10 @@ public record ItemCountsResponse(
             Map<String, Long> byState,
 
             @Schema(description = "For each deprecated field of the module that still has values, how many items hold one.", example = "{\"authors_text\": 42}")
-            Map<String, Long> deprecatedFieldUse
+            Map<String, Long> deprecatedFieldUse,
+
+            @Schema(description = "Items on an earlier module version for which the module declares a migration that has not been accepted yet.", example = "120")
+            long pendingMigration
     ) {
     }
 }

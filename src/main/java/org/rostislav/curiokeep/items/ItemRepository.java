@@ -35,6 +35,32 @@ public interface ItemRepository extends JpaRepository<ItemEntity, UUID> {
             + "from ItemEntity i where i.collectionId = :collectionId group by i.moduleId, i.stateKey")
     List<StateCount> countByModuleAndState(@Param("collectionId") UUID collectionId);
 
+    /** First batch of the module's items that are not on {@code version}; continue with {@link #findBehindBatchAfter}. */
+    @Query("select i from ItemEntity i where i.collectionId = :collectionId and i.moduleId = :moduleId and i.moduleVersion <> :version "
+            + "order by i.createdAt asc, i.id asc")
+    List<ItemEntity> findBehindFirstBatch(@Param("collectionId") UUID collectionId, @Param("moduleId") UUID moduleId,
+                                          @Param("version") String version, Pageable batch);
+
+    @Query("select i from ItemEntity i where i.collectionId = :collectionId and i.moduleId = :moduleId and i.moduleVersion <> :version "
+            + "and (i.createdAt > :createdAt or (i.createdAt = :createdAt and i.id > :id)) "
+            + "order by i.createdAt asc, i.id asc")
+    List<ItemEntity> findBehindBatchAfter(@Param("collectionId") UUID collectionId, @Param("moduleId") UUID moduleId,
+                                          @Param("version") String version, @Param("createdAt") OffsetDateTime createdAt,
+                                          @Param("id") UUID id, Pageable batch);
+
+    /** One row per module and module version that has items in the collection. */
+    @Query("select i.moduleId as moduleId, i.moduleVersion as moduleVersion, count(i) as count "
+            + "from ItemEntity i where i.collectionId = :collectionId group by i.moduleId, i.moduleVersion")
+    List<VersionCount> countByModuleAndVersion(@Param("collectionId") UUID collectionId);
+
+    interface VersionCount {
+        UUID getModuleId();
+
+        String getModuleVersion();
+
+        long getCount();
+    }
+
     interface StateCount {
         UUID getModuleId();
 

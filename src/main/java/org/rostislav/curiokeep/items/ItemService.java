@@ -8,7 +8,9 @@ import org.rostislav.curiokeep.collections.api.dto.Role;
 import org.rostislav.curiokeep.items.api.dto.*;
 import org.rostislav.curiokeep.items.entities.ItemEntity;
 import org.rostislav.curiokeep.items.entities.ItemIdentifierEntity;
+import org.rostislav.curiokeep.modules.MigrationEngine;
 import org.rostislav.curiokeep.modules.ModuleQueryService;
+import org.rostislav.curiokeep.modules.ModuleVersion;
 import org.rostislav.curiokeep.modules.contract.FieldContract;
 import org.rostislav.curiokeep.modules.contract.ModuleContract;
 import org.rostislav.curiokeep.modules.entities.ModuleDefinitionEntity;
@@ -102,6 +104,7 @@ public class ItemService {
                 ItemEntity e = new ItemEntity();
                 e.setCollectionId(collectionId);
                 e.setModuleId(req.moduleId());
+                e.setModuleVersion(contract.version());
                 e.setStateKey(ItemStateRules.normalize(req.stateKey(), contract));
                 e.setTitle(req.title());
                 e.setAttributes(writeJson(attrs));
@@ -233,17 +236,25 @@ public class ItemService {
         for (ItemRepository.StateCount row : items.countByModuleAndState(collectionId)) {
             byModule.computeIfAbsent(row.getModuleId(), id -> new java.util.LinkedHashMap<>()).put(row.getStateKey(), row.getCount());
         }
+        Map<UUID, List<ItemRepository.VersionCount>> versionsByModule = new java.util.HashMap<>();
+        for (ItemRepository.VersionCount row : items.countByModuleAndVersion(collectionId)) {
+            versionsByModule.computeIfAbsent(row.getModuleId(), id -> new java.util.ArrayList<>()).add(row);
+        }
         Map<UUID, ItemCountsResponse.ModuleCounts> modulesCounts = new java.util.LinkedHashMap<>();
-        byModule.forEach((moduleId, byState) -> modulesCounts.put(moduleId,
-                new ItemCountsResponse.ModuleCounts(byState.values().stream().mapToLong(Long::longValue).sum(), byState,
-                        deprecatedFieldUse(collectionId, moduleId))));
+        byModule.forEach((moduleId, byState) -> {
+            Optional<ModuleContract> contract = modules.getEntityById(moduleId).map(modules::getContract);
+            modulesCounts.put(moduleId, new ItemCountsResponse.ModuleCounts(
+                    byState.values().stream().mapToLong(Long::longValue).sum(), byState,
+                    contract.map(c -> deprecatedFieldUse(collectionId, moduleId, c)).orElse(Map.of()),
+                    contract.map(c -> pendingMigration(c, versionsByModule.getOrDefault(moduleId, List.of()))).orElse(0L)));
+        });
         return new ItemCountsResponse(modulesCounts);
     }
 
     /** Counts, per deprecated field of the module, the items that still hold a value there, so the user can go and update them. */
-    private Map<String, Long> deprecatedFieldUse(UUID collectionId, UUID moduleId) {
+    private Map<String, Long> deprecatedFieldUse(UUID collectionId, UUID moduleId, ModuleContract contract) {
         Map<String, Long> use = new java.util.LinkedHashMap<>();
-        modules.getEntityById(moduleId).map(modules::getContract).ifPresent(contract -> contract.fields().stream()
+        contract.fields().stream()
                 .filter(FieldContract::deprecated)
                 .forEach(field -> {
                     ItemQuery query = new ItemQuery(collectionId, moduleId, null, List.of(), List.of(), List.of(
@@ -251,8 +262,17 @@ public class ItemService {
                             ItemQuery.Sort.newestFirst(), 0, 1);
                     long count = search.count(query);
                     if (count > 0) use.put(field.key(), count);
-                }));
+                });
         return use;
+    }
+
+    /** Items on an earlier version of the module that the module's migrations have something to say about. */
+    private static long pendingMigration(ModuleContract contract, List<ItemRepository.VersionCount> versions) {
+        return versions.stream()
+                .filter(v -> ModuleVersion.compare(v.getModuleVersion(), contract.version()) < 0)
+                .filter(v -> !MigrationEngine.stepsSince(contract, v.getModuleVersion()).isEmpty())
+                .mapToLong(ItemRepository.VersionCount::getCount)
+                .sum();
     }
 
     @Transactional

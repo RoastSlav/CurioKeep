@@ -22,6 +22,9 @@ public class ItemEntity {
     @Column(name = "module_id", nullable = false, columnDefinition = "uuid")
     private UUID moduleId;
 
+    @Column(name = "module_version", nullable = false)
+    private String moduleVersion;
+
     @Column(name = "state_key", nullable = false)
     private String stateKey = "OWNED";
 
@@ -79,6 +82,14 @@ public class ItemEntity {
 
     public void setModuleId(UUID moduleId) {
         this.moduleId = moduleId;
+    }
+
+    public String getModuleVersion() {
+        return moduleVersion;
+    }
+
+    public void setModuleVersion(String moduleVersion) {
+        this.moduleVersion = moduleVersion;
     }
 
     public String getStateKey() {

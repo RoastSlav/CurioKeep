@@ -39,6 +39,7 @@ public class ModuleCompiler {
         var providers = compileProviders(xml.providers().provider());
         var fields = compileFields(xml.fields().field());
         var workflows = compileWorkflows(xml.workflows().workflow());
+        var migrations = compileMigrations(xml.migrationsList());
 
         // sort for stable output (useful for checksums + diffing)
         states = states.stream()
@@ -63,7 +64,8 @@ public class ModuleCompiler {
                 providers,
                 fields,
                 workflows,
-                Map.of() // extensions (not supported by XSD yet)
+                Map.of(), // extensions (not supported by XSD yet)
+                migrations
         );
     }
 
@@ -240,6 +242,28 @@ public class ModuleCompiler {
         if (helpText == null || helpText.isBlank()) {
             log.warn("Field '{}' declares CUSTOM identifier but ui.helpText is missing", fieldKey);
         }
+    }
+
+    private List<MigrationContract> compileMigrations(List<MigrationXml> migrationXmls) {
+        return migrationXmls.stream()
+                .map(m -> new MigrationContract(m.to() == null ? null : m.to().trim(),
+                        Optional.ofNullable(m.steps()).orElse(List.of()).stream().map(this::compileMigrationStep).toList()))
+                .sorted(Comparator.comparing(MigrationContract::to, ModuleVersion::compare))
+                .toList();
+    }
+
+    private MigrationStep compileMigrationStep(MigrationStepXml s) {
+        return new MigrationStep(
+                MigrationOp.valueOf(s.op().trim().toUpperCase(Locale.ROOT)),
+                blankToNull(s.from()), blankToNull(s.to()), blankToNull(s.field()),
+                s.value(), // may be an empty string on purpose, so it is not trimmed or nulled
+                blankToNull(s.transform()),
+                Optional.ofNullable(s.mappings()).orElse(List.of()).stream()
+                        .map(mapping -> new MigrationStep.ValueMapping(mapping.from(), mapping.to())).toList());
+    }
+
+    private static String blankToNull(String text) {
+        return text == null || text.isBlank() ? null : text.trim();
     }
 
     private List<WorkflowContract> compileWorkflows(List<WorkflowXml> workflowXmls) {

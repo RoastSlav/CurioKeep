@@ -118,6 +118,21 @@ export type ModuleMeta = {
   minAppVersion?: string;
 };
 
+export type MigrationStep = {
+  op: "MOVE" | "COPY" | "MAP" | "DEFAULT" | "DROP";
+  from?: string;
+  to?: string;
+  field?: string;
+  value?: string;
+  transform?: string;
+  mappings?: { from: string; to: string }[];
+};
+
+export type MigrationContract = {
+  to: string;
+  steps: MigrationStep[];
+};
+
 export type ModuleContract = {
   key: string;
   version: string;
@@ -129,4 +144,5 @@ export type ModuleContract = {
   fields: FieldContract[];
   workflows: WorkflowContract[];
   extensions: Record<string, unknown>;
+  migrations?: MigrationContract[];
 };
